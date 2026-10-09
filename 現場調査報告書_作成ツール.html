@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>現場調査報告書 作成ツール</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --ink:#16202b; --ink2:#43505e; --line:#d6dde4; --line2:#e8edf1;
+    --bg:#eef1f4; --card:#ffffff; --field-blue:#1f4f8f;
+    --accent:#16744d;            /* field green = the export action */
+    --accent-press:#0f5a3b;
+    --label-bg:#eef3f1; --label-ink:#274b3e;
+    --danger:#b23b3b; --warn:#8a6d00;
+    --radius:10px; --shadow:0 1px 2px rgba(20,32,43,.06),0 6px 18px rgba(20,32,43,.06);
+    --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;
+    color:var(--ink); background:var(--bg); -webkit-text-size-adjust:100%;
+    line-height:1.5;
+  }
+  /* ---- top bar ---- */
+  .topbar{
+    position:sticky; top:0; z-index:30; background:var(--ink); color:#fff;
+    padding:10px 14px; display:flex; align-items:center; gap:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.18);
+  }
+  .topbar .mark{
+    font-weight:800; letter-spacing:.04em; font-size:15px; white-space:nowrap;
+    display:flex; align-items:center; gap:8px;
+  }
+  .topbar .mark .dot{width:9px;height:9px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
+  .topbar .sub{font-size:11px;color:#9fb0c0;font-weight:500;white-space:nowrap}
+  .seg{margin-left:auto; display:flex; background:#0e1822; border-radius:8px; padding:3px; gap:2px}
+  .seg button{
+    border:0; background:transparent; color:#9fb0c0; font:inherit; font-size:12px; font-weight:700;
+    padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;
+  }
+  .seg button.on{background:var(--accent); color:#fff}
+  /* ---- layout ---- */
+  .wrap{max-width:780px; margin:0 auto; padding:16px 14px 130px}
+  .lead{font-size:12.5px; color:var(--ink2); margin:4px 2px 14px}
+  .lead b{color:var(--ink)}
+  .databar{display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 2px 16px}
+  .databar button{
+    display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:12.5px; font-weight:700;
+    color:var(--ink2); background:var(--card); border:1px solid var(--line); border-radius:8px;
+    padding:8px 12px; cursor:pointer; box-shadow:var(--shadow);
+  }
+  .databar button:hover{border-color:var(--accent); color:var(--accent)}
+  .databar button svg{color:var(--accent)}
+  .databar .dnote{font-size:11px; color:var(--ink2); flex:1; min-width:160px}
+  .help{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); margin:0 0 16px; overflow:hidden}
+  .help summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:12px 15px; background:var(--label-bg); color:var(--label-ink); font-weight:800; font-size:13px}
+  .help summary::-webkit-details-marker{display:none}
+  .help summary .ht{display:flex; align-items:center; gap:8px}
+  .help summary .hc{margin-left:auto; font-weight:600; font-size:11px; color:var(--ink2)}
+  .help[open] summary{border-bottom:1px solid var(--line)}
+  .help-body{padding:6px 16px 14px}
+  .help-body ol{margin:8px 0; padding-left:20px}
+  .help-body li{font-size:12.8px; color:var(--ink2); margin:9px 0; line-height:1.6}
+  .help-body li b{color:var(--ink)}
+  .help-body .req{color:var(--danger); font-weight:700}
+  .help-note{font-size:11.5px; color:var(--ink2); background:#f6f9f8; border:1px solid var(--line2); border-radius:8px; padding:9px 11px; margin:10px 0 2px; line-height:1.7}
+  section.card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); margin:0 0 14px; overflow:hidden;
+  }
+  .card > h2{
+    margin:0; font-size:13px; font-weight:800; letter-spacing:.02em;
+    padding:12px 15px; background:var(--label-bg); color:var(--label-ink);
+    border-bottom:1px solid var(--line); display:flex; align-items:center; gap:9px;
+  }
+  .card > h2 .num{
+    font-family:var(--mono); font-size:11px; background:var(--label-ink); color:#fff;
+    width:20px;height:20px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;
+  }
+  .card > h2 .hint{margin-left:auto;font-weight:600;font-size:11px;color:var(--ink2)}
+  .body{padding:14px 15px}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:12px 14px}
+  .grid .full{grid-column:1/-1}
+  @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  label.f{display:flex; flex-direction:column; gap:5px; font-size:12px; font-weight:700; color:var(--ink2)}
+  label.f .req{color:var(--danger); margin-left:3px; font-size:11px}
+  input[type=text],input[type=date],input[type=number],select,textarea{
+    font:inherit; font-size:13.5px; color:var(--ink); background:#fdfefe;
+    border:1px solid var(--line); border-radius:8px; padding:9px 10px; width:100%;
+    transition:border-color .12s, box-shadow .12s;
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(22,116,77,.14);
+  }
+  textarea{resize:vertical; min-height:72px; line-height:1.55}
+  select{appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2343505e' d='M1 1l5 5 5-5'/></svg>"); background-repeat:no-repeat; background-position:right 11px center; padding-right:30px}
+  .combo{position:relative; display:block}
+  .combo input{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2343505e' d='M1 1l5 5 5-5'/></svg>"); background-repeat:no-repeat; background-position:right 11px center; padding-right:30px}
+  .combo input::-webkit-calendar-picker-indicator{opacity:0; position:absolute; right:0; width:30px; height:100%; cursor:pointer}
+  /* photo */
+  .photo{display:flex; flex-direction:column; gap:6px}
+  .photo .drop{
+    border:1.5px dashed var(--line); border-radius:9px; background:#f7faf9;
+    aspect-ratio:4/3; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; overflow:hidden; position:relative; color:var(--ink2); font-size:12px; text-align:center;
+  }
+  .photo .drop:hover{border-color:var(--accent); background:#f0f7f3}
+  .photo .drop img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo .drop .ph{padding:10px}
+  .photo .drop .ph svg{display:block;margin:0 auto 6px;opacity:.6}
+  .photo .cap{display:flex;gap:8px;align-items:center}
+  .photo .cap .name{font-size:11px;color:var(--ink2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .photo .cap button{
+    border:1px solid var(--line); background:#fff; color:var(--danger); font:inherit; font-size:11px;
+    font-weight:700; border-radius:6px; padding:4px 9px; cursor:pointer;
+  }
+  /* camera/photo block */
+  .block{border:1px solid var(--line); border-radius:9px; margin:0 0 12px; overflow:hidden}
+  .block > .bh{
+    background:#f4f7f9; border-bottom:1px solid var(--line); padding:9px 12px;
+    display:flex; align-items:center; gap:10px; font-size:12.5px; font-weight:800; color:var(--ink);
+  }
+  .block > .bh .tag{font-family:var(--mono);font-size:11px;background:var(--field-blue);color:#fff;border-radius:5px;padding:2px 7px}
+  .block > .bh .del{margin-left:auto; border:1px solid var(--line); background:#fff; color:var(--danger);
+    font:inherit;font-size:11px;font-weight:700;border-radius:6px;padding:5px 9px;cursor:pointer}
+  .block > .bb{padding:12px}
+  .addbtn{
+    width:100%; border:1.5px dashed var(--accent); color:var(--accent); background:#f0f7f3;
+    font:inherit; font-size:13px; font-weight:800; border-radius:9px; padding:11px; cursor:pointer;
+  }
+  .addbtn:disabled{opacity:.45; cursor:not-allowed; border-style:solid}
+  .twophoto{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .smallnote{font-size:11px;color:var(--ink2);margin:2px 2px 10px}
+  /* footer */
+  .footer{
+    position:fixed; left:0; right:0; bottom:0; z-index:30; background:rgba(255,255,255,.94);
+    backdrop-filter:saturate(1.4) blur(6px); border-top:1px solid var(--line);
+    padding:11px 14px; display:flex; gap:10px; align-items:center;
+  }
+  .footer .info{font-size:11.5px;color:var(--ink2);flex:1;overflow:hidden}
+  .footer .info b{color:var(--ink)}
+  .btn{
+    font:inherit; font-weight:800; font-size:14px; border-radius:9px; padding:12px 18px; cursor:pointer;
+    border:1px solid transparent; white-space:nowrap;
+  }
+  .btn.primary{background:var(--accent); color:#fff}
+  .btn.primary:hover{background:var(--accent-press)}
+  .btn.primary:disabled{opacity:.6;cursor:wait}
+  .btn.ghost{background:#fff;border-color:var(--line);color:var(--ink2)}
+  .toast{
+    position:fixed; left:50%; bottom:86px; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:11px 18px; border-radius:10px; font-size:13px; font-weight:700;
+    opacity:0; pointer-events:none; transition:.25s; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,.25); max-width:90vw;
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--danger)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="mark"><span class="dot"></span>現調報告書 作成ツール<span class="sub">アイベリー / アイデアル</span></div>
+  <div class="seg" id="seg">
+    <button data-t="general" class="on">現調報告書</button>
+    <button data-t="camera">防犯カメラ</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <p class="lead">フォームに入力すると、元テンプレートと同じ体裁の <b>Excel(.xlsx)</b> を書き出します。会社名・担当者・機器仕様などは元と同じ<b>プルダウン</b>付き（一覧外も自由入力可）。写真は撮影/選択するだけで自動縮小して貼り付けます。</p>
+  <div class="databar">
+    <button id="backupBtn" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>バックアップ保存</button>
+    <button id="importBtn" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>読み込み</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <span class="dnote">入力内容と写真を1ファイルにまとめて保存／復元（両報告書ぶん）</span>
+  </div>
+  <details class="help" open>
+    <summary><span class="ht"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>使い方</span><span class="hc">タップで開閉</span></summary>
+    <div class="help-body">
+      <ol>
+        <li><b>報告書の種類</b>：画面上部のタブで「現調報告書 / 防犯カメラ」を切り替えます。それぞれ別々に入力でき、両方まとめて保存されます。</li>
+        <li><b>入力</b>：各項目を記入します。「<span class="req">＊</span>」は必須の目安。プルダウン付きの欄は、右の▼で一覧から選んでも、そのまま直接入力してもOK（一覧に無い担当者・項目も入れられます）。</li>
+        <li><b>写真</b>：写真枠をタップして撮影または選択すると、自動で縮小して貼り付きます。防犯カメラは「＋カメラを追加」で最大7台まで。各写真に予備写真も付けられます。</li>
+        <li><b>Excel出力</b>：下部の「<b>Excelを出力</b>」で、元テンプレートと同じ体裁の .xlsx をダウンロード。現調基準期日（受付日＋3日）は自動計算されます。ファイル名は受付NO・物件名から付きます。</li>
+        <li><b>保存と再開</b>：「<b>バックアップ保存</b>」で写真ごと1ファイル（.json）に保存、「<b>読み込み</b>」で復元します。途中保存して別端末で続ける・後日再編集する・控えを残す、といった使い方に。</li>
+        <li><b>クリア</b>：表示中の報告書の入力を消去します（もう一方の報告書は残ります）。</li>
+      </ol>
+      <p class="help-note">※ ブラウザを閉じても自動保存はされません。続きをする場合は必ず「バックアップ保存」をしてください。<br>※ 写真はExcelのセル枠に合わせて配置するため、元の縦横比と多少変わる場合があります（出力後にExcel上で微調整できます）。</p>
+    </div>
+  </details>
+  <div id="form"></div>
+</div>
+
+<div class="footer">
+  <div class="info" id="finfo"></div>
+  <button class="btn ghost" id="resetBtn">クリア</button>
+  <button class="btn primary" id="exportBtn">Excelを出力</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================ マスタ（選択肢） ============================ */
+/* 両報告書で共通する項目は「多い方＝網羅的なリスト」に統一（漏れ防止のため和集合） */
+const SHARED = {
+  company:['株式会社アイベリー','株式会社アイデアル'],
+  business:['くらしサポート事業','公営住宅事業','ＯＳＳ特約店事業','リノベ事業','総合設備事業'],
+  customer:['新規顧客','既存顧客'],
+  sales:['三島','古西','五味','戎野','片田','野本','石井','村中','末永','川畑','山本','西平','大西','大川','菊森','木村','柳川'],
+  survey:['山本','西平','大西','金子','月岡','前川','十河','大川','菊森','木村','谷内','水野','森兼','道添','山田','佐藤','片岡','深澤','堀井','花田','宮内','川畑','パートナー','末永','三島','戎野','五味','野本','片田','石井','古西'],
+};
+const M = {
+  general:{ ...SHARED },
+  camera:{
+    ...SHARED,
+    work:['新設工事','リプレース工事（自社既施工）','リプレース工事（他社既施工）','改善工事（撤去・増設・移設）'],
+    power:['同軸ケーブル＋電源ケーブル','LANケーブル＋電源ケーブル','PoC給電（同軸ケーブル電力供給）','PoE給電（LANケーブル電力供給）'],
+    nextpower:['既設使用','仕様変更'],
+    zoom:['ズームあり','ズームなし'],
+    camtype:['バレット型','ドーム型','PTZ型（遠隔操作機能）'],
+    mount:['ジャンクションボックス','天井吊り下げブラケット','壁面取付けブラケット','ポールマウントブラケット','コーナーマウントブラケット','天井埋め込みブラケット'],
+    service:['防犯カメラサービス','除草剪定サービス','LED省エネサービス','排水管清掃サービス'],
+  }
+};
+
+/* ============================ 状態 ============================ */
+let type = 'general';
+const state = { general:blankGeneral(), camera:blankCamera() };
+
+function blankGeneral(){
+  return {
+    company:'株式会社アイベリー', business:'公営住宅事業', uketsukeNo:'', uketsukeDate:'',
+    sales:'', customer:'', bukken:'', address:'', kyaku:'', work:'',
+    hearing:'', hosoku:'', genko:'', kako:'', survey:'', surveyDate:'', doukou:'', renraku:'',
+    zenkei:[null,null],           // 全景写真 2枚
+    photos:Array.from({length:10},()=>({place:'',img:null})),
+  };
+}
+function blankCamera(){
+  return {
+    company:'株式会社アイベリー', business:'公営住宅事業', uketsukeNo:'', uketsukeDate:'',
+    sales:'', kyaku:'', work:'', hearing:'', hosoku:'', genko:'', kako:'',
+    kisetuYM:'', leaseEnd:'', recModel:'', camModel:'', power:'', nextpower:'',
+    survey:'', surveyDate:'', freeName:'', renraku:'',
+    recorder:{date:'',place:'',setup:'',memo:'',img:null,spare:null},
+    others:Array.from({length:4},(_,i)=>({date:'',place:'',memo:'',img:null,spare:null})),
+    cams:[ newCam(1) ],
+  };
+}
+function newCam(idx){
+  return {no:'カ-0100'+idx, date:'',place:'',spec:'',zoom:'',camtype:'',mount:'',
+          dist:'',cable:'',memo:'',img:null,spare:null};
+}
+
+/* ============================ UI ヘルパー ============================ */
+const el=(t,a={},...kids)=>{const n=document.createElement(t);for(const k in a){if(k==='class')n.className=a[k];else if(k==='html')n.innerHTML=a[k];else if(k.startsWith('on'))n.addEventListener(k.slice(2),a[k]);else n.setAttribute(k,a[k]);}kids.flat().forEach(c=>n.append(c&&c.nodeType?c:document.createTextNode(c??'')));return n;};
+
+function field(labelText,node,{req=false,full=false}={}){
+  const lab=el('label',{class:'f'+(full?' full':'')});
+  const sp=el('span',{},labelText); if(req)sp.append(el('span',{class:'req'},'＊'));
+  lab.append(sp,node); return lab;
+}
+function inputText(get,set,ph=''){const i=el('input',{type:'text',placeholder:ph});i.value=get()||'';i.addEventListener('input',()=>set(i.value));return i;}
+function inputDate(get,set){const i=el('input',{type:'date'});i.value=get()||'';i.addEventListener('input',()=>set(i.value));return i;}
+function inputNum(get,set,ph=''){const i=el('input',{type:'number',inputmode:'decimal',placeholder:ph,step:'0.1'});i.value=get()??'';i.addEventListener('input',()=>set(i.value));return i;}
+function textarea(get,set,ph=''){const t=el('textarea',{placeholder:ph});t.value=get()||'';t.addEventListener('input',()=>set(t.value));return t;}
+let _dlSeq=0;
+function selectBox(opts,get,set,{allowEmpty=true,placeholder='選択 または 自由入力'}={}){
+  // 一覧から選択でき、かつ一覧に無い値も自由に入力できるコンボ入力
+  const id='dl'+(++_dlSeq);
+  const wrap=el('div',{class:'combo'});
+  const inp=el('input',{type:'text',list:id,placeholder,autocomplete:'off',spellcheck:'false'});
+  const dl=el('datalist',{id});
+  opts.forEach(o=>dl.append(el('option',{value:o})));
+  inp.value=get()||'';
+  const upd=()=>set(inp.value);
+  inp.addEventListener('input',upd); inp.addEventListener('change',upd);
+  wrap.append(inp,dl); return wrap;
+}
+function photoField(get,set,label='写真を選択 / 撮影'){
+  const box=el('div',{class:'photo'});
+  const drop=el('div',{class:'drop'});
+  const fileInput=el('input',{type:'file',accept:'image/*',style:'display:none'});
+  const cap=el('div',{class:'cap'});
+  function paint(){
+    drop.innerHTML='';
+    const v=get();
+    if(v&&v.dataUrl){drop.append(el('img',{src:v.dataUrl}));
+      cap.innerHTML=''; cap.append(el('span',{class:'name'},v.name||'画像'),
+        el('button',{onclick:e=>{e.stopPropagation();set(null);paint();}},'削除'));
+    }else{
+      drop.append(el('div',{class:'ph',html:`<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M3 17l5-4 4 3 3-2 6 5"/></svg>${label}`}));
+      cap.innerHTML='';
+    }
+  }
+  drop.addEventListener('click',()=>fileInput.click());
+  fileInput.addEventListener('change',async()=>{
+    const f=fileInput.files[0]; if(!f)return;
+    const dataUrl=await resizeImage(f); set({dataUrl,name:f.name}); paint(); fileInput.value='';
+  });
+  box.append(drop,fileInput,cap); paint(); return box;
+}
+
+/* 画像を自動縮小（長辺1280px / JPEG 0.72）—「縮専」相当 */
+function resizeImage(file){
+  return new Promise(res=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const max=1280; let{width:w,height:h}=img;
+      if(Math.max(w,h)>max){const r=max/Math.max(w,h);w=Math.round(w*r);h=Math.round(h*r);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg',0.72));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);res(null);};
+    img.src=url;
+  });
+}
+
+/* ============================ フォーム描画 ============================ */
+const formRoot=document.getElementById('form');
+function render(){
+  formRoot.innerHTML='';
+  if(type==='general')renderGeneral(); else renderCamera();
+  updateInfo();
+}
+function card(numLabel,title,hint){
+  const c=el('section',{class:'card'});
+  const h=el('h2',{}, numLabel?el('span',{class:'num'},numLabel):'', title);
+  if(hint)h.append(el('span',{class:'hint'},hint));
+  const body=el('div',{class:'body'}); c.append(h,body); formRoot.append(c); return body;
+}
+
+function renderGeneral(){
+  const d=state.general, m=M.general;
+  // ① 受付情報
+  let b=card('1','受付情報','営業担当が記入');
+  const g=el('div',{class:'grid'});
+  g.append(
+    field('会社名',selectBox(m.company,()=>d.company,v=>{d.company=v;},{allowEmpty:false}),{req:true}),
+    field('事業種別',selectBox(m.business,()=>d.business,v=>{d.business=v;}),{req:true}),
+    field('受付NO',inputText(()=>d.uketsukeNo,v=>{d.uketsukeNo=v;updateInfo();},'00000xx'),{req:true}),
+    field('受付日',inputDate(()=>d.uketsukeDate,v=>{d.uketsukeDate=v;}),{}),
+    field('営業担当者',selectBox(m.sales,()=>d.sales,v=>{d.sales=v;})),
+    field('お客様種別',selectBox(m.customer,()=>d.customer,v=>{d.customer=v;})),
+    field('物件名',inputText(()=>d.bukken,v=>{d.bukken=v;updateInfo();}),{req:true,full:false}),
+    field('物件住所',inputText(()=>d.address,v=>{d.address=v;})),
+    field('お客様担当者名',inputText(()=>d.kyaku,v=>{d.kyaku=v;})),
+    field('工事内容',inputText(()=>d.work,v=>{d.work=v;})),
+    field('ヒアリング内容',textarea(()=>d.hearing,v=>{d.hearing=v;},'お客様からの要望事項、現在の状況やお困り事項など'),{full:true}),
+    field('現状補足事項',textarea(()=>d.hosoku,v=>{d.hosoku=v;}),{full:true}),
+    field('現行施工会社',inputText(()=>d.genko,v=>{d.genko=v;})),
+    field('過去自社施工内容',inputText(()=>d.kako,v=>{d.kako=v;})),
+  );
+  b.append(g);
+  // ② 現場調査情報
+  b=card('2','現場調査情報','現調担当が記入');
+  const g2=el('div',{class:'grid'});
+  g2.append(
+    field('現調担当者',selectBox(m.survey,()=>d.survey,v=>{d.survey=v;})),
+    field('現調日',inputDate(()=>d.surveyDate,v=>{d.surveyDate=v;})),
+    field('同行協力会社',inputText(()=>d.doukou,v=>{d.doukou=v;})),
+    field('連絡事項',textarea(()=>d.renraku,v=>{d.renraku=v;},'伝達事項、工事着手時の注意事項や安全対策事項など'),{full:true}),
+  );
+  b.append(el('p',{class:'smallnote'},'※ 現調基準期日は受付日＋3日として出力Excelで自動計算されます。'),g2);
+  // 現場写真
+  b=card('','現場写真','全景＋写真1〜10');
+  const tp=el('div',{class:'twophoto'});
+  tp.append(
+    el('div',{},field('全景-1',photoField(()=>d.zenkei[0],v=>d.zenkei[0]=v),{full:true})),
+    el('div',{},field('全景-2',photoField(()=>d.zenkei[1],v=>d.zenkei[1]=v),{full:true})),
+  );
+  b.append(tp);
+  d.photos.forEach((p,i)=>{
+    const blk=el('div',{class:'block'});
+    blk.append(el('div',{class:'bh'},el('span',{class:'tag'},'No.'+(i+1)),'写真 '+(i+1)));
+    const bb=el('div',{class:'bb'});
+    bb.append(field('撮影場所',inputText(()=>p.place,v=>p.place=v),{full:true}),
+              el('div',{style:'margin-top:10px'},photoField(()=>p.img,v=>p.img=v)));
+    blk.append(bb); b.append(blk);
+  });
+}
+
+function renderCamera(){
+  const d=state.camera, m=M.camera;
+  // 営業担当記入欄
+  let b=card('1','受付情報','営業担当記入欄');
+  const g=el('div',{class:'grid'});
+  g.append(
+    field('会社名',selectBox(m.company,()=>d.company,v=>{d.company=v;},{allowEmpty:false}),{req:true}),
+    field('事業種別',selectBox(m.business,()=>d.business,v=>{d.business=v;}),{req:true}),
+    field('受付NO',inputText(()=>d.uketsukeNo,v=>{d.uketsukeNo=v;updateInfo();},'00000xx'),{req:true}),
+    field('受付日',inputDate(()=>d.uketsukeDate,v=>{d.uketsukeDate=v;})),
+    field('営業担当者',selectBox(m.sales,()=>d.sales,v=>{d.sales=v;})),
+    field('顧客担当者名',inputText(()=>d.kyaku,v=>{d.kyaku=v;})),
+    field('工事内容',selectBox(m.work,()=>d.work,v=>{d.work=v;}),{full:true}),
+    field('ヒアリング内容',textarea(()=>d.hearing,v=>{d.hearing=v;},'お客様からの要望事項、現在の状況やお困り事項など'),{full:true}),
+    field('現状補足事項',textarea(()=>d.hosoku,v=>{d.hosoku=v;}),{full:true}),
+    field('現行施工会社',inputText(()=>d.genko,v=>{d.genko=v;})),
+    field('過去自社施工内容',selectBox(m.service,()=>d.kako,v=>{d.kako=v;})),
+  );
+  b.append(g);
+  // 機器仕様
+  b=card('','機器仕様','営業又は現調担当が記入');
+  const g2=el('div',{class:'grid'});
+  g2.append(
+    field('既設年月',inputText(()=>d.kisetuYM,v=>{d.kisetuYM=v;},'例：2018年4月'),{}),
+    field('リース満了日',inputText(()=>d.leaseEnd,v=>{d.leaseEnd=v;}),{}),
+    field('既設機器（レコーダー）メーカー・型番',inputText(()=>d.recModel,v=>{d.recModel=v;}),{full:true}),
+    field('既設機器（カメラ）メーカー・型番・台数',inputText(()=>d.camModel,v=>{d.camModel=v;}),{full:true}),
+    field('既設給電方法',selectBox(m.power,()=>d.power,v=>{d.power=v;})),
+    field('次期給電方法',selectBox(m.nextpower,()=>d.nextpower,v=>{d.nextpower=v;})),
+  );
+  b.append(g2);
+  // 現調担当記入欄
+  b=card('2','現場調査情報','現調担当記入欄');
+  const g3=el('div',{class:'grid'});
+  g3.append(
+    field('現調担当者',selectBox(m.survey,()=>d.survey,v=>{d.survey=v;})),
+    field('現調日',inputDate(()=>d.surveyDate,v=>{d.surveyDate=v;})),
+    field('複数名フリー記入',inputText(()=>d.freeName,v=>{d.freeName=v;}),{full:true}),
+    field('連絡事項',textarea(()=>d.renraku,v=>{d.renraku=v;},'伝達事項、工事着手時の注意事項や安全対策事項など'),{full:true}),
+  );
+  b.append(el('p',{class:'smallnote'},'※ 現調基準期日は受付日＋3日として出力Excelで自動計算されます。'),g3);
+  // 現場写真：レコーダー設置＋その他
+  b=card('','現場写真','レコーダー設置・その他');
+  // レコーダー
+  const rb=el('div',{class:'block'});
+  rb.append(el('div',{class:'bh'},el('span',{class:'tag'},'レ-1'),'レコーダー設置'));
+  const rbb=el('div',{class:'bb'});
+  const rg=el('div',{class:'grid'});
+  rg.append(
+    field('撮影日',inputDate(()=>d.recorder.date,v=>d.recorder.date=v)),
+    field('撮影場所',inputText(()=>d.recorder.place,v=>d.recorder.place=v)),
+    field('設置内容',inputText(()=>d.recorder.setup,v=>d.recorder.setup=v),{full:true}),
+    field('備考（配線方法など）',textarea(()=>d.recorder.memo,v=>d.recorder.memo=v),{full:true}),
+  );
+  rbb.append(rg);
+  const rtp=el('div',{class:'twophoto',style:'margin-top:10px'});
+  rtp.append(el('div',{},field('設置場所写真',photoField(()=>d.recorder.img,v=>d.recorder.img=v),{full:true})),
+             el('div',{},field('予備写真',photoField(()=>d.recorder.spare,v=>d.recorder.spare=v),{full:true})));
+  rbb.append(rtp); rb.append(rbb); b.append(rb);
+  // その他
+  d.others.forEach((o,i)=>{
+    const ob=el('div',{class:'block'});
+    ob.append(el('div',{class:'bh'},el('span',{class:'tag'},'他-'+(i+1)),'その他（点検口・防火壁・防火扉など）'));
+    const obb=el('div',{class:'bb'});
+    const og=el('div',{class:'grid'});
+    og.append(field('撮影日',inputDate(()=>o.date,v=>o.date=v)),
+              field('撮影場所',inputText(()=>o.place,v=>o.place=v)),
+              field('備考',textarea(()=>o.memo,v=>o.memo=v),{full:true}));
+    obb.append(og);
+    const otp=el('div',{class:'twophoto',style:'margin-top:10px'});
+    otp.append(el('div',{},field('写真',photoField(()=>o.img,v=>o.img=v),{full:true})),
+               el('div',{},field('予備写真',photoField(()=>o.spare,v=>o.spare=v),{full:true})));
+    obb.append(otp); ob.append(obb); b.append(ob);
+  });
+  // カメラ設置（最大7台）
+  b=card('3','現場写真（カメラ）','カメラ設置 最大7台');
+  b.append(el('p',{class:'smallnote'},'写真番号は「カ-フロア(00)＋順番(000)」。例：1階1台目→カ-01001'));
+  const list=el('div',{id:'camlist'});
+  d.cams.forEach((cam,i)=>list.append(camBlock(cam,i)));
+  b.append(list);
+  const add=el('button',{class:'addbtn',onclick:()=>{
+    if(d.cams.length>=7)return;
+    d.cams.push(newCam(d.cams.length+1)); render();
+    window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+  }},'＋ カメラを追加（'+d.cams.length+'/7）');
+  if(d.cams.length>=7)add.disabled=true;
+  b.append(add);
+
+  function camBlock(cam,i){
+    const blk=el('div',{class:'block'});
+    const bh=el('div',{class:'bh'},el('span',{class:'tag'},'カ'),'カメラ '+(i+1));
+    if(d.cams.length>1)bh.append(el('button',{class:'del',onclick:()=>{d.cams.splice(i,1);render();}},'削除'));
+    blk.append(bh);
+    const bb=el('div',{class:'bb'});
+    const cg=el('div',{class:'grid'});
+    cg.append(
+      field('写真番号',inputText(()=>cam.no,v=>cam.no=v,'カ-01001')),
+      field('撮影日',inputDate(()=>cam.date,v=>cam.date=v)),
+      field('撮影場所',inputText(()=>cam.place,v=>cam.place=v),{full:true}),
+      field('設置仕様',inputText(()=>cam.spec,v=>cam.spec=v),{full:true}),
+      field('ズーム機能',selectBox(m.zoom,()=>cam.zoom,v=>cam.zoom=v)),
+      field('カメラタイプ',selectBox(m.camtype,()=>cam.camtype,v=>cam.camtype=v)),
+      field('取付タイプ',selectBox(m.mount,()=>cam.mount,v=>cam.mount=v),{full:true}),
+      field('床面距離 m（高さ）',inputNum(()=>cam.dist,v=>cam.dist=v)),
+      field('配線距離 m',inputNum(()=>cam.cable,v=>cam.cable=v)),
+      field('備考（配線方法など）',textarea(()=>cam.memo,v=>cam.memo=v),{full:true}),
+    );
+    bb.append(cg);
+    const ctp=el('div',{class:'twophoto',style:'margin-top:10px'});
+    ctp.append(el('div',{},field('設置場所写真',photoField(()=>cam.img,v=>cam.img=v),{full:true})),
+               el('div',{},field('予備写真',photoField(()=>cam.spare,v=>cam.spare=v),{full:true})));
+    bb.append(ctp); blk.append(bb); return blk;
+  }
+}
+
+/* ============================ Excel 出力 ============================ */
+const FONT={name:'Meiryo',size:10};
+const TITLEFONT={name:'Meiryo',size:13,bold:true};
+const thin={style:'thin',color:{argb:'FF9AA7B2'}};
+const ALLBORDER={top:thin,left:thin,bottom:thin,right:thin};
+const LABELFILL={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEF3F1'}};
+const HEADFILL={type:'pattern',pattern:'solid',fgColor:{argb:'FF274B3E'}};
+const SECFILL ={type:'pattern',pattern:'solid',fgColor:{argb:'FFDCE6E1'}};
+
+function pageSetup(ws,area){
+  ws.pageSetup={orientation:'portrait',fitToPage:true,fitToWidth:1,fitToHeight:0,
+    horizontalCentered:true,margins:{left:0.4,right:0.4,top:0.5,bottom:0.5,header:0.2,footer:0.2}};
+  if(area)ws.pageSetup.printArea=area;
+}
+function setW(ws,obj){for(const c in obj)ws.getColumn(c).width=obj[c];}
+function setH(ws,obj){for(const r in obj)ws.getRow(+r).height=obj[r];}
+function C(ws,addr,val,opt={}){
+  const cell=ws.getCell(addr);
+  if(val!==undefined&&val!==null&&val!=='')cell.value=val;
+  cell.font=opt.font||FONT;
+  cell.alignment=Object.assign({vertical:'middle',wrapText:true},opt.align||{});
+  if(opt.fill)cell.fill=opt.fill;
+  if(opt.border!==false)cell.border=ALLBORDER;
+  if(opt.numFmt)cell.numFmt=opt.numFmt;
+  return cell;
+}
+function label(ws,addr,val){return C(ws,addr,val,{fill:LABELFILL,font:{name:'Meiryo',size:10,bold:true},align:{horizontal:'left'}});}
+function section(ws,addr,val){return C(ws,addr,val,{fill:SECFILL,font:{name:'Meiryo',size:10,bold:true}});}
+function dval(cell,sheet,col,n){cell.dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:["'選択シート'!$"+col+"$3:$"+col+"$"+(2+n)]};}
+function borderRange(ws,r1,c1,r2,c2){for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){const cell=ws.getCell(r,c);if(!cell.border)cell.border=ALLBORDER;if(!cell.font)cell.font=FONT;cell.alignment=Object.assign({vertical:'middle',wrapText:true},cell.alignment);}}
+function toDate(s){if(!s)return null;const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+
+function placeImg(wb,ws,dataUrl,range){
+  if(!dataUrl)return;
+  const id=wb.addImage({base64:dataUrl,extension:'jpeg'});
+  ws.addImage(id,range);
+}
+
+function buildSelectSheet(wb,masters,cols){
+  const ws=wb.addWorksheet('選択シート',{state:'visible'});
+  ws.getCell('A1').value='※ プルダウン用マスタ（編集可）';
+  ws.getCell('A1').font={name:'Meiryo',size:9,color:{argb:'FF8A8A8A'}};
+  cols.forEach(({col,head,arr})=>{
+    ws.getCell(col+'2').value=head;
+    ws.getCell(col+'2').font={name:'Meiryo',size:9,bold:true};
+    arr.forEach((v,i)=>{ws.getCell(col+(3+i)).value=v;ws.getCell(col+(3+i)).font=FONT;});
+    ws.getColumn(col).width=Math.max(12,...arr.map(v=>v.length))+2;
+  });
+  return ws;
+}
+
+async function exportGeneral(){
+  const d=state.general,m=M.general;
+  const wb=new ExcelJS.Workbook();
+  // ① 調査報告
+  const ws=wb.addWorksheet('①調査報告');
+  setW(ws,{A:4.7,B:15,C:30.9,D:15.6,E:33.6,F:2.1,G:8.8});
+  setH(ws,{1:28.2,2:28.2,3:27.6,4:27,5:27,6:27,7:27,8:27,10:19.9,11:120,12:40,13:25.8,14:22.2,15:23.4,16:23.4,18:19.9,19:60,20:8,21:8});
+  ws.mergeCells('B1:G1'); C(ws,'B1','現場調査報告書（兼　お客様確認書・工事作業指示書）',{font:TITLEFONT,align:{horizontal:'center'},border:false});
+  label(ws,'B2','会社名'); ws.mergeCells('C2:D2'); C(ws,'C2','',{});  dval(C(ws,'E2',d.company,{}),ws,'A',m.company.length);
+  section(ws,'B3','①受付情報'); C(ws,'C3','',{}); label(ws,'D3','事業種別'); dval(C(ws,'E3',d.business,{}),ws,'B',m.business.length);
+  label(ws,'B4','受付NO'); C(ws,'C4',d.uketsukeNo,{}); label(ws,'D4','受付日'); C(ws,'E4',toDate(d.uketsukeDate),{numFmt:'yyyy/m/d'});
+  label(ws,'B5','営業担当者'); dval(C(ws,'C5',d.sales,{}),ws,'F',m.sales.length); label(ws,'D5','お客様種別'); dval(C(ws,'E5',d.customer,{}),ws,'C',m.customer.length);
+  label(ws,'B6','物件名'); C(ws,'C6',d.bukken,{}); label(ws,'D6','物件住所'); C(ws,'E6',d.address,{});
+  label(ws,'B7','お客様担当者名'); C(ws,'C7',d.kyaku,{}); C(ws,'D7','',{}); C(ws,'E7','',{});
+  label(ws,'B8','工事内容'); ws.mergeCells('C8:E8'); C(ws,'C8',d.work,{align:{horizontal:'left'}});
+  label(ws,'B10','ヒアリング内容'); ws.mergeCells('C10:E10'); C(ws,'C10','＜営業担当→現調担当＞お客様からの要望事項、現在の状況やお困り事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B11:E11'); C(ws,'B11',d.hearing,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B12','＜現状補足事項＞'); ws.mergeCells('C12:E12'); C(ws,'C12',d.hosoku,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B13','現行施工会社'); C(ws,'C13',d.genko,{}); label(ws,'D13','過去自社施工内容'); C(ws,'E13',d.kako,{});
+  section(ws,'B14','②現場調査情報'); C(ws,'C14','',{}); label(ws,'D14','現調基準期日'); C(ws,'E14',{formula:'IF(E4="","",E4+3)'},{numFmt:'yyyy/m/d'});
+  label(ws,'B15','現調担当者'); dval(C(ws,'C15',d.survey,{}),ws,'G',m.survey.length); label(ws,'D15','現調日'); C(ws,'E15',toDate(d.surveyDate),{numFmt:'yyyy/m/d'});
+  C(ws,'B16','',{}); C(ws,'C16','',{}); label(ws,'D16','同行協力会社'); C(ws,'E16',d.doukou,{});
+  label(ws,'B18','連絡事項'); ws.mergeCells('C18:E18'); C(ws,'C18','＜現調担当→営業担当・施工担当＞伝達事項、工事着手時の注意事項や安全対策事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B19:E21'); C(ws,'B19',d.renraku,{align:{horizontal:'left',vertical:'top'}});
+  pageSetup(ws,'B1:G21');
+  // ② 現場写真
+  const p=wb.addWorksheet('②現場写真');
+  setW(p,{A:4,B:17.4,C:34.9,D:17.7,E:36.7,F:8.8});
+  const rh={1:30,2:24.6,3:24.6,4:24.6}; for(let i=0;i<6;i++){const base=5+i*4;rh[base]=19.2;rh[base+1]=19.2;rh[base+2]=160;rh[base+3]=8;} setH(p,rh);
+  p.mergeCells('B1:E1'); C(p,'B1','現場写真',{font:TITLEFONT,align:{horizontal:'center'},border:false});
+  label(p,'B2','受付NO・物件名'); p.mergeCells('D2:E2'); C(p,'D2',[d.uketsukeNo,d.bukken].filter(Boolean).join(' '),{align:{horizontal:'left'}}); C(p,'C2','',{});
+  label(p,'B3','物件住所'); p.mergeCells('D3:E3'); C(p,'D3',d.address,{align:{horizontal:'left'}}); C(p,'C3','',{});
+  label(p,'D4','現場調査日'); C(p,'E4',toDate(d.surveyDate),{numFmt:'yyyy/m/d'}); C(p,'B4','',{border:false}); C(p,'C4','',{border:false});
+  // 全景 2枚（行5-8相当を流用：写真番号/撮影場所/写真）
+  // 全景は先頭ブロックの拡張として row5..8 を全景に
+  label(p,'B5','写真番号'); C(p,'C5','全-1',{}); label(p,'D5','写真番号'); C(p,'E5','全-2',{});
+  label(p,'B6','撮影場所'); C(p,'C6','全景',{}); label(p,'D6','撮影場所'); C(p,'E6','全景',{});
+  p.getRow(7).height=160;
+  p.mergeCells('B7:C7'); C(p,'B7','',{}); p.mergeCells('D7:E7'); C(p,'D7','',{});
+  placeImg(wb,p,d.zenkei[0]?.dataUrl,'B7:C7'); placeImg(wb,p,d.zenkei[1]?.dataUrl,'D7:E7');
+  p.getRow(8).height=8;
+  // 写真1-10（2列×5段）：row9開始
+  let r=9;
+  for(let i=0;i<10;i+=2){
+    const left=d.photos[i], right=d.photos[i+1];
+    label(p,'B'+r,'写真番号'); C(p,'C'+r,String(i+1),{}); label(p,'D'+r,'写真番号'); C(p,'E'+r,String(i+2),{});
+    label(p,'B'+(r+1),'撮影場所'); C(p,'C'+(r+1),left?.place,{align:{horizontal:'left'}}); label(p,'D'+(r+1),'撮影場所'); C(p,'E'+(r+1),right?.place,{align:{horizontal:'left'}});
+    p.getRow(r+2).height=160;
+    p.mergeCells('B'+(r+2)+':C'+(r+2)); C(p,'B'+(r+2),'',{}); p.mergeCells('D'+(r+2)+':E'+(r+2)); C(p,'D'+(r+2),'',{});
+    placeImg(wb,p,left?.img?.dataUrl,'B'+(r+2)+':C'+(r+2));
+    placeImg(wb,p,right?.img?.dataUrl,'D'+(r+2)+':E'+(r+2));
+    p.getRow(r+3).height=8;
+    r+=4;
+  }
+  // 図面シート
+  const z=wb.addWorksheet('図面'); z.getCell('B2').value='※別紙添付可'; z.getCell('B2').font=FONT;
+  pageSetup(p,'B1:E'+(r-1));
+  buildSelectSheet(wb,m,[
+    {col:'A',head:'会社名',arr:m.company},{col:'B',head:'事業種別',arr:m.business},
+    {col:'C',head:'顧客種別',arr:m.customer},{col:'F',head:'営業担当者',arr:m.sales},
+    {col:'G',head:'現調担当者',arr:m.survey},
+  ]);
+  return wb;
+}
+
+async function exportCamera(){
+  const d=state.camera,m=M.camera;
+  const wb=new ExcelJS.Workbook();
+  // ① 調査報告
+  const ws=wb.addWorksheet('①調査報告');
+  setW(ws,{A:4.7,B:15,C:30.9,D:15.6,E:33.6,F:4.1,G:8.8});
+  setH(ws,{1:28.2,2:21.6,3:28.2,4:27,5:27,6:27,7:21.6,8:80,9:20.4,10:25.8,12:20.4,13:20,14:20,15:20,16:20,17:27,19:21.6,20:21,21:23.4,22:23.4,23:20,24:55,25:8,26:8});
+  ws.mergeCells('B1:G1'); C(ws,'B1','防犯カメラ　現場調査報告書（兼　お客様確認書・工事作業指示書）',{font:TITLEFONT,align:{horizontal:'center'},border:false});
+  section(ws,'B2','◆営業担当記入欄'); C(ws,'C2','',{}); label(ws,'D2','会社名'); dval(C(ws,'E2',d.company,{}),ws,'A',m.company.length);
+  section(ws,'B3','①受付情報'); C(ws,'C3','',{}); label(ws,'D3','事業種別'); dval(C(ws,'E3',d.business,{}),ws,'B',m.business.length);
+  label(ws,'B4','受付NO'); C(ws,'C4',d.uketsukeNo,{}); label(ws,'D4','受付日'); C(ws,'E4',toDate(d.uketsukeDate),{numFmt:'yyyy/m/d'});
+  label(ws,'B5','営業担当者'); dval(C(ws,'C5',d.sales,{}),ws,'L',m.sales.length); label(ws,'D5','顧客担当者名'); C(ws,'E5',d.kyaku,{});
+  label(ws,'B6','工事内容'); ws.mergeCells('C6:E6'); dval(C(ws,'C6',d.work,{align:{horizontal:'left'}}),ws,'D',m.work.length);
+  label(ws,'B7','ヒアリング内容'); ws.mergeCells('C7:E7'); C(ws,'C7','＜営業担当→現調担当＞お客様からの要望事項、現在の状況やお困り事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B8:E8'); C(ws,'B8',d.hearing,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B9','＜現状補足事項＞'); C(ws,'C9',d.hosoku,{align:{horizontal:'left'}}); C(ws,'D9','',{}); C(ws,'E9','',{});
+  label(ws,'B10','現行施工会社'); C(ws,'C10',d.genko,{}); label(ws,'D10','過去自社施工内容'); dval(C(ws,'E10',d.kako,{}),ws,'N',m.service.length);
+  section(ws,'B12','◆機器仕様記入欄'); C(ws,'C12','',{}); C(ws,'D12','',{}); C(ws,'E12','',{});
+  label(ws,'B13','既設年月'); C(ws,'C13',d.kisetuYM,{}); label(ws,'D13','リース満了日'); C(ws,'E13',d.leaseEnd,{});
+  label(ws,'B14','既設機器'); C(ws,'C14','レコーダー）メーカー・型番',{align:{horizontal:'left'}}); ws.mergeCells('D14:E14'); C(ws,'D14',d.recModel,{align:{horizontal:'left'}});
+  C(ws,'B15','',{}); C(ws,'C15','カメラ）メーカー・型番・台数',{align:{horizontal:'left'}}); ws.mergeCells('D15:E15'); C(ws,'D15',d.camModel,{align:{horizontal:'left'}});
+  label(ws,'B17','既設給電方法'); dval(C(ws,'C17',d.power,{}),ws,'E',m.power.length); label(ws,'D17','次期給電方法'); dval(C(ws,'E17',d.nextpower,{}),ws,'F',m.nextpower.length);
+  section(ws,'B19','◆現調担当記入欄'); C(ws,'C19','',{}); C(ws,'D19','',{}); C(ws,'E19','',{});
+  section(ws,'B20','②現場調査情報'); C(ws,'C20','',{}); label(ws,'D20','現調基準期日'); C(ws,'E20',{formula:'IF(E4="","",E4+3)'},{numFmt:'yyyy/m/d'});
+  label(ws,'B21','現調担当者'); dval(C(ws,'C21',d.survey,{}),ws,'M',m.survey.length); label(ws,'D21','現調日'); C(ws,'E21',toDate(d.surveyDate),{numFmt:'yyyy/m/d'});
+  label(ws,'B22','複数名フリー記入'); C(ws,'C22',d.freeName,{align:{horizontal:'left'}}); C(ws,'D22','',{}); C(ws,'E22','',{});
+  label(ws,'B23','連絡事項'); ws.mergeCells('C23:E23'); C(ws,'C23','＜現調担当→営業担当・施工担当＞伝達事項、工事着手時の注意事項や安全対策事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B24:E26'); C(ws,'B24',d.renraku,{align:{horizontal:'left',vertical:'top'}});
+  pageSetup(ws,'B1:G26');
+
+  // ② 現場写真（レコーダー・その他）
+  const p=wb.addWorksheet('②現場写真');
+  setW(p,{A:4,B:17.4,C:33.6,D:50.9,E:49.2,F:8.8});
+  p.mergeCells('B1:E1'); C(p,'B1','現場写真（レコーダー・その他）',{font:TITLEFONT,align:{horizontal:'center'},border:false});
+  p.getRow(1).height=30;
+  label(p,'B2','受付NO・物件名'); p.mergeCells('D2:E2'); C(p,'D2',[d.uketsukeNo,'',].filter(Boolean).join(' '),{align:{horizontal:'left'}}); C(p,'C2','',{});
+  label(p,'B3','物件住所'); p.mergeCells('D3:E3'); C(p,'D3','',{align:{horizontal:'left'}}); C(p,'C3','',{});
+  // レコーダー設置
+  section(p,'B4','◆レコーダー設置'); C(p,'C4','',{}); C(p,'D4','＜設置場所写真＞',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}}); C(p,'E4','予備写真',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}});
+  label(p,'B5','写真番号'); C(p,'C5','レ-1',{});
+  label(p,'B6','撮影日'); C(p,'C6',toDate(d.recorder.date),{numFmt:'yyyy/m/d'});
+  label(p,'B7','撮影場所'); C(p,'C7',d.recorder.place,{align:{horizontal:'left'}});
+  label(p,'B8','設置内容'); C(p,'C8',d.recorder.setup,{align:{horizontal:'left'}});
+  label(p,'B9','〈備考〉※配線方法など'); C(p,'C9',d.recorder.memo,{align:{horizontal:'left',vertical:'top'}});
+  for(let rr=5;rr<=9;rr++)p.getRow(rr).height=24;
+  p.mergeCells('D5:D9'); p.mergeCells('E5:E9');
+  C(p,'D5','',{}); C(p,'E5','',{});
+  placeImg(wb,p,d.recorder.img?.dataUrl,'D5:D9'); placeImg(wb,p,d.recorder.spare?.dataUrl,'E5:E9');
+  // その他
+  let r=11;
+  section(p,'B'+r,'◆その他（点検口・防火壁・防火扉など）'); C(p,'C'+r,'',{}); C(p,'D'+r,'',{}); C(p,'E'+r,'',{}); r++;
+  d.others.forEach((o,i)=>{
+    const top=r;
+    label(p,'B'+r,'写真番号'); C(p,'C'+r,'他-'+(i+1),{}); r++;
+    label(p,'B'+r,'撮影日'); C(p,'C'+r,toDate(o.date),{numFmt:'yyyy/m/d'}); r++;
+    label(p,'B'+r,'撮影場所'); C(p,'C'+r,o.place,{align:{horizontal:'left'}}); r++;
+    label(p,'B'+r,'〈備考〉'); C(p,'C'+r,o.memo,{align:{horizontal:'left',vertical:'top'}});
+    for(let rr=top;rr<=r;rr++)p.getRow(rr).height=24;
+    p.mergeCells('D'+top+':D'+r); p.mergeCells('E'+top+':E'+r);
+    C(p,'D'+top,'',{}); C(p,'E'+top,'',{});
+    placeImg(wb,p,o.img?.dataUrl,'D'+top+':D'+r); placeImg(wb,p,o.spare?.dataUrl,'E'+top+':E'+r);
+    r+=2; // gap row
+  });
+  pageSetup(p,'B1:E'+(r-1));
+
+  // ③ 現場写真（カメラ）
+  const cs=wb.addWorksheet('③現場写真(カメラ)');
+  setW(cs,{A:4,B:17.4,C:33.6,D:50.9,E:49.2,F:8.8});
+  cs.mergeCells('B1:E1'); C(cs,'B1','現場写真（カメラ）',{font:TITLEFONT,align:{horizontal:'center'},border:false}); cs.getRow(1).height=30;
+  label(cs,'B2','受付NO'); cs.mergeCells('D2:E2'); C(cs,'D2',d.uketsukeNo,{align:{horizontal:'left'}}); C(cs,'C2','',{});
+  label(cs,'B3','物件住所'); cs.mergeCells('D3:E3'); C(cs,'D3','',{align:{horizontal:'left'}}); C(cs,'C3','',{});
+  section(cs,'B4','◆カメラ設置'); C(cs,'C4','※写真番号:カメラ(カ)-フロア(00)順番(000)',{font:{name:'Meiryo',size:9},align:{horizontal:'left'}});
+  C(cs,'D4','＜設置場所写真＞',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}}); C(cs,'E4','予備写真',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}});
+  let cr=5;
+  d.cams.forEach((cam)=>{
+    const top=cr;
+    label(cs,'B'+cr,'写真番号'); C(cs,'C'+cr,cam.no,{}); cr++;
+    label(cs,'B'+cr,'撮影日'); C(cs,'C'+cr,toDate(cam.date),{numFmt:'yyyy/m/d'}); cr++;
+    label(cs,'B'+cr,'撮影場所'); C(cs,'C'+cr,cam.place,{align:{horizontal:'left'}}); cr++;
+    label(cs,'B'+cr,'設置仕様'); C(cs,'C'+cr,cam.spec,{align:{horizontal:'left'}}); cr++;
+    label(cs,'B'+cr,'ズーム機能'); dval(C(cs,'C'+cr,cam.zoom,{}),cs,'G',m.zoom.length); cr++;
+    label(cs,'B'+cr,'カメラタイプ'); dval(C(cs,'C'+cr,cam.camtype,{}),cs,'H',m.camtype.length); cr++;
+    label(cs,'B'+cr,'取付タイプ'); dval(C(cs,'C'+cr,cam.mount,{}),cs,'I',m.mount.length); cr++;
+    label(cs,'B'+cr,'床面距離m(高さ)'); C(cs,'C'+cr,cam.dist?Number(cam.dist):'',{}); cr++;
+    label(cs,'B'+cr,'配線距離m'); C(cs,'C'+cr,cam.cable?Number(cam.cable):'',{}); cr++;
+    label(cs,'B'+cr,'〈備考〉※配線方法など'); C(cs,'C'+cr,cam.memo,{align:{horizontal:'left',vertical:'top'}});
+    for(let rr=top;rr<=cr;rr++)cs.getRow(rr).height=22;
+    cs.mergeCells('D'+top+':D'+cr); cs.mergeCells('E'+top+':E'+cr);
+    C(cs,'D'+top,'',{}); C(cs,'E'+top,'',{});
+    placeImg(wb,cs,cam.img?.dataUrl,'D'+top+':D'+cr); placeImg(wb,cs,cam.spare?.dataUrl,'E'+top+':E'+cr);
+    cr+=2; // gap row
+  });
+  pageSetup(cs,'B1:E'+(cr-1));
+  // 配置図面
+  const z=wb.addWorksheet('配置図面'); z.getCell('A1').value='※配置図面を貼り付け（別紙添付可）'; z.getCell('A1').font=FONT;
+  buildSelectSheet(wb,m,[
+    {col:'A',head:'会社名',arr:m.company},{col:'B',head:'事業種別',arr:m.business},
+    {col:'C',head:'顧客種別',arr:m.customer},{col:'D',head:'工事種別',arr:m.work},
+    {col:'E',head:'給電方法',arr:m.power},{col:'F',head:'次期給電方法',arr:m.nextpower},
+    {col:'G',head:'ズーム機能',arr:m.zoom},{col:'H',head:'カメラタイプ',arr:m.camtype},
+    {col:'I',head:'取付タイプ',arr:m.mount},{col:'L',head:'営業担当者',arr:m.sales},
+    {col:'M',head:'現調担当者',arr:m.survey},{col:'N',head:'施工サービス',arr:m.service},
+  ]);
+  return wb;
+}
+
+async function doExport(){
+  const btn=document.getElementById('exportBtn');
+  if(typeof ExcelJS==='undefined'){toast('Excelライブラリの読込中です。数秒後に再度お試しください。',true);return;}
+  const d=state[type];
+  if(!d.uketsukeNo&&!(type==='general'?d.bukken:true)){/* soft */}
+  btn.disabled=true; const old=btn.textContent; btn.textContent='出力中…';
+  try{
+    const wb = type==='general' ? await exportGeneral() : await exportCamera();
+    const buf= await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const no=(d.uketsukeNo||'00000xx');
+    const name=(type==='general'?d.bukken:'')||'物件名';
+    const fname=`${no}_${name}_${type==='general'?'現調報告書':'防犯カメラ現調報告書'}.xlsx`;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    toast('Excelを出力しました：'+fname);
+  }catch(e){console.error(e);toast('出力に失敗しました：'+(e.message||e),true);}
+  finally{btn.disabled=false; btn.textContent=old;}
+}
+
+/* ============================ 補助 ============================ */
+function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast'+(err?' err':''),3200);}
+function updateInfo(){
+  const d=state[type]; const tn=type==='general'?'現調報告書':'防犯カメラ現調報告書';
+  const no=d.uketsukeNo||'（受付NO未入力）';
+  const bk=type==='general'?(d.bukken||''):'';
+  document.getElementById('finfo').innerHTML=`<b>${tn}</b> ／ ${no}${bk?' ／ '+bk:''}`;
+}
+document.getElementById('seg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  type=b.dataset.t;
+  [...document.querySelectorAll('#seg button')].forEach(x=>x.classList.toggle('on',x===b));
+  render(); window.scrollTo({top:0,behavior:'smooth'});
+});
+document.getElementById('exportBtn').addEventListener('click',doExport);
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(!confirm('入力内容をクリアします。よろしいですか？'))return;
+  state[type]= type==='general'?blankGeneral():blankCamera(); render();
+});
+
+/* ---- バックアップ／インポート ---- */
+function syncSeg(){[...document.querySelectorAll('#seg button')].forEach(x=>x.classList.toggle('on',x.dataset.t===type));}
+// テンプレート構造を保ったまま、保存データを安全に流し込む（不足項目は空のまま）
+function mergeObj(base,src){
+  if(src===undefined)return base;               // 保存値なし→テンプレートのまま
+  if(src===null)return null;                    // 明示的に空
+  if(base===null||base===undefined)return src;  // テンプレに形が無い→保存値を採用
+  if(Array.isArray(base)){
+    if(!Array.isArray(src))return base;
+    const tmpl=base.length?base[0]:null;
+    return src.map(s=>mergeObj(tmpl,s));
+  }
+  if(typeof base==='object'){
+    if(typeof src!=='object'||Array.isArray(src))return base;
+    const out={...base};
+    new Set([...Object.keys(base),...Object.keys(src)]).forEach(k=>{out[k]=mergeObj(base[k],src[k]);});
+    return out;
+  }
+  return src; // プリミティブは保存値を採用
+}
+function doBackup(){
+  try{
+    const payload={_type:'genchou-backup',version:1,savedAt:new Date().toISOString(),active:type,state};
+    const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+    const d=state[type];
+    const no=d.uketsukeNo||'00000xx';
+    const nm=((type==='general'?d.bukken:'')||'物件名').slice(0,30);
+    const t=new Date(),z=n=>String(n).padStart(2,'0');
+    const stamp=`${t.getFullYear()}${z(t.getMonth()+1)}${z(t.getDate())}_${z(t.getHours())}${z(t.getMinutes())}`;
+    const fname=`現調バックアップ_${no}_${nm}_${stamp}.json`;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    toast('バックアップを保存しました：'+fname);
+  }catch(e){console.error(e);toast('保存に失敗しました：'+(e.message||e),true);}
+}
+function doImport(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const obj=JSON.parse(fr.result);
+      const src=obj&&(obj.state||obj);
+      if(!src||(!src.general&&!src.camera))throw new Error('対応していないファイルです');
+      if(src.general)state.general=mergeObj(blankGeneral(),src.general);
+      if(src.camera) state.camera =mergeObj(blankCamera(), src.camera);
+      if(obj.active==='general'||obj.active==='camera'){type=obj.active;syncSeg();}
+      render();
+      toast('読み込みました'+(obj.savedAt?'（保存日時 '+new Date(obj.savedAt).toLocaleString('ja-JP')+'）':''));
+    }catch(e){console.error(e);toast('読み込み失敗：'+(e.message||e),true);}
+  };
+  fr.onerror=()=>toast('ファイルを読めませんでした',true);
+  fr.readAsText(file);
+}
+document.getElementById('backupBtn').addEventListener('click',doBackup);
+document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  if(confirm('現在の入力内容を、読み込むデータで置き換えます。よろしいですか？'))doImport(f);
+  e.target.value='';
+});
+render();
+</script>
+</body>
+</html>
