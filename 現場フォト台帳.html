@@ -289,13 +289,24 @@ textarea{resize:vertical;min-height:64px}
       </div>
       <form class="panel" id="pform">
         <h2 id="pformTitle">案件を追加</h2>
-        <p class="lead">工種を登録しておくと、撮影時に選べます。</p>
+        <p class="lead">連携シートの内容を貼り付けると、下の項目に自動で入ります。工種を登録しておくと、撮影時に選べます。</p>
+        <div style="display:grid;gap:8px;margin-bottom:16px">
+          <label class="f">連携シートから貼り付け<textarea id="pPaste" rows="4" placeholder="Excelの連携シートで項目名と内容の2列を選んでコピーし、ここに貼り付けてください&#10;例）受付No指定	000&#10;　　工事名	〇〇工事"></textarea></label>
+          <div class="row"><button type="button" class="btn" id="pParse">読み取る</button><span class="status" id="pParseMsg"></span></div>
+        </div>
         <div class="fields">
+          <label class="f">受付No<input id="pNo" inputmode="numeric" placeholder="例：000"></label>
+          <label class="f">受付日<input id="pDate" placeholder="例：2026/1/1"></label>
           <label class="f full">工事名（案件名）<input id="pName" required placeholder="例：〇〇区 街頭防犯カメラ設置工事"></label>
-          <label class="f">発注者<input id="pClient" placeholder="例：〇〇区役所"></label>
-          <label class="f">施工者<input id="pBy" placeholder="例：〇〇電設株式会社"></label>
-          <label class="f">工事場所<input id="pPlace" placeholder="例：〇〇区〇〇町"></label>
-          <label class="f">工期<input id="pTerm" placeholder="例：2026/11/1〜2027/1/31"></label>
+          <label class="f full">物件名<input id="pBldg" placeholder="例：〇〇マンション"></label>
+          <label class="f full">物件住所（工事場所）<input id="pPlace" placeholder="例：〇〇区〇〇町1-2-3"></label>
+          <label class="f">顧客名（発注者）<input id="pClient" placeholder="例：〇〇区役所"></label>
+          <label class="f">顧客担当者名<input id="pClientRep" placeholder="例：〇〇様"></label>
+          <label class="f">請負会社（施工者）<input id="pBy" placeholder="例：〇〇電設株式会社"></label>
+          <label class="f">案件分類<input id="pCat" placeholder="例：防犯カメラ設置"></label>
+          <label class="f">営業担当者<input id="pSales" placeholder="例：〇〇"></label>
+          <label class="f">工事担当<input id="pWorker" placeholder="例：〇〇"></label>
+          <label class="f full">工期<input id="pTerm" placeholder="例：2026/11/1〜2027/1/31"></label>
           <label class="f full">工種（改行区切り）<textarea id="pKinds" rows="4" placeholder="配線工事&#10;機器取付&#10;支柱建柱&#10;調整・試験"></textarea></label>
         </div>
         <div class="row" style="margin-top:14px;justify-content:space-between">
@@ -407,6 +418,8 @@ const safeName=s=>String(s||"案件").replace(/[\\/:*?"<>|\s]/g,"_").slice(0,60)
 let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2800)}
 function banner(m){$("#sysBanner").textContent=m||"";$("#sysBanner").hidden=!m}
 const proj=()=>S.projects.find(p=>p.id===S.pid);
+const projHeader=(p=proj())=>p?[p.receiptNo?`受付No.${p.receiptNo}`:"",p.building,p.name].filter(Boolean).join("　"):"";
+const projFile=(p=proj())=>p?(p.receiptNo?`No${safeName(p.receiptNo)}_`:"")+safeName(p.name).slice(0,40):"案件";
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 /* ---------- 端末内データベース（IndexedDB） ---------- */
@@ -708,7 +721,7 @@ function renderLedger(){const km=kindsOf(sorted());const cur=$("#lgKind").value;
   const list=ledgerList();const pages=chunk(list,3);const title=$("#lgTitle").value||"工事写真台帳";
   $("#btnPdf").disabled=$("#btnCsv").disabled=$("#btnXlsx").disabled=!list.length;$("#lgStatus").textContent=list.length?`${list.length}枚・${pages.length}ページ`:"";
   if(!list.length){$("#sheets").innerHTML=`<div class="empty" style="width:100%"><strong>台帳にする写真がありません</strong>写真を撮ると、ここにA4台帳の見本が並びます。</div>`;return}
-  $("#sheets").innerHTML=pages.map((pg,i)=>`<div class="a4"><div class="hd"><b>${esc(title)}</b><span>${esc(proj()?.name||"")}　${i+1} / ${pages.length}</span></div>`+
+  $("#sheets").innerHTML=pages.map((pg,i)=>`<div class="a4"><div class="hd"><b>${esc(title)}</b><span>${esc(projHeader())}　${i+1} / ${pages.length}</span></div>`+
     pg.map(ph=>`<div class="slot"><div class="pi"><img data-blob="${ph.imgId}" alt=""></div><dl>${infoRows(ph).map(([a,b])=>`<dt>${a}</dt><dd>${esc(b||"")}</dd>`).join("")}</dl></div>`).join("")+`</div>`).join("");
   hydrateImgs($("#sheets"))}
 function wrapText(x,t,maxW){const out=[];let line="";for(const ch of String(t||"")){if(x.measureText(line+ch).width>maxW&&line){out.push(line);line=ch}else line+=ch}if(line)out.push(line);return out.length?out:[""]}
@@ -728,12 +741,12 @@ async function pageCanvas(pg,idx,total,title,pname){const W=1240,H=1754,M=80;con
     x.strokeStyle="#bbb";x.beginPath();x.moveTo(ix+lw,y);x.lineTo(ix+lw,ry);x.stroke()}
   return c}
 $("#btnPdf").addEventListener("click",async()=>{const list=ledgerList();if(!list.length)return;if(!window.jspdf){toast("PDF作成の部品を読み込めませんでした。通信できる場所で開き直してください");return}
-  const btn=$("#btnPdf");btn.disabled=true;await fontsReady();const pages=chunk(list,3);const title=$("#lgTitle").value||"工事写真台帳";const pname=proj()?.name||"";
+  const btn=$("#btnPdf");btn.disabled=true;await fontsReady();const pages=chunk(list,3);const title=$("#lgTitle").value||"工事写真台帳";const pname=projHeader();
   try{const pdf=new window.jspdf.jsPDF({unit:"mm",format:"a4",compress:true});
     for(let i=0;i<pages.length;i++){$("#lgStatus").textContent=`PDFを作成中 ${i+1} / ${pages.length}ページ`;const c=await pageCanvas(pages[i],i,pages.length,title,pname);
       if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",.85),"JPEG",0,0,210,297)}
     $("#lgStatus").textContent=`${list.length}枚・${pages.length}ページ`;
-    const f=new File([pdf.output("blob")],`${safeName(pname)}_${safeName(title)}.pdf`,{type:"application/pdf"});lastFile=f;
+    const f=new File([pdf.output("blob")],`${projFile()}_${safeName(title)}.pdf`,{type:"application/pdf"});lastFile=f;
     $("#lgStatus").innerHTML=`${list.length}枚・${pages.length}ページのPDFができました <button class="btn primary" id="btnPdfGo">${isMobile?"保存・共有する":"保存先を選んで保存"}</button>`;
     $("#btnPdfGo").addEventListener("click",()=>shareFiles([lastFile]))}
   catch(e){toast("PDFを作れませんでした")}btn.disabled=false});
@@ -784,9 +797,9 @@ async function buildXlsx(list,title,pname,onProg){await ensureExcelJS();
   ls2.columns=[10,14,14,18,10,20,18,30].map(w=>({width:w}));ls2.addRow(head);ls2.getRow(1).font=F({bold:true});ls2.getRow(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE6EDE8"}};
   list.forEach(p=>{const b=p.board||{};ls2.addRow([p.no,b.date||"",b.kind||"",b.type||"",b.phase||"",b.point||"",b.by||"",b.note||""]).font=F()});
   ls2.views=[{state:"frozen",ySplit:1}];ls2.pageSetup={paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:1"};ls2.autoFilter={from:"A1",to:"H1"};
-  const buf=await wb.xlsx.writeBuffer();return new File([buf],`${safeName(pname)}_${safeName(title)}.xlsx`,{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})}
+  const buf=await wb.xlsx.writeBuffer();return new File([buf],`${projFile()}_${safeName(title)}.xlsx`,{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})}
 $("#btnXlsx").addEventListener("click",async()=>{const list=ledgerList();if(!list.length)return;const btn=$("#btnXlsx");btn.disabled=true;const st=$("#lgStatus");
-  const title=$("#lgTitle").value||"工事写真台帳";const pname=proj()?.name||"";
+  const title=$("#lgTitle").value||"工事写真台帳";const pname=projHeader();
   try{st.textContent="Excelを作成中…";const f=await buildXlsx(list,title,pname,n=>st.textContent=`Excelを作成中 ${list.findIndex(x=>x.no===n)+1} / ${list.length}枚`);lastFile=f;
     st.innerHTML=`${list.length}枚・${Math.ceil(list.length/3)}ページのExcelができました（${(f.size/1048576).toFixed(1)}MB） <button class="btn primary" id="btnXlsxGo">${isMobile?"保存・共有する":"保存先を選んで保存"}</button>`;
     $("#btnXlsxGo").addEventListener("click",()=>shareFiles([lastFile]))}
@@ -795,28 +808,47 @@ $("#btnXlsx").addEventListener("click",async()=>{const list=ledgerList();if(!lis
 $("#btnCsv").addEventListener("click",()=>{const list=ledgerList();const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
   const head=["写真番号","撮影日","工種","種別・部位","撮影区分","測点・位置","施工者","備考","黒板写し込み"];
   const rows=list.map(x=>{const b=x.board||{};return[x.no,b.date,b.kind,b.type,b.phase,b.point,b.by,b.note,x.boardBurned?"あり":"なし"]});
-  shareFiles([new File(["﻿"+[head,...rows].map(r=>r.map(q).join(",")).join("\r\n")],`${safeName(proj()?.name)}_写真一覧.csv`,{type:"text/csv"})])});
+  shareFiles([new File(["﻿"+[head,...rows].map(r=>r.map(q).join(",")).join("\r\n")],`${projFile()}_写真一覧.csv`,{type:"text/csv"})])});
 
 /* ---------- 案件 ---------- */
 let editPid=null;
 $("#projPick").addEventListener("change",e=>selectProject(e.target.value));
 async function selectProject(id){S.pid=id||null;ls.set("pid",S.pid);S.kind="";S.sel.clear();fillBoardFromProject();S.photos=S.pid?await DB.byProject(S.pid):[];render()}
 function renderProjects(){$("#projPick").innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}" ${p.id===S.pid?"selected":""}>${esc(p.name)}</option>`).join(""):'<option value="">案件を登録してください</option>';
-  $("#plist").innerHTML=S.projects.length?S.projects.map(p=>`<div class="pitem ${p.id===S.pid?"on":""}"><div style="min-width:0"><div class="t">${esc(p.name)}</div>
-    <div class="s">${esc([p.client,p.place,p.term].filter(Boolean).join("・"))}</div><div class="s">工種：${esc((p.kinds||[]).join("、")||"未登録")}</div></div>
+  $("#plist").innerHTML=S.projects.length?S.projects.map(p=>`<div class="pitem ${p.id===S.pid?"on":""}"><div style="min-width:0"><div class="t">${p.receiptNo?`<span class="no" style="font-size:12px">受付No.${esc(p.receiptNo)}</span> `:""}${esc(p.name)}</div>
+    <div class="s">${esc([p.building,p.client,p.place,p.term].filter(Boolean).join("・"))}</div><div class="s">工種：${esc((p.kinds||[]).join("、")||"未登録")}</div></div>
     <div class="row">${p.id===S.pid?'<span class="s">選択中</span>':`<button class="btn" data-sel="${p.id}">選ぶ</button>`}<button class="btn" data-edit="${p.id}">編集</button></div></div>`).join("")
     :`<div class="empty"><strong>まだ案件がありません</strong>右のフォームに工事名を入れて追加してください。</div>`}
 $("#plist").addEventListener("click",e=>{const s=e.target.closest("[data-sel]"),ed=e.target.closest("[data-edit]");
   if(s){selectProject(s.dataset.sel);toast("案件を切り替えました")}
-  if(ed){const p=S.projects.find(x=>x.id===ed.dataset.edit);if(!p)return;editPid=p.id;$("#pName").value=p.name||"";$("#pClient").value=p.client||"";$("#pBy").value=p.contractor||"";
-    $("#pPlace").value=p.place||"";$("#pTerm").value=p.term||"";$("#pKinds").value=(p.kinds||[]).join("\n");$("#pformTitle").textContent="案件を編集";$("#pSubmit").textContent="変更を保存";
-    $("#pCancel").hidden=false;$("#pDelete").hidden=false;$("#pDelete").classList.remove("armed");$("#pDelete").textContent="案件を削除";$("#pName").focus()}});
-function resetPform(){editPid=null;$("#pform").reset();$("#pformTitle").textContent="案件を追加";$("#pSubmit").textContent="追加する";$("#pCancel").hidden=true;$("#pDelete").hidden=true}
+  if(ed){const p=S.projects.find(x=>x.id===ed.dataset.edit);if(p)startEdit(p)}});
+/* 案件の項目と、連携シートでの項目名の対応 */
+const PF=[["pNo","receiptNo",["受付No指定","受付No","受付番号","受付NO"]],["pDate","receiptDate",["受付日"]],["pName","name",["工事名","件名"]],
+  ["pBldg","building",["物件名"]],["pPlace","place",["物件住所","工事場所","住所"]],["pClient","client",["顧客名","発注者"]],["pClientRep","clientRep",["顧客担当者名","顧客担当者"]],
+  ["pBy","contractor",["請負会社","施工者","施工会社"]],["pCat","category",["案件分類"]],["pSales","sales",["営業担当者","営業担当"]],["pWorker","worker",["工事担当","工事担当者"]],["pTerm","term",["工期"]]];
+function startEdit(p){editPid=p.id;PF.forEach(([id,k])=>$("#"+id).value=p[k]||"");$("#pKinds").value=(p.kinds||[]).join("\n");$("#pformTitle").textContent="案件を編集";$("#pSubmit").textContent="変更を保存";
+  $("#pCancel").hidden=false;$("#pDelete").hidden=false;$("#pDelete").classList.remove("armed");$("#pDelete").textContent="案件を削除";$("#pform").scrollIntoView({block:"start"})}
+function resetPform(){editPid=null;$("#pform").reset();$("#pParseMsg").textContent="";$("#pformTitle").textContent="案件を追加";$("#pSubmit").textContent="追加する";$("#pCancel").hidden=true;$("#pDelete").hidden=true}
 $("#pCancel").addEventListener("click",resetPform);
+const normLabel=s=>String(s||"").replace(/[\s　:：]/g,"").replace(/[ＮＯｎｏ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)).toUpperCase();
+function parseRenkei(text){const out={};const keys=PF.map(([id,k,ls])=>[k,ls.map(normLabel)]);
+  for(const raw of String(text).split(/\r?\n/)){const line=raw.replace(/^﻿/,"");if(!line.trim()||/^[■□◆●]/.test(line.trim()))continue;
+    let label,val;if(line.includes("\t")){const cells=line.split("\t");label=cells[0];val=cells.slice(1).join(" ")}
+    else{const m=line.match(/^\s*(.+?)(?:[:：]|\s{2,}|　)\s*(.*)$/);if(!m)continue;label=m[1];val=m[2]}
+    const nl=normLabel(label);val=String(val||"").replace(/^[\s　]+|[\s　]+$/g,"").replace(/[\s　]{2,}/g," ");
+    if(!nl)continue;for(const [k,ls] of keys){if(ls.includes(nl)){if(val&&!out[k])out[k]=val;break}}}
+  return out}
+$("#pParse").addEventListener("click",()=>{const d=parseRenkei($("#pPaste").value);const n=Object.keys(d).length;const msg=$("#pParseMsg");
+  if(!n){msg.textContent="項目を読み取れませんでした。項目名と内容の2列をコピーして貼り付けてください";return}
+  const same=d.receiptNo&&S.projects.find(p=>String(p.receiptNo||"")===String(d.receiptNo)&&p.id!==editPid);
+  if(same&&!editPid){startEdit(same);msg.textContent=`受付No.${d.receiptNo} はすでに登録済みです。貼り付けた内容で上書きして「変更を保存」を押してください`}
+  else msg.textContent=`${n}項目を読み取りました。内容を確かめて「${editPid?"変更を保存":"追加する"}」を押してください`;
+  PF.forEach(([id,k])=>{if(d[k]!=null)$("#"+id).value=d[k]})});
 $("#pform").addEventListener("submit",async e=>{e.preventDefault();
-  const d={name:$("#pName").value.trim(),client:$("#pClient").value.trim(),contractor:$("#pBy").value.trim(),place:$("#pPlace").value.trim(),term:$("#pTerm").value.trim(),kinds:$("#pKinds").value.split(/[\n,、]/).map(s=>s.trim()).filter(Boolean)};
+  const d={kinds:$("#pKinds").value.split(/[\n,、]/).map(s=>s.trim()).filter(Boolean)};PF.forEach(([id,k])=>d[k]=$("#"+id).value.trim());
   if(!d.name)return;
-  if(editPid){const p=S.projects.find(x=>x.id===editPid);Object.assign(p,d);await DB.put("projects",p);toast("案件を更新しました");if(editPid===S.pid)fillBoardFromProject();render()}
+  if(editPid){const p=S.projects.find(x=>x.id===editPid);Object.assign(p,d);delete p.sample;await DB.put("projects",p);toast("案件を更新しました");
+    if(editPid===S.pid){ls.set("board:"+S.pid,{...ls.get("board:"+S.pid,{}),name:p.name,by:p.contractor});fillBoardFromProject()}render()}
   else{const p={id:uid(),...d,createdAt:new Date().toISOString()};await DB.put("projects",p);S.projects.unshift(p);toast("案件を追加しました");await selectProject(p.id)}
   resetPform()});
 $("#pDelete").addEventListener("click",async()=>{const btn=$("#pDelete");const n=(await DB.byProject(editPid)).length;
