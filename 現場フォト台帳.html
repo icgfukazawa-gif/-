@@ -239,7 +239,7 @@ textarea{resize:vertical;min-height:64px}
     </div>
     <div class="chips" id="kindChips"></div>
     <div class="selbar">
-      <button class="btn" id="btnSelMode">選んで写真アプリに保存</button>
+      <button class="btn" id="btnSelMode">写真を選んで保存</button>
       <span id="selTools" hidden class="row">
         <select id="selWhich" style="width:auto"><option value="orig">元の写真（黒板なし）</option><option value="img">黒板つき写真</option></select>
         <button class="btn" id="btnSelAll">すべて選ぶ</button>
@@ -591,9 +591,35 @@ $("#btnSave").addEventListener("click",async()=>{const btn=$("#btnSave");btn.dis
   btn.disabled=false;$("#bNote").value="";clearPending();toast(`${ok}枚を保存しました`)});
 
 /* ---------- ファイルを端末へ渡す ---------- */
+const isMobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const canPick=!isMobile&&typeof window.showSaveFilePicker==="function";
+function pickType(f){const ext=(f.name.split(".").pop()||"").toLowerCase();
+  const T={pdf:["PDFファイル","application/pdf"],xlsx:["Excelファイル","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    csv:["CSVファイル","text/csv"],json:["書き出しデータ","application/json"],jpg:["写真","image/jpeg"],jpeg:["写真","image/jpeg"],png:["写真","image/png"]}[ext];
+  return T?[{description:T[0],accept:{[T[1]]:["."+ext]}}]:undefined}
+async function writeHandle(h,f){const w=await h.createWritable();await w.write(f);await w.close()}
+async function pickSave(files){
+  if(files.length===1){const f=files[0];const h=await window.showSaveFilePicker({suggestedName:f.name,types:pickType(f),id:"genba-save"});await writeHandle(h,f);toast(`「${h.name}」を保存しました`);return true}
+  const dir=await window.showDirectoryPicker({mode:"readwrite",id:"genba-save"});let n=0;
+  for(const f of files){let name=f.name,i=1;const dot=name.lastIndexOf(".");
+    while(true){try{await dir.getFileHandle(name);name=`${f.name.slice(0,dot)}(${i++})${f.name.slice(dot)}`}catch(e){break}}
+    await writeHandle(await dir.getFileHandle(name,{create:true}),f);n++}
+  toast(`「${dir.name}」に${n}件を保存しました`);return true}
+/* 時間のかかる処理のあとは、ボタンを押し直してもらってから保存先を選ぶ */
+function askThenSave(files){return new Promise(res=>{const ov=document.createElement("div");ov.className="overlay";
+  ov.innerHTML=`<div class="sheetdlg" role="dialog" aria-modal="true" style="max-width:440px"><h2 style="margin-bottom:8px">ファイルができました</h2>
+    <p class="lead">${esc(files.length===1?files[0].name:files.length+"件のファイル")}</p>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-a="no">やめる</button><button class="btn primary" data-a="go">保存先を選んで保存</button></div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener("click",async e=>{const a=e.target.closest("[data-a]")?.dataset.a;if(!a&&e.target!==ov)return;ov.remove();
+    if(a==="go"){try{res(await pickSave(files))}catch(err){if(err?.name!=="AbortError")downloadFiles(files);res(false)}}else res(false)})})}
+async function downloadFiles(files){for(const f of files){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);await sleep(300)}}
 async function shareFiles(files){
-  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return true}}
-  catch(e){if(e?.name==="AbortError")return false}
+  if(canPick){try{return await pickSave(files)}
+    catch(e){if(e?.name==="AbortError")return false;if(e?.name==="SecurityError"||e?.name==="NotAllowedError")return askThenSave(files)}}
+  if(isMobile){try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return true}}
+    catch(e){if(e?.name==="AbortError")return false}}
   for(const f of files){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(a.href),10000);await sleep(300)}
   return true}
@@ -620,14 +646,14 @@ function renderPhotos(){const all=sorted();const km=kindsOf(all);
 $("#gallery").addEventListener("click",e=>{const c=e.target.closest(".card");if(!c)return;if(S.selMode){toggleSel(c.dataset.id);renderPhotos()}else openDlg(c.dataset.id)});
 /* 選んで写真アプリに保存 */
 $("#btnSelMode").addEventListener("click",()=>{S.selMode=!S.selMode;S.sel.clear();S.selFiles.clear();$("#selTools").hidden=!S.selMode;
-  $("#btnSelMode").textContent=S.selMode?"選択をやめる":"選んで写真アプリに保存";renderPhotos()});
+  $("#btnSelMode").textContent=S.selMode?"選択をやめる":"写真を選んで保存";renderPhotos()});
 $("#selWhich").addEventListener("change",()=>{S.selFiles.clear();S.sel.forEach(prefetch);updSel()});
 $("#btnSelAll").addEventListener("click",()=>{filtered().forEach(p=>{if(!S.sel.has(p.id)){S.sel.add(p.id);prefetch(p.id)}});renderPhotos()});
 function toggleSel(id){if(S.sel.has(id)){S.sel.delete(id);S.selFiles.delete(id)}else{S.sel.add(id);prefetch(id)}}
 async function prefetch(id){const p=S.photos.find(x=>x.id===id);if(!p)return;const which=$("#selWhich").value;const bid=which==="orig"?(p.origId||p.imgId):p.imgId;
   const b=await DB.blob(bid);if(b&&S.sel.has(id))S.selFiles.set(id,new File([b],`${(p.board?.date||"").replace(/-/g,"")}_${safeName(p.board?.point||p.board?.kind||"現場")}_${p.id.slice(0,6)}${which==="orig"?"_元":""}.jpg`,{type:"image/jpeg"}));updSel()}
 function updSel(){const n=S.sel.size,ready=S.selFiles.size;$("#btnSelSave").textContent=ready<n?`準備中 ${ready}/${n}`:`保存（${n}枚）`;$("#btnSelSave").disabled=!n||ready<n}
-$("#btnSelSave").addEventListener("click",async()=>{const files=[...S.selFiles.values()];if(await shareFiles(files))toast("共有メニューで「画像を保存」を選ぶと写真アプリに入ります")});
+$("#btnSelSave").addEventListener("click",async()=>{const files=[...S.selFiles.values()];if(await shareFiles(files)&&isMobile)toast("共有メニューで「画像を保存」を選ぶと写真アプリに入ります")});
 
 /* ---------- 詳細 ---------- */
 let editing=null,eOrigBmp=null,eLayout=null,ePrevUrl=null,ePrevT=0;
@@ -708,7 +734,7 @@ $("#btnPdf").addEventListener("click",async()=>{const list=ledgerList();if(!list
       if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",.85),"JPEG",0,0,210,297)}
     $("#lgStatus").textContent=`${list.length}枚・${pages.length}ページ`;
     const f=new File([pdf.output("blob")],`${safeName(pname)}_${safeName(title)}.pdf`,{type:"application/pdf"});lastFile=f;
-    $("#lgStatus").innerHTML=`${list.length}枚・${pages.length}ページのPDFができました <button class="btn primary" id="btnPdfGo">保存・共有する</button>`;
+    $("#lgStatus").innerHTML=`${list.length}枚・${pages.length}ページのPDFができました <button class="btn primary" id="btnPdfGo">${isMobile?"保存・共有する":"保存先を選んで保存"}</button>`;
     $("#btnPdfGo").addEventListener("click",()=>shareFiles([lastFile]))}
   catch(e){toast("PDFを作れませんでした")}btn.disabled=false});
 let lastFile=null;
@@ -762,7 +788,7 @@ async function buildXlsx(list,title,pname,onProg){await ensureExcelJS();
 $("#btnXlsx").addEventListener("click",async()=>{const list=ledgerList();if(!list.length)return;const btn=$("#btnXlsx");btn.disabled=true;const st=$("#lgStatus");
   const title=$("#lgTitle").value||"工事写真台帳";const pname=proj()?.name||"";
   try{st.textContent="Excelを作成中…";const f=await buildXlsx(list,title,pname,n=>st.textContent=`Excelを作成中 ${list.findIndex(x=>x.no===n)+1} / ${list.length}枚`);lastFile=f;
-    st.innerHTML=`${list.length}枚・${Math.ceil(list.length/3)}ページのExcelができました（${(f.size/1048576).toFixed(1)}MB） <button class="btn primary" id="btnXlsxGo">保存・共有する</button>`;
+    st.innerHTML=`${list.length}枚・${Math.ceil(list.length/3)}ページのExcelができました（${(f.size/1048576).toFixed(1)}MB） <button class="btn primary" id="btnXlsxGo">${isMobile?"保存・共有する":"保存先を選んで保存"}</button>`;
     $("#btnXlsxGo").addEventListener("click",()=>shareFiles([lastFile]))}
   catch(e){st.textContent=window.ExcelJS?"Excelを作れませんでした":"Excel作成の部品を読み込めませんでした。通信できる場所でもう一度押してください"}
   btn.disabled=false});
