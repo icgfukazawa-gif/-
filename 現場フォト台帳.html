@@ -257,7 +257,7 @@ textarea{resize:vertical;min-height:64px}
         <label class="f">台帳の表題<input id="lgTitle" value="工事写真台帳"></label>
         <label class="f">工種<select id="lgKind"><option value="">すべて</option></select></label>
         <label class="f">撮影区分<select id="lgPhase"><option value="">すべて</option></select></label>
-        <div class="row"><button class="btn primary" id="btnPdf">PDFで保存</button><button class="btn" id="btnCsv">CSVで保存</button></div>
+        <div class="row"><button class="btn primary" id="btnPdf">PDFで保存</button><button class="btn primary" id="btnXlsx">Excelで保存</button><button class="btn" id="btnCsv">CSVで保存</button></div>
       </div>
       <div class="status" id="lgStatus"></div>
     </div>
@@ -680,7 +680,7 @@ function infoRows(p){const b=p.board||{};return[["写真番号","No."+p.no],["�
 function renderLedger(){const km=kindsOf(sorted());const cur=$("#lgKind").value;
   $("#lgKind").innerHTML='<option value="">すべて</option>'+[...km.keys()].map(k=>`<option ${k===cur?"selected":""}>${esc(k)}</option>`).join("");
   const list=ledgerList();const pages=chunk(list,3);const title=$("#lgTitle").value||"工事写真台帳";
-  $("#btnPdf").disabled=$("#btnCsv").disabled=!list.length;$("#lgStatus").textContent=list.length?`${list.length}枚・${pages.length}ページ`:"";
+  $("#btnPdf").disabled=$("#btnCsv").disabled=$("#btnXlsx").disabled=!list.length;$("#lgStatus").textContent=list.length?`${list.length}枚・${pages.length}ページ`:"";
   if(!list.length){$("#sheets").innerHTML=`<div class="empty" style="width:100%"><strong>台帳にする写真がありません</strong>写真を撮ると、ここにA4台帳の見本が並びます。</div>`;return}
   $("#sheets").innerHTML=pages.map((pg,i)=>`<div class="a4"><div class="hd"><b>${esc(title)}</b><span>${esc(proj()?.name||"")}　${i+1} / ${pages.length}</span></div>`+
     pg.map(ph=>`<div class="slot"><div class="pi"><img data-blob="${ph.imgId}" alt=""></div><dl>${infoRows(ph).map(([a,b])=>`<dt>${a}</dt><dd>${esc(b||"")}</dd>`).join("")}</dl></div>`).join("")+`</div>`).join("");
@@ -712,6 +712,60 @@ $("#btnPdf").addEventListener("click",async()=>{const list=ledgerList();if(!list
     $("#btnPdfGo").addEventListener("click",()=>shareFiles([lastFile]))}
   catch(e){toast("PDFを作れませんでした")}btn.disabled=false});
 let lastFile=null;
+/* ---------- Excel台帳（PDFと同じA4縦・1ページ3枚。文字はセルなので編集可、写真は移動・差し替え可） ---------- */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+async function ensureExcelJS(){if(window.ExcelJS)return;await loadScript("https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js")}
+const XL={photoCols:4,photoColPx:102.5,labelPx:72,valuePx:178,titleH:30,gapTopH:8,rowH:26,noteH:54,gapH:8,font:"游ゴシック"};
+const px2w=px=>(px-5)/7, pt2px=pt=>pt*96/72;
+async function excelImage(p){const bl=await DB.blob(p.imgId);if(!bl)return null;const bm=await loadBitmap(bl);const c=scaleCanvas(bm,1400);
+  const jb=await toBlob(c,.85);return{buf:await jb.arrayBuffer(),w:c.width,h:c.height}}
+async function buildXlsx(list,title,pname,onProg){await ensureExcelJS();
+  const wb=new ExcelJS.Workbook();wb.creator="現場フォト台帳";wb.created=new Date();
+  const ws=wb.addWorksheet("写真台帳",{views:[{showGridLines:false}]});
+  ws.pageSetup={paperSize:9,orientation:"portrait",scale:100,fitToPage:false,horizontalCentered:true,
+    margins:{left:.59,right:.59,top:.47,bottom:.47,header:0,footer:0}};
+  const cols=[];for(let i=0;i<XL.photoCols;i++)cols.push({width:px2w(XL.photoColPx)});cols.push({width:px2w(XL.labelPx)},{width:px2w(XL.valuePx)});ws.columns=cols;
+  const F=(o={})=>({name:XL.font,size:10,...o});const thin={style:"thin",color:{argb:"FF333333"}},hair={style:"thin",color:{argb:"FFBBBBBB"}};
+  const LBL=XL.photoCols+1,VAL=XL.photoCols+2;
+  const slotRowsH=[...Array(7).fill(XL.rowH),XL.noteH];const slotPx={w:XL.photoColPx*XL.photoCols,h:pt2px(slotRowsH.reduce((a,b)=>a+b,0))};
+  const pages=chunk(list,3);let r=1;
+  for(let pi=0;pi<pages.length;pi++){
+    ws.getRow(r).height=XL.titleH;ws.mergeCells(r,1,r,3);ws.mergeCells(r,4,r,VAL);
+    const t=ws.getCell(r,1);t.value=title;t.font=F({size:16,bold:true});t.alignment={vertical:"bottom"};
+    const pn=ws.getCell(r,4);pn.value=`${pname}　${pi+1} / ${pages.length}`;pn.font=F({size:10});pn.alignment={horizontal:"right",vertical:"bottom",shrinkToFit:true};
+    for(let c=1;c<=VAL;c++)ws.getCell(r,c).border={bottom:{style:"medium",color:{argb:"FF111111"}}};
+    r++;ws.getRow(r).height=XL.gapTopH;r++;
+    for(let si=0;si<pages[pi].length;si++){const p=pages[pi][si];onProg?.(p.no);const top=r;const rows=infoRows(p);
+      rows.forEach(([a,b],i)=>{const row=ws.getRow(r+i);row.height=slotRowsH[i];
+        const lc=row.getCell(LBL),vc=row.getCell(VAL);lc.value=a;vc.value=b||"";
+        lc.font=F({color:{argb:"FF555555"}});vc.font=F();lc.alignment={vertical:"middle",indent:1};vc.alignment={vertical:i===7?"top":"middle",wrapText:true,indent:1};
+        const last=i===rows.length-1,first=i===0;
+        lc.border={left:thin,right:hair,bottom:last?thin:hair,top:first?thin:undefined};vc.border={right:thin,bottom:last?thin:hair,top:first?thin:undefined}});
+      for(let i=0;i<8;i++)for(let c=1;c<=XL.photoCols;c++){const bd={};if(i===0)bd.top=thin;if(i===7)bd.bottom=thin;if(c===1)bd.left=thin;if(c===XL.photoCols)bd.right=thin;ws.getCell(top+i,c).border=bd}
+      ws.mergeCells(top,1,top+7,XL.photoCols);
+      const im=await excelImage(p);
+      if(im){const id=wb.addImage({buffer:im.buf,extension:"jpeg"});const pad=8;const s=Math.min((slotPx.w-pad*2)/im.w,(slotPx.h-pad*2)/im.h);
+        const iw=Math.round(im.w*s),ih=Math.round(im.h*s);let ox=(slotPx.w-iw)/2,oy=(slotPx.h-ih)/2;
+        let nc=0;while(nc<XL.photoCols-1&&ox>=XL.photoColPx){ox-=XL.photoColPx;nc++}
+        let nr=0;while(nr<7&&oy>=pt2px(slotRowsH[nr])){oy-=pt2px(slotRowsH[nr]);nr++}
+        ws.addImage(id,{tl:{nativeCol:nc,nativeColOff:Math.round(ox*9525),nativeRow:top-1+nr,nativeRowOff:Math.round(oy*9525)},ext:{width:iw,height:ih},editAs:"oneCell"})}
+      r+=8;
+      if(si<pages[pi].length-1){ws.getRow(r).height=XL.gapH;r++}}
+    if(pi<pages.length-1){ws.getRow(r-1).addPageBreak()}}
+  ws.pageSetup.printArea=`A1:${String.fromCharCode(64+VAL)}${r-1}`;
+  /* 一覧シート */
+  const ls2=wb.addWorksheet("写真一覧");const head=["写真番号","撮影日","工種","種別・部位","撮影区分","測点・位置","施工者","備考"];
+  ls2.columns=[10,14,14,18,10,20,18,30].map(w=>({width:w}));ls2.addRow(head);ls2.getRow(1).font=F({bold:true});ls2.getRow(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE6EDE8"}};
+  list.forEach(p=>{const b=p.board||{};ls2.addRow([p.no,b.date||"",b.kind||"",b.type||"",b.phase||"",b.point||"",b.by||"",b.note||""]).font=F()});
+  ls2.views=[{state:"frozen",ySplit:1}];ls2.pageSetup={paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:1"};ls2.autoFilter={from:"A1",to:"H1"};
+  const buf=await wb.xlsx.writeBuffer();return new File([buf],`${safeName(pname)}_${safeName(title)}.xlsx`,{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})}
+$("#btnXlsx").addEventListener("click",async()=>{const list=ledgerList();if(!list.length)return;const btn=$("#btnXlsx");btn.disabled=true;const st=$("#lgStatus");
+  const title=$("#lgTitle").value||"工事写真台帳";const pname=proj()?.name||"";
+  try{st.textContent="Excelを作成中…";const f=await buildXlsx(list,title,pname,n=>st.textContent=`Excelを作成中 ${list.findIndex(x=>x.no===n)+1} / ${list.length}枚`);lastFile=f;
+    st.innerHTML=`${list.length}枚・${Math.ceil(list.length/3)}ページのExcelができました（${(f.size/1048576).toFixed(1)}MB） <button class="btn primary" id="btnXlsxGo">保存・共有する</button>`;
+    $("#btnXlsxGo").addEventListener("click",()=>shareFiles([lastFile]))}
+  catch(e){st.textContent=window.ExcelJS?"Excelを作れませんでした":"Excel作成の部品を読み込めませんでした。通信できる場所でもう一度押してください"}
+  btn.disabled=false});
 $("#btnCsv").addEventListener("click",()=>{const list=ledgerList();const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
   const head=["写真番号","撮影日","工種","種別・部位","撮影区分","測点・位置","施工者","備考","黒板写し込み"];
   const rows=list.map(x=>{const b=x.board||{};return[x.no,b.date,b.kind,b.type,b.phase,b.point,b.by,b.note,x.boardBurned?"あり":"なし"]});
