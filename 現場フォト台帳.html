@@ -359,6 +359,7 @@ textarea{resize:vertical;min-height:64px}
       </div>
       <div>
         <div class="fields">
+          <label class="f full">工事名<input id="eName"></label>
           <label class="f">工種<input id="eKind" list="kindList"></label>
           <label class="f">種別・部位<input id="eType"></label>
           <label class="f">測点・位置<input id="ePoint"></label>
@@ -367,10 +368,20 @@ textarea{resize:vertical;min-height:64px}
           <label class="f">施工者<input id="eBy"></label>
           <label class="f full">備考<input id="eNote"></label>
         </div>
-        <p class="hint">ここで直すのは台帳とCSVの記載です。写真に写し込んだ黒板の文字は変わりません。</p>
+        <div id="eBurnBox" style="display:grid;gap:8px;margin-top:12px">
+          <label class="optrow" style="display:flex;gap:6px;align-items:center"><input id="eBurn" type="checkbox"> 写真に黒板を写し込む（直した内容で描き直します）</label>
+          <div class="optrow">位置
+            <span class="seg" id="ePos"><button data-v="keep" aria-pressed="true">そのまま</button><button data-v="bl" aria-pressed="false">左下</button><button data-v="br" aria-pressed="false">右下</button><button data-v="tl" aria-pressed="false">左上</button><button data-v="tr" aria-pressed="false">右上</button></span>
+          </div>
+          <div class="optrow">大きさ
+            <span class="seg" id="eSize"><button data-v="s" aria-pressed="false">小</button><button data-v="m" aria-pressed="false">中</button><button data-v="l" aria-pressed="false">大</button></span>
+          </div>
+          <p class="hint" style="margin:0">画面の写真は描き直した仕上がりの見本です。「更新」を押すまで保存されません。</p>
+        </div>
+        <p class="hint" id="eNoOrig">この写真は元の写真が残っていないため、写真の黒板は描き直せません。台帳とCSVの記載だけ直せます。</p>
         <div class="row" style="justify-content:space-between;margin-top:10px">
           <button class="btn danger" id="eDel">削除</button>
-          <button class="btn primary" id="eSave">記載を更新</button>
+          <button class="btn primary" id="eSave">更新</button>
         </div>
       </div>
     </div>
@@ -446,13 +457,13 @@ $("#segSize").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed
 const CFONT='"BIZ UDPGothic","Hiragino Sans","Yu Gothic","Meiryo",sans-serif';
 async function fontsReady(){try{await document.fonts.load('700 20px "BIZ UDPGothic"')}catch(e){}}
 function fitText(x,t,maxW){if(x.measureText(t).width<=maxW)return t;while(t.length>1&&x.measureText(t+"…").width>maxW)t=t.slice(0,-1);return t+"…"}
-function boardRect(w,h,rowsN){const short=Math.min(w,h);const bw=Math.round(short*({s:.46,m:.6,l:.78}[S.size]||.6));const rh=Math.round(bw*.088);
-  const frame=Math.max(4,Math.round(bw*.018));const bh=rh*rowsN+frame*2;const m=Math.round(short*.025);let bx,by;
-  if(S.pos==="free"&&S.free){bx=Math.round(S.free.x*w);by=Math.round(S.free.y*h)}else{bx=S.pos[1]==="l"?m:w-bw-m;by=S.pos[0]==="t"?m:h-bh-m}
+function boardRect(w,h,rowsN,L=S){const short=Math.min(w,h);const bw=Math.round(short*({s:.46,m:.6,l:.78}[L.size]||.6));const rh=Math.round(bw*.088);
+  const frame=Math.max(4,Math.round(bw*.018));const bh=rh*rowsN+frame*2;const m=Math.round(short*.025);let bx,by;const pos=L.pos||"bl";
+  if(pos==="free"&&L.free){bx=Math.round(L.free.x*w);by=Math.round(L.free.y*h)}else{const q=pos==="free"?"bl":pos;bx=q[1]==="l"?m:w-bw-m;by=q[0]==="t"?m:h-bh-m}
   return{x:Math.max(0,Math.min(w-bw,bx)),y:Math.max(0,Math.min(h-bh,by)),w:bw,h:bh,rh,frame}}
 function boardRows(b){const r=[["工事名",b.name],["工　種",b.kind],["種　別",[b.type,b.phase].filter(Boolean).join("　")],["測　点",b.point],["撮影日",jpDate(b.date)],["施工者",b.by]];
   if(b.note)r.push(["備　考",b.note]);return r}
-function drawBoard(x,w,h,b){const rows=boardRows(b);const R=boardRect(w,h,rows.length);const{rh,frame}=R;
+function drawBoard(x,w,h,b,L){const rows=boardRows(b);const R=boardRect(w,h,rows.length,L);const{rh,frame}=R;
   x.save();x.fillStyle="#6d5a3c";x.fillRect(R.x,R.y,R.w,R.h);x.fillStyle="rgba(36,64,47,.96)";x.fillRect(R.x+frame,R.y+frame,R.w-frame*2,R.h-frame*2);
   const lx=R.x+frame,ly=R.y+frame,iw=R.w-frame*2,lc=Math.round(iw*.24);
   x.strokeStyle="rgba(244,241,230,.75)";x.lineWidth=Math.max(1,Math.round(R.w*.003));
@@ -471,7 +482,8 @@ async function savePhoto(baseCanvas,origBlob,b,on){
   if(on)drawBoard(x,c.width,c.height,b);
   const img=await toBlob(c,.86);const th=await toBlob(scaleCanvas(c,480),.75);
   const imgId=await DB.putBlob(img),thumbId=await DB.putBlob(th),origId=origBlob?await DB.putBlob(origBlob):null;
-  const rec={id:uid(),projectId:S.pid,imgId,thumbId,origId,w:c.width,h:c.height,board:b,boardBurned:on,createdAt:new Date().toISOString()};
+  const rec={id:uid(),projectId:S.pid,imgId,thumbId,origId,w:c.width,h:c.height,board:b,boardBurned:on,
+    layout:{pos:S.pos,size:S.size,free:S.free?{...S.free}:null},createdAt:new Date().toISOString()};
   await DB.put("photos",rec);S.photos.push(rec);return{rec,canvas:c}}
 
 /* ---------- ライブカメラ ---------- */
@@ -618,19 +630,44 @@ function updSel(){const n=S.sel.size,ready=S.selFiles.size;$("#btnSelSave").text
 $("#btnSelSave").addEventListener("click",async()=>{const files=[...S.selFiles.values()];if(await shareFiles(files))toast("共有メニューで「画像を保存」を選ぶと写真アプリに入ります")});
 
 /* ---------- 詳細 ---------- */
-let editing=null;
+let editing=null,eOrigBmp=null,eLayout=null,ePrevUrl=null,ePrevT=0;
+const EF=["eName","eKind","eType","ePoint","eDate","ePhase","eBy","eNote"];
+function editVals(){return{...(editing.board||{}),name:$("#eName").value.trim(),kind:$("#eKind").value.trim(),type:$("#eType").value.trim(),point:$("#ePoint").value.trim(),
+  date:$("#eDate").value,phase:$("#ePhase").value,by:$("#eBy").value.trim(),note:$("#eNote").value.trim()}}
+function editLayout(){const keep=$("#ePos").querySelector('[aria-pressed="true"]')?.dataset.v||"keep";const base=eLayout||{pos:"bl",size:"m",free:null};
+  const size=$("#eSize").querySelector('[aria-pressed="true"]')?.dataset.v||base.size||"m";
+  return keep==="keep"?{...base,size}:{pos:keep,size,free:null}}
+function renderEdit(){if(!eOrigBmp)return null;const c=scaleCanvas(eOrigBmp,2048);if($("#eBurn").checked)drawBoard(c.getContext("2d"),c.width,c.height,editVals(),editLayout());return c}
+function editChanged(){if(!eOrigBmp)return;clearTimeout(ePrevT);ePrevT=setTimeout(async()=>{const p=editing;const c=renderEdit();if(!c||editing!==p)return;
+  const bl=await toBlob(scaleCanvas(c,1280),.8);if(editing!==p)return;if(ePrevUrl)URL.revokeObjectURL(ePrevUrl);ePrevUrl=URL.createObjectURL(bl);$("#dlgImg").src=ePrevUrl},250)}
+EF.forEach(id=>$("#"+id).addEventListener("input",editChanged));$("#eBurn").addEventListener("change",editChanged);
+["#ePos","#eSize"].forEach(id=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  $(id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));editChanged()}));
 async function openDlg(id){const p=S.photos.find(x=>x.id===id);if(!p)return;editing=p;const b=p.board||{};$("#dlgImg").src=await blobUrl(p.imgId);
-  $("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";$("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";
+  eOrigBmp=null;eLayout=p.layout||{pos:S.pos,size:S.size,free:S.free};$("#eBurnBox").hidden=!p.origId;$("#eNoOrig").hidden=!!p.origId;$("#eBurn").checked=p.boardBurned!==false;
+  $("#ePos").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v==="keep"));
+  $("#eSize").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===(eLayout.size||"m")));
+  if(p.origId)DB.blob(p.origId).then(async bl=>{if(!bl||editing!==p)return;try{const bm=await loadBitmap(bl);if(editing===p)eOrigBmp=bm}catch(e){$("#eBurnBox").hidden=true;$("#eNoOrig").hidden=false}});
+  $("#eName").value=b.name||proj()?.name||"";$("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";$("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";
   $("#eBy").value=b.by||"";$("#eNote").value=b.note||"";$("#eDel").classList.remove("armed");$("#eDel").textContent="削除";$("#eSaveOrig").hidden=!p.origId;
   editing._files={};for(const [k,bid] of [["img",p.imgId],["orig",p.origId]]){if(bid)DB.blob(bid).then(bl=>{if(bl&&editing===p)p._files[k]=new File([bl],`${(b.date||"").replace(/-/g,"")}_${safeName(b.point||b.kind||"現場")}${k==="orig"?"_元":""}.jpg`,{type:"image/jpeg"})})}
   $("#dlg").hidden=false}
-function closeDlg(){$("#dlg").hidden=true;editing=null}
+function closeDlg(){$("#dlg").hidden=true;editing=null;eOrigBmp=null;clearTimeout(ePrevT);if(ePrevUrl){URL.revokeObjectURL(ePrevUrl);ePrevUrl=null}}
 $("#dlgClose").addEventListener("click",closeDlg);$("#dlg").addEventListener("click",e=>{if(e.target.id==="dlg")closeDlg()});
 $("#eSaveImg").addEventListener("click",()=>{const f=editing?._files?.img;if(f)shareFiles([f]);else toast("読み込み中です。もう一度押してください")});
 $("#eSaveOrig").addEventListener("click",()=>{const f=editing?._files?.orig;if(f)shareFiles([f]);else toast("読み込み中です。もう一度押してください")});
-$("#eSave").addEventListener("click",async()=>{if(!editing)return;const p=editing;
-  p.board={...(p.board||{}),kind:$("#eKind").value.trim(),type:$("#eType").value.trim(),point:$("#ePoint").value.trim(),date:$("#eDate").value,phase:$("#ePhase").value,by:$("#eBy").value.trim(),note:$("#eNote").value.trim()};
-  const {_files,...rec}=p;await DB.put("photos",rec);toast("記載を更新しました");closeDlg();render()});
+$("#eSave").addEventListener("click",async()=>{if(!editing)return;const p=editing;const btn=$("#eSave");
+  if(p.origId&&!eOrigBmp&&!$("#eBurnBox").hidden){toast("写真を読み込み中です。少し待ってから押してください");return}
+  btn.disabled=true;
+  try{const nb=editVals();let redrawn=false;
+    if(p.origId&&eOrigBmp){const c=renderEdit();const img=await toBlob(c,.86),th=await toBlob(scaleCanvas(c,480),.75);
+      const imgId=await DB.putBlob(img),thumbId=await DB.putBlob(th);
+      for(const old of [p.imgId,p.thumbId]){if(old){await DB.del("blobs",old);const u=urlCache.get(old);if(u){URL.revokeObjectURL(u);urlCache.delete(old)}}}
+      Object.assign(p,{imgId,thumbId,w:c.width,h:c.height,boardBurned:$("#eBurn").checked,layout:editLayout()});redrawn=true}
+    p.board=nb;const {_files,...rec}=p;await DB.put("photos",rec);
+    toast(redrawn?"黒板を描き直して更新しました":"記載を更新しました");closeDlg();render()}
+  catch(e){toast(e?.name==="QuotaExceededError"?"端末の保存容量が足りません":"更新できませんでした")}
+  btn.disabled=false});
 $("#eDel").addEventListener("click",async()=>{const btn=$("#eDel");if(!btn.classList.contains("armed")){btn.classList.add("armed");btn.textContent="もう一度押すと削除";return}
   const p=editing;for(const id of [p.imgId,p.thumbId,p.origId])if(id)await DB.del("blobs",id);await DB.del("photos",p.id);
   S.photos=S.photos.filter(x=>x.id!==p.id);toast("写真を削除しました");closeDlg();render()});
