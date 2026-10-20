@@ -129,6 +129,23 @@ textarea{resize:vertical;min-height:64px}
 .cam .last{justify-self:start;display:flex;align-items:center;gap:8px}
 .cam .last img{width:56px;height:42px;object-fit:cover;border-radius:6px;border:2px solid #fff}
 .cam .msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;font-size:15px;line-height:1.7}
+.cam .rotate{position:absolute;inset:0;z-index:5;background:rgba(0,0,0,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;padding:24px max(24px,env(safe-area-inset-right,0px)) 24px max(24px,env(safe-area-inset-left,0px))}
+.cam .rotate .ph{width:56px;height:96px;border:4px solid #fff;border-radius:12px;animation:turn 2.4s ease-in-out infinite}
+@keyframes turn{0%,20%{transform:rotate(0)}50%,80%{transform:rotate(-90deg)}100%{transform:rotate(0)}}
+.cam .rotate b{font-size:20px}
+.cam .rotate p{margin:0;font-size:13px;color:#c9d6cd;max-width:28em}
+@media (orientation:landscape){
+  .cam{flex-direction:row}
+  .cam .view{padding-top:0;padding-left:env(safe-area-inset-left,0px)}
+  .cam .bar{width:min(250px,36vw);padding:calc(10px + env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) 12px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;overflow-y:auto}
+  .cam .quick{grid-template-columns:1fr;gap:6px}
+  .cam .quick input,.cam .quick select{padding:6px 8px}
+  .cam .shoot{grid-template-columns:1fr;justify-items:center;gap:8px}
+  .cam .shoot .hint{display:none}
+  .cam .shutter{width:68px;height:68px;order:-1}
+  .cam .last{justify-self:center}
+  .cam .topbar{right:12px;left:calc(10px + env(safe-area-inset-left,0px))}
+}
 /* 台帳見本 */
 .ledger-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:18px}
 .ledger-tools > label{flex:1 1 200px}
@@ -182,6 +199,7 @@ textarea{resize:vertical;min-height:64px}
         <datalist id="kindList"></datalist>
         <div style="margin-top:16px;display:grid;gap:10px">
           <label class="optrow" style="display:flex;gap:6px;align-items:center"><input id="bOn" type="checkbox" checked> 黒板を写し込む</label>
+          <label class="optrow" style="display:flex;gap:6px;align-items:center"><input id="landOnly" type="checkbox" checked> 横向きで撮影する（縦に持つと案内を出します）</label>
           <div class="optrow">位置
             <span class="seg" id="segPos"><button data-v="bl" aria-pressed="true">左下</button><button data-v="br" aria-pressed="false">右下</button><button data-v="tl" aria-pressed="false">左上</button><button data-v="tr" aria-pressed="false">右上</button></span>
           </div>
@@ -300,6 +318,12 @@ textarea{resize:vertical;min-height:64px}
       <div class="flash" id="flash"></div>
     </div>
     <div class="msg" id="camMsg" hidden></div>
+    <div class="rotate" id="rotate" hidden>
+      <div class="ph" aria-hidden="true"></div>
+      <b>スマホを横向きにしてください</b>
+      <p>向きが変わらないときは、コントロールセンターで「画面の向きのロック」を解除してください。</p>
+      <button class="pill" id="btnPortrait">縦向きのまま撮る</button>
+    </div>
     <div class="topbar">
       <button class="pill" id="camClose">閉じる</button>
       <span class="pill" id="camCount" style="cursor:default">0枚</span>
@@ -451,28 +475,38 @@ async function savePhoto(baseCanvas,origBlob,b,on){
 /* ---------- ライブカメラ ---------- */
 let stream=null;const video=$("#video"),ov=$("#ov");let ovRect=null;
 $("#btnOpenCam").addEventListener("click",openCam);
+$("#landOnly").checked=ls.get("landOnly",true);$("#landOnly").addEventListener("change",e=>ls.set("landOnly",e.target.checked));
+const portraitMQ=matchMedia("(orientation: portrait)");
+function checkOrient(){$("#rotate").hidden=!(!$("#cam").hidden&&$("#landOnly").checked&&!S.allowPortrait&&portraitMQ.matches&&$("#camMsg").hidden)}
+portraitMQ.addEventListener?.("change",()=>{checkOrient();setTimeout(fitVideo,250)});
+$("#btnPortrait").addEventListener("click",()=>{S.allowPortrait=true;checkOrient()});
+async function lockLandscape(){if(!$("#landOnly").checked||!screen.orientation?.lock)return;
+  try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:"hide"});
+    await screen.orientation.lock("landscape")}catch(e){}}
+function unlockOrient(){try{screen.orientation?.unlock?.()}catch(e){}if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{})}
 async function openCam(){if(!S.pid){toast("先に「案件・データ」で案件を登録してください");setTab("projects");return}
+  S.allowPortrait=false;const lockP=lockLandscape();
   $("#qPoint").value=$("#bPoint").value;$("#qNote").value=$("#bNote").value;$("#qPhase").value=$("#bPhase").value;
   $("#cam").hidden=false;document.body.style.overflow="hidden";S.camCount=0;$("#camCount").textContent="0枚";$("#lastBox").hidden=true;
-  const msg=$("#camMsg");msg.hidden=true;$("#bDate").value=today();await fontsReady();
+  const msg=$("#camMsg");msg.hidden=true;$("#bDate").value=today();await lockP;checkOrient();await fontsReady();
   if(!navigator.mediaDevices?.getUserMedia){msg.textContent="この画面ではカメラを使えません。https:// で始まるアドレスで開いているか確認してください。開けない場合は「標準カメラで撮る」を使ってください。";msg.hidden=false;return}
   try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1440}}});
     video.srcObject=stream;await video.play();await sleep(50);fitVideo();try{await navigator.wakeLock?.request("screen")}catch(e){}}
-  catch(e){msg.textContent=e?.name==="NotAllowedError"?"カメラの使用が許可されていません。ブラウザの設定でこのサイトのカメラを許可してから、もう一度開いてください。":"カメラを起動できませんでした。「標準カメラで撮る」を使ってください。";msg.hidden=false}}
-function closeCam(){stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;$("#cam").hidden=true;document.body.style.overflow="";
+  catch(e){$("#rotate").hidden=true;msg.textContent=e?.name==="NotAllowedError"?"カメラの使用が許可されていません。ブラウザの設定でこのサイトのカメラを許可してから、もう一度開いてください。":"カメラを起動できませんでした。「標準カメラで撮る」を使ってください。";msg.hidden=false}}
+function closeCam(){stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;$("#cam").hidden=true;document.body.style.overflow="";unlockOrient();checkOrient();
   $("#bPoint").value=$("#qPoint").value;$("#bNote").value=$("#qNote").value;$("#bPhase").value=$("#qPhase").value;if(S.pid)ls.set("board:"+S.pid,boardVals());render()}
 $("#camClose").addEventListener("click",closeCam);
-function fitVideo(){if(!video.videoWidth)return;const view=$("#camView");const vw=view.clientWidth,vh=view.clientHeight-(parseFloat(getComputedStyle(view).paddingTop)||0);
+function fitVideo(){if(!video.videoWidth)return;const view=$("#camView");const cs=getComputedStyle(view);const vw=view.clientWidth-(parseFloat(cs.paddingLeft)||0),vh=view.clientHeight-(parseFloat(cs.paddingTop)||0);
   const a=video.videoWidth/video.videoHeight;let w=vw,h=vw/a;if(h>vh){h=vh;w=vh*a}
   $("#vbox").style.width=Math.floor(w)+"px";$("#vbox").style.height=Math.floor(h)+"px";ov.width=video.videoWidth;ov.height=video.videoHeight;drawOverlay()}
 window.addEventListener("resize",()=>{if(stream)setTimeout(fitVideo,200)});
-video.addEventListener("loadedmetadata",fitVideo);
+video.addEventListener("loadedmetadata",fitVideo);video.addEventListener("resize",fitVideo);
 function camBoardVals(){const b=boardVals();b.point=$("#qPoint").value.trim();b.note=$("#qNote").value.trim();b.phase=$("#qPhase").value;b.date=today();return b}
 function drawOverlay(){if(!stream||!ov.width)return;const x=ov.getContext("2d");x.clearRect(0,0,ov.width,ov.height);ovRect=$("#bOn").checked?drawBoard(x,ov.width,ov.height,camBoardVals()):null}
 ["qPoint","qNote","qPhase"].forEach(id=>$("#"+id).addEventListener("input",drawOverlay));
 $("#camBoard").addEventListener("click",()=>{$("#bOn").checked=!$("#bOn").checked;$("#camBoard").textContent=$("#bOn").checked?"黒板 ON":"黒板 OFF";drawOverlay();drawPreview()});
 let shooting=false;
-$("#shutter").addEventListener("click",async()=>{if(!stream||!video.videoWidth||shooting)return;shooting=true;
+$("#shutter").addEventListener("click",async()=>{if(!stream||!video.videoWidth||shooting||!$("#rotate").hidden)return;shooting=true;
   const fl=$("#flash");fl.classList.add("on");requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove("on")));
   try{const base=scaleCanvas(video,2048);const orig=await toBlob(base,.92);const b=camBoardVals();
     const {canvas}=await savePhoto(base,orig,b,$("#bOn").checked);
