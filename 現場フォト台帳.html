@@ -119,7 +119,8 @@ textarea{resize:vertical;min-height:64px}
 .cam .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 .cam .flash.on{opacity:.8;transition:none}
 .cam .topbar{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;gap:8px;z-index:2}
-.cam .pill{background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 14px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;min-height:40px}
+.cam .pill{background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 11px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;min-height:40px;white-space:nowrap}
+.cam .pill.on{background:var(--chalk);color:#1d2621;border-color:var(--chalk)}
 .cam .bar{background:#0e1511;padding:10px max(14px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));display:grid;gap:10px}
 .cam .quick{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:8px}
 .cam .quick input,.cam .quick select{background:#1c2620;color:#fff;border-color:#33433a;font-size:16px;padding:8px}
@@ -321,12 +322,13 @@ textarea{resize:vertical;min-height:64px}
     <div class="rotate" id="rotate" hidden>
       <div class="ph" aria-hidden="true"></div>
       <b>スマホを横向きにしてください</b>
-      <p>向きが変わらないときは、コントロールセンターで「画面の向きのロック」を解除してください。</p>
+      <p>横にしても案内が消えないときは、上の「向き」ボタンを押して「横」を選んでください。</p>
       <button class="pill" id="btnPortrait">縦向きのまま撮る</button>
     </div>
     <div class="topbar">
       <button class="pill" id="camClose">閉じる</button>
       <span class="pill" id="camCount" style="cursor:default">0枚</span>
+      <button class="pill" id="camOri">向き 自動</button>
       <button class="pill" id="camBoard">黒板 ON</button>
     </div>
   </div>
@@ -476,16 +478,34 @@ async function savePhoto(baseCanvas,origBlob,b,on){
 let stream=null;const video=$("#video"),ov=$("#ov");let ovRect=null;
 $("#btnOpenCam").addEventListener("click",openCam);
 $("#landOnly").checked=ls.get("landOnly",true);$("#landOnly").addEventListener("change",e=>ls.set("landOnly",e.target.checked));
-const portraitMQ=matchMedia("(orientation: portrait)");
-function checkOrient(){$("#rotate").hidden=!(!$("#cam").hidden&&$("#landOnly").checked&&!S.allowPortrait&&portraitMQ.matches&&$("#camMsg").hidden)}
-portraitMQ.addEventListener?.("change",()=>{checkOrient();setTimeout(fitVideo,250)});
+/* 向き：画面が回る端末はそのまま。回らない端末は傾きセンサーで持ち方を読み、写真を回して横向きにする */
+S.oriMode=ls.get("oriMode","auto");S.phys=null;S.sensorOn=false;
+const pageLand=()=>innerWidth>innerHeight;
+function camRot(){if(pageLand())return 0;const m=S.oriMode==="auto"?S.phys:S.oriMode;return m==="l"?-90:m==="r"?90:0}
+function checkOrient(){$("#rotate").hidden=!(!$("#cam").hidden&&$("#landOnly").checked&&!S.allowPortrait&&!pageLand()&&camRot()===0&&$("#camMsg").hidden);updOriPill()}
+function updOriPill(){const L={auto:"向き 自動",l:"向き 横↺",r:"向き 横↻",p:"向き 縦"};const b=$("#camOri");
+  b.textContent=L[S.oriMode]+(S.oriMode==="auto"&&camRot()?"・横":"");b.classList.toggle("on",S.oriMode!=="auto")}
+function onRotChange(){checkOrient();drawOverlay()}
+function onOri(e){const be=e.beta,ga=e.gamma;if(be==null||ga==null)return;let p=S.phys;
+  if(Math.abs(ga)>55&&Math.abs(be)<50)p=ga<0?"l":"r";else if(Math.abs(be)>60&&Math.abs(ga)<35)p="p";
+  if(p!==S.phys){S.phys=p;if(!$("#cam").hidden)onRotChange()}}
+function startSensor(){if(S.sensorOn)return;const go=()=>{window.addEventListener("deviceorientation",onOri);S.sensorOn=true};
+  try{if(typeof DeviceOrientationEvent!=="undefined"&&typeof DeviceOrientationEvent.requestPermission==="function"){
+      DeviceOrientationEvent.requestPermission().then(r=>{if(r==="granted")go()}).catch(()=>{})}
+    else if("ondeviceorientation" in window)go()}catch(e){}}
+$("#camOri").addEventListener("click",()=>{const order=["auto","l","r","p"];S.oriMode=order[(order.indexOf(S.oriMode)+1)%order.length];ls.set("oriMode",S.oriMode);onRotChange()});
+const onViewChange=()=>{checkOrient();setTimeout(()=>{fitVideo();checkOrient()},250)};
+matchMedia("(orientation: portrait)").addEventListener?.("change",onViewChange);
+window.addEventListener("orientationchange",onViewChange);
 $("#btnPortrait").addEventListener("click",()=>{S.allowPortrait=true;checkOrient()});
+function rotCanvas(c,r){const o=document.createElement("canvas");o.width=c.height;o.height=c.width;const x=o.getContext("2d");
+  if(r===-90){x.translate(0,c.width);x.rotate(-Math.PI/2)}else{x.translate(c.height,0);x.rotate(Math.PI/2)}x.drawImage(c,0,0);return o}
 async function lockLandscape(){if(!$("#landOnly").checked||!screen.orientation?.lock)return;
   try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:"hide"});
     await screen.orientation.lock("landscape")}catch(e){}}
 function unlockOrient(){try{screen.orientation?.unlock?.()}catch(e){}if(document.fullscreenElement)document.exitFullscreen?.().catch(()=>{})}
 async function openCam(){if(!S.pid){toast("先に「案件・データ」で案件を登録してください");setTab("projects");return}
-  S.allowPortrait=false;const lockP=lockLandscape();
+  S.allowPortrait=false;startSensor();const lockP=lockLandscape();
   $("#qPoint").value=$("#bPoint").value;$("#qNote").value=$("#bNote").value;$("#qPhase").value=$("#bPhase").value;
   $("#cam").hidden=false;document.body.style.overflow="hidden";S.camCount=0;$("#camCount").textContent="0枚";$("#lastBox").hidden=true;
   const msg=$("#camMsg");msg.hidden=true;$("#bDate").value=today();await lockP;checkOrient();await fontsReady();
@@ -499,16 +519,23 @@ $("#camClose").addEventListener("click",closeCam);
 function fitVideo(){if(!video.videoWidth)return;const view=$("#camView");const cs=getComputedStyle(view);const vw=view.clientWidth-(parseFloat(cs.paddingLeft)||0),vh=view.clientHeight-(parseFloat(cs.paddingTop)||0);
   const a=video.videoWidth/video.videoHeight;let w=vw,h=vw/a;if(h>vh){h=vh;w=vh*a}
   $("#vbox").style.width=Math.floor(w)+"px";$("#vbox").style.height=Math.floor(h)+"px";ov.width=video.videoWidth;ov.height=video.videoHeight;drawOverlay()}
-window.addEventListener("resize",()=>{if(stream)setTimeout(fitVideo,200)});
+window.addEventListener("resize",()=>{checkOrient();if(stream)setTimeout(fitVideo,200)});
 video.addEventListener("loadedmetadata",fitVideo);video.addEventListener("resize",fitVideo);
 function camBoardVals(){const b=boardVals();b.point=$("#qPoint").value.trim();b.note=$("#qNote").value.trim();b.phase=$("#qPhase").value;b.date=today();return b}
-function drawOverlay(){if(!stream||!ov.width)return;const x=ov.getContext("2d");x.clearRect(0,0,ov.width,ov.height);ovRect=$("#bOn").checked?drawBoard(x,ov.width,ov.height,camBoardVals()):null}
+let ovGeo={r:0};
+function drawOverlay(){if(!stream||!ov.width)return;const x=ov.getContext("2d");const W=ov.width,H=ov.height;x.clearRect(0,0,W,H);ovRect=null;
+  const r=camRot();ovGeo=r?{r,W,H,ow:H,oh:W}:{r:0,W,H,ow:W,oh:H};if(!$("#bOn").checked)return;
+  if(!r){ovRect=drawBoard(x,W,H,camBoardVals());return}
+  const off=document.createElement("canvas");off.width=H;off.height=W;ovRect=drawBoard(off.getContext("2d"),H,W,camBoardVals());
+  x.save();if(r===-90){x.translate(W,0);x.rotate(Math.PI/2)}else{x.translate(0,H);x.rotate(-Math.PI/2)}x.drawImage(off,0,0);x.restore()}
+/* 画面上の位置 → 写真（横向き）上の位置 */
+function ovMap(p){const g=ovGeo;if(g.r===-90)return{x:p.y,y:g.W-p.x,cw:g.ow,ch:g.oh};if(g.r===90)return{x:g.H-p.y,y:p.x,cw:g.ow,ch:g.oh};return{x:p.x,y:p.y,cw:g.W,ch:g.H}}
 ["qPoint","qNote","qPhase"].forEach(id=>$("#"+id).addEventListener("input",drawOverlay));
 $("#camBoard").addEventListener("click",()=>{$("#bOn").checked=!$("#bOn").checked;$("#camBoard").textContent=$("#bOn").checked?"黒板 ON":"黒板 OFF";drawOverlay();drawPreview()});
 let shooting=false;
 $("#shutter").addEventListener("click",async()=>{if(!stream||!video.videoWidth||shooting||!$("#rotate").hidden)return;shooting=true;
   const fl=$("#flash");fl.classList.add("on");requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove("on")));
-  try{const base=scaleCanvas(video,2048);const orig=await toBlob(base,.92);const b=camBoardVals();
+  try{let base=scaleCanvas(video,2048);const r=camRot();if(r)base=rotCanvas(base,r);const orig=await toBlob(base,.92);const b=camBoardVals();
     const {canvas}=await savePhoto(base,orig,b,$("#bOn").checked);
     S.lastOrig={blob:orig,name:fileName(b,"元")};S.camCount++;$("#camCount").textContent=S.camCount+"枚";
     $("#lastImg").src=URL.createObjectURL(await toBlob(scaleCanvas(canvas,240),.7));$("#lastBox").hidden=false}
@@ -518,15 +545,15 @@ $("#btnLastSave").addEventListener("click",()=>{if(S.lastOrig)shareFiles([new Fi
 function fileName(b,tag,ext="jpg"){const d=new Date();return `${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}_${safeName(b.point||b.kind||"現場").slice(0,24)}_${tag}.${ext}`}
 
 /* ---------- 黒板のドラッグ（ライブ画面・取込プレビュー共通） ---------- */
-function draggable(cv,getRect,redraw){let drag=null;
-  const pt=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}};
+function draggable(cv,getRect,redraw,map){let drag=null;
+  const pt=e=>{const r=cv.getBoundingClientRect();const p={x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};return map?map(p):{...p,cw:cv.width,ch:cv.height}};
   cv.addEventListener("pointerdown",e=>{const R=getRect();if(!R)return;const p=pt(e);
     if(p.x<R.x||p.x>R.x+R.w||p.y<R.y||p.y>R.y+R.h)return;drag={dx:p.x-R.x,dy:p.y-R.y,w:R.w,h:R.h};cv.setPointerCapture(e.pointerId);e.preventDefault()});
   cv.addEventListener("pointermove",e=>{if(!drag)return;const p=pt(e);
-    S.free={x:Math.max(0,Math.min(cv.width-drag.w,p.x-drag.dx))/cv.width,y:Math.max(0,Math.min(cv.height-drag.h,p.y-drag.dy))/cv.height};
+    S.free={x:Math.max(0,Math.min(p.cw-drag.w,p.x-drag.dx))/p.cw,y:Math.max(0,Math.min(p.ch-drag.h,p.y-drag.dy))/p.ch};
     if(S.pos!=="free"){S.pos="free";$("#segPos").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed","false"))}redraw()});
   const end=()=>{if(!drag)return;drag=null;ls.set("pos",S.pos);ls.set("free",S.free)};cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end)}
-let raf1=0;draggable(ov,()=>ovRect,()=>{if(!raf1)raf1=requestAnimationFrame(()=>{raf1=0;drawOverlay()})});
+let raf1=0;draggable(ov,()=>ovRect,()=>{if(!raf1)raf1=requestAnimationFrame(()=>{raf1=0;drawOverlay()})},ovMap);
 
 /* ---------- 写真の取り込み ---------- */
 async function loadBitmap(file){try{return await createImageBitmap(file,{imageOrientation:"from-image"})}catch(e){const u=URL.createObjectURL(file);const i=new Image();i.src=u;await i.decode();return i}}
@@ -714,8 +741,14 @@ function render(){renderProjects();if(S.tab==="photos")renderPhotos();if(S.tab==
   try{const persisted=await navigator.storage?.persist?.();if(persisted===false&&/iPhone|iPad/.test(navigator.userAgent)&&!navigator.standalone)
     banner("iPhoneでは、しばらく開かないとデータが消えることがあります。共有ボタンから「ホーム画面に追加」して使ってください。")}catch(e){}
   S.projects=(await DB.all("projects")).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  if(!S.projects.length&&!ls.get("sampleSeeded",false)){
+    const sp={id:uid(),name:"【サンプル】〇〇区 街頭防犯カメラ設置工事",client:"〇〇区役所",contractor:"〇〇電設株式会社",place:"大阪市〇〇区〇〇町",term:"2026/11/1〜2027/1/31",
+      kinds:["配線工事","支柱建柱","機器取付","調整・試験"],createdAt:new Date().toISOString(),sample:true};
+    try{await DB.put("projects",sp);S.projects=[sp];ls.set("sampleSeeded",true);ls.set("pid",sp.id);
+      ls.set("board:"+sp.id,{name:sp.name,kind:"機器取付",type:"防犯カメラ設置",point:"正門 1号機",by:sp.contractor,phase:"施工中"});ls.set("tab","shoot")}catch(e){}}
   S.pid=ls.get("pid",null);if(!S.projects.some(p=>p.id===S.pid))S.pid=S.projects[0]?.id||null;
   await selectProject(S.pid);setTab(S.projects.length?ls.get("tab","shoot"):"projects");fontsReady();
+  if(proj()?.sample&&!$("#sysBanner").textContent)banner("サンプル案件を入れてあります。そのまま撮影を試せます。本番では「案件・データ」で自分の案件を追加し、サンプルは編集から削除してください。");
 })();
 </script>
 </body>
