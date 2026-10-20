@@ -814,7 +814,7 @@ $("#btnCsv").addEventListener("click",()=>{const list=ledgerList();const q=v=>`"
 let editPid=null;
 $("#projPick").addEventListener("change",e=>selectProject(e.target.value));
 async function selectProject(id){S.pid=id||null;ls.set("pid",S.pid);S.kind="";S.sel.clear();fillBoardFromProject();S.photos=S.pid?await DB.byProject(S.pid):[];render()}
-function renderProjects(){$("#projPick").innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}" ${p.id===S.pid?"selected":""}>${esc(p.name)}</option>`).join(""):'<option value="">案件を登録してください</option>';
+function renderProjects(){$("#projPick").innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}" ${p.id===S.pid?"selected":""}>${esc(projHeader(p))}</option>`).join(""):'<option value="">案件を登録してください</option>';
   $("#plist").innerHTML=S.projects.length?S.projects.map(p=>`<div class="pitem ${p.id===S.pid?"on":""}"><div style="min-width:0"><div class="t">${p.receiptNo?`<span class="no" style="font-size:12px">受付No.${esc(p.receiptNo)}</span> `:""}${esc(p.name)}</div>
     <div class="s">${esc([p.building,p.client,p.place,p.term].filter(Boolean).join("・"))}</div><div class="s">工種：${esc((p.kinds||[]).join("、")||"未登録")}</div></div>
     <div class="row">${p.id===S.pid?'<span class="s">選択中</span>':`<button class="btn" data-sel="${p.id}">選ぶ</button>`}<button class="btn" data-edit="${p.id}">編集</button></div></div>`).join("")
