@@ -1,46 +1,48 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="現場フォト台帳">
+<meta name="theme-color" content="#24402f">
 <title>現場フォト台帳</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Klee+One:wght@600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-/* Layout: 黒板グリーンの帯ヘッダー + タブ切替の1カラム作業画面。写真は格子、台帳はA4見本を縦に並べる */
+/* 黒板グリーンの帯ヘッダー + タブ切替の1カラム作業画面。撮影は全画面カメラ */
 :root{
   --bg:#f3f5f1; --surface:#ffffff; --line:#d5dbd2; --ink:#1d2621; --muted:#5d6b62;
   --board:#24402f; --board-ink:#f4f1e6; --chalk:#e6c341; --accent:#2f6b47; --danger:#b3392f;
   --shadow:0 1px 2px rgba(20,40,28,.08),0 4px 14px rgba(20,40,28,.06);
   --f-body:"BIZ UDPGothic","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
   --f-chalk:"Klee One","BIZ UDPGothic","Hiragino Sans",sans-serif;
-  --r:10px;
+  --r:10px; color-scheme:light;
 }
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+@media (prefers-color-scheme: dark){:root{
   --bg:#131a16; --surface:#1b241f; --line:#2f3b34; --ink:#e7ece8; --muted:#9aa89f;
-  --board:#1f3828; --board-ink:#f4f1e6; --chalk:#e6c341; --accent:#6fbf8d; --danger:#ef7d72;
-  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#131a16; --surface:#1b241f; --line:#2f3b34; --ink:#e7ece8; --muted:#9aa89f;
-  --board:#1f3828; --board-ink:#f4f1e6; --chalk:#e6c341; --accent:#6fbf8d; --danger:#ef7d72;
-  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}
+  --board:#1f3828; --accent:#6fbf8d; --danger:#ef7d72; --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark}}
 *{box-sizing:border-box}
-html,body{min-height:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--board)}
+[hidden]{display:none!important}
+img{max-width:100%}
 .wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1080px;margin:0 auto}
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--board);color:var(--board-ink)}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--board);color:var(--board-ink);padding-top:env(safe-area-inset-top,0px);margin-top:calc(-1 * env(safe-area-inset-top,0px))}
 header.top .wrap{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;padding-block:12px 0}
 .brand{font-family:var(--f-chalk);font-size:22px;letter-spacing:.04em;margin:0;white-space:nowrap}
-.brand small{font-family:var(--f-body);font-size:12px;opacity:.75;margin-left:8px;letter-spacing:.08em}
 .projsel{margin-left:auto;display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 220px;justify-content:flex-end}
 .projsel select{max-width:100%;min-width:0;flex:0 1 320px;background:rgba(255,255,255,.1);color:var(--board-ink);border:1px solid rgba(255,255,255,.3);border-radius:8px;padding:6px 10px;font:inherit}
 .projsel select option{color:#1d2621;background:#fff}
 nav.tabs{display:flex;gap:4px;overflow-x:auto;width:100%;scrollbar-width:none}
 nav.tabs button{background:none;border:0;color:var(--board-ink);opacity:.72;font:inherit;font-weight:700;padding:10px 14px 12px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
 nav.tabs button[aria-selected="true"]{opacity:1;border-bottom-color:var(--chalk)}
-nav.tabs button:focus-visible{outline:2px solid var(--chalk);outline-offset:-2px}
-main{padding-block:20px 60px}
-h2{font-size:18px;margin:0 0 4px;text-wrap:balance}
+main{padding-block:20px calc(60px + env(safe-area-inset-bottom,0px))}
+h2{font-size:18px;margin:0 0 4px}
 .lead{color:var(--muted);margin:0 0 16px;font-size:14px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
 .grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
@@ -49,19 +51,18 @@ h2{font-size:18px;margin:0 0 4px;text-wrap:balance}
 .fields .full{grid-column:1/-1}
 @media (max-width:440px){.fields{grid-template-columns:minmax(0,1fr)}}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);letter-spacing:.04em;font-weight:700;min-width:0}
-input,select,textarea{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
-textarea{resize:vertical;min-height:64px}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0;max-width:100%}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-height:42px;text-align:left}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
-input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:700;border-radius:8px;padding:10px 16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;text-decoration:none;min-height:44px}
+input[type=checkbox]{width:auto}
+textarea{resize:vertical;min-height:64px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-weight:700;border-radius:8px;padding:10px 16px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;min-height:44px;position:relative}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-:root[data-theme="dark"] .btn.primary{color:#0f1a13}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.primary{color:#0f1a13}}
+@media (prefers-color-scheme: dark){.btn.primary{color:#0f1a13}}
 .btn.danger{color:var(--danger);border-color:var(--danger)}
 .btn.danger.armed{background:var(--danger);color:#fff}
 .btn:disabled{opacity:.45;cursor:not-allowed}
-.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.big{min-height:56px;font-size:17px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .seg button{font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:0;border-right:1px solid var(--line);padding:7px 11px;cursor:pointer;min-height:36px}
@@ -69,33 +70,31 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .seg button[aria-pressed="true"]{background:var(--board);color:var(--board-ink)}
 .optrow{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:13px;color:var(--muted)}
 .capture{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
-.capture label.btn{position:relative}
-.capture input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+.capture label.btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
 .stage{background:#0d1410;border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;display:grid;place-items:center;max-width:100%}
-.stage canvas{max-width:100%;max-height:100%;display:block;touch-action:none;cursor:grab}
-.stage canvas.drag{cursor:grabbing}
-.stage .ph{color:#9fb3a5;text-align:center;padding:24px;font-size:14px}
-.boardmock{font-family:var(--f-chalk);background:var(--board);color:var(--board-ink);border:3px solid #6d5a3c;border-radius:4px;display:inline-grid;grid-template-columns:auto 1fr;font-size:13px;min-width:220px;margin-bottom:12px}
-.boardmock span{padding:3px 10px;border-bottom:1px solid rgba(244,241,230,.35)}
-.boardmock span:nth-child(odd){border-right:1px solid rgba(244,241,230,.35)}
+.stage canvas{max-width:100%;max-height:100%;display:block;touch-action:none}
 .thumbs{display:flex;gap:6px;overflow-x:auto;margin-top:10px}
 .thumbs img{width:64px;height:48px;object-fit:cover;border-radius:4px;border:2px solid transparent;cursor:pointer}
 .thumbs img.on{border-color:var(--chalk)}
 .status{font-size:13px;color:var(--muted);min-height:20px}
+.hint{font-size:12px;color:var(--muted)}
 .filters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .filters > *{flex:1 1 180px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
 .chip{font:inherit;font-size:13px;padding:5px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
 .chip[aria-pressed="true"]{background:var(--board);color:var(--board-ink);border-color:var(--board)}
 .chip b{font-variant-numeric:tabular-nums;margin-left:4px;opacity:.75}
-.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;cursor:pointer;text-align:left;padding:0;font:inherit;color:inherit;display:flex;flex-direction:column}
-.card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.selbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;cursor:pointer;text-align:left;padding:0;font:inherit;color:inherit;display:flex;flex-direction:column;position:relative}
+.card.sel{outline:3px solid var(--chalk);outline-offset:-3px}
 .card .im{aspect-ratio:4/3;background:#0d1410;width:100%}
 .card .im img{width:100%;height:100%;object-fit:cover;display:block}
 .card .meta{padding:8px 10px;display:grid;gap:2px;font-size:12px;min-width:0}
 .card .meta .k{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .meta .d{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .meta .d{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .tick{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.45);border:2px solid #fff;color:#1d2621;display:grid;place-items:center;font-weight:700}
+.card.sel .tick{background:var(--chalk)}
 .no{font-variant-numeric:tabular-nums;font-size:11px;color:var(--muted)}
 .empty{border:2px dashed var(--line);border-radius:var(--r);padding:32px 20px;text-align:center;color:var(--muted)}
 .empty strong{display:block;color:var(--ink);font-size:16px;margin-bottom:6px}
@@ -105,13 +104,31 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .pitem.on{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
 .pitem .t{font-weight:700}
 .pitem .s{font-size:12px;color:var(--muted)}
-.overlay{position:fixed;inset:0;background:rgba(8,14,10,.6);z-index:20;display:flex;align-items:flex-end;justify-content:center;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) 0 env(safe-area-inset-left,0px)}
+.overlay{position:fixed;inset:0;background:rgba(8,14,10,.6);z-index:20;display:flex;align-items:flex-end;justify-content:center}
 .sheetdlg{background:var(--surface);width:100%;max-width:900px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 @media (min-width:760px){.overlay{align-items:center}.sheetdlg{border-radius:14px}}
 .dlghead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .big{width:100%;border-radius:8px;background:#0d1410;display:block}
-.hint{font-size:12px;color:var(--muted)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
+/* カメラ */
+.cam{position:fixed;inset:0;background:#000;z-index:40;display:flex;flex-direction:column;color:#fff}
+.cam .view{flex:1;display:grid;place-items:center;min-height:0;position:relative;padding-top:env(safe-area-inset-top,0px)}
+.cam .vbox{position:relative}
+.cam video{display:block;width:100%;height:100%;object-fit:fill;background:#111}
+.cam canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.cam .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
+.cam .flash.on{opacity:.8;transition:none}
+.cam .topbar{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;gap:8px;z-index:2}
+.cam .pill{background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 14px;font:inherit;font-weight:700;font-size:14px;cursor:pointer;min-height:40px}
+.cam .bar{background:#0e1511;padding:10px max(14px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));display:grid;gap:10px}
+.cam .quick{display:grid;grid-template-columns:1.2fr 1fr .9fr;gap:8px}
+.cam .quick input,.cam .quick select{background:#1c2620;color:#fff;border-color:#33433a;font-size:16px;padding:8px}
+.cam .shoot{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px}
+.cam .shutter{width:76px;height:76px;border-radius:50%;border:5px solid #fff;background:var(--chalk);cursor:pointer}
+.cam .shutter:active{transform:scale(.94)}
+.cam .last{justify-self:start;display:flex;align-items:center;gap:8px}
+.cam .last img{width:56px;height:42px;object-fit:cover;border-radius:6px;border:2px solid #fff}
+.cam .msg{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px;font-size:15px;line-height:1.7}
 /* 台帳見本 */
 .ledger-tools{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:18px}
 .ledger-tools > label{flex:1 1 200px}
@@ -125,21 +142,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .a4 .slot dl{margin:0;display:grid;grid-template-columns:auto 1fr;align-content:start;min-width:0}
 .a4 .slot dt,.a4 .slot dd{margin:0;padding:3px 6px;border-bottom:1px solid #bbb;min-width:0;overflow-wrap:anywhere}
 .a4 .slot dt{border-right:1px solid #bbb;color:#444;white-space:nowrap}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.meter{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-
+</head>
+<body>
 <header class="top">
   <div class="wrap">
-    <h1 class="brand">現場フォト台帳<small>工事写真・電子小黒板</small></h1>
-    <div class="projsel">
-      <label for="projPick" style="font-size:12px;opacity:.75;white-space:nowrap">案件</label>
-      <select id="projPick" aria-label="案件を選択"></select>
-    </div>
+    <h1 class="brand">現場フォト台帳</h1>
+    <div class="projsel"><select id="projPick" aria-label="案件を選択"></select></div>
     <nav class="tabs" role="tablist">
-      <button role="tab" data-tab="shoot" aria-selected="true">撮影・取込</button>
+      <button role="tab" data-tab="shoot" aria-selected="true">撮影</button>
       <button role="tab" data-tab="photos" aria-selected="false">写真一覧</button>
       <button role="tab" data-tab="ledger" aria-selected="false">写真台帳</button>
-      <button role="tab" data-tab="projects" aria-selected="false">案件</button>
+      <button role="tab" data-tab="projects" aria-selected="false">案件・データ</button>
     </nav>
   </div>
 </header>
@@ -147,12 +164,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 <main class="wrap">
   <div id="sysBanner" class="banner" hidden></div>
 
-  <!-- 撮影・取込 -->
   <section id="tab-shoot">
     <div class="grid2">
       <div class="panel">
         <h2>黒板の内容</h2>
-        <p class="lead">ここに入れた内容を写真に写し込み、台帳にも記載します。</p>
+        <p class="lead">カメラ画面に重ねて表示し、そのまま写真に写し込みます。</p>
         <div class="fields">
           <label class="f full">工事名<input id="bName" placeholder="案件を選ぶと自動で入ります"></label>
           <label class="f">工種<input id="bKind" list="kindList" placeholder="例：配線工事"></label>
@@ -160,62 +176,60 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
           <label class="f">測点・位置<input id="bPoint" placeholder="例：正門 1号機"></label>
           <label class="f">撮影日<input id="bDate" type="date"></label>
           <label class="f">施工者<input id="bBy" placeholder="例：〇〇電設"></label>
-          <label class="f">撮影区分<select id="bPhase"><option>着手前</option><option selected>施工中</option><option>完了</option><option>材料検収</option><option>品質管理</option><option>出来形</option><option>その他</option></select></label>
+          <label class="f">撮影区分<select id="bPhase"></select></label>
           <label class="f full">備考<input id="bNote" placeholder="例：取付高さ H=3.0m"></label>
         </div>
         <datalist id="kindList"></datalist>
         <div style="margin-top:16px;display:grid;gap:10px">
-          <div class="optrow">
-            <label style="display:flex;gap:6px;align-items:center"><input id="bOn" type="checkbox" checked style="width:auto"> 黒板を写し込む</label>
-          </div>
+          <label class="optrow" style="display:flex;gap:6px;align-items:center"><input id="bOn" type="checkbox" checked> 黒板を写し込む</label>
           <div class="optrow">位置
-            <span class="seg" id="segPos">
-              <button data-v="bl" aria-pressed="true">左下</button><button data-v="br" aria-pressed="false">右下</button><button data-v="tl" aria-pressed="false">左上</button><button data-v="tr" aria-pressed="false">右上</button>
-            </span>
+            <span class="seg" id="segPos"><button data-v="bl" aria-pressed="true">左下</button><button data-v="br" aria-pressed="false">右下</button><button data-v="tl" aria-pressed="false">左上</button><button data-v="tr" aria-pressed="false">右上</button></span>
           </div>
           <div class="optrow">大きさ
-            <span class="seg" id="segSize">
-              <button data-v="s" aria-pressed="false">小</button><button data-v="m" aria-pressed="true">中</button><button data-v="l" aria-pressed="false">大</button>
-            </span>
+            <span class="seg" id="segSize"><button data-v="s" aria-pressed="false">小</button><button data-v="m" aria-pressed="true">中</button><button data-v="l" aria-pressed="false">大</button></span>
           </div>
         </div>
       </div>
 
       <div class="panel">
-        <h2>写真</h2>
-        <p class="lead">スマホはカメラが起動します。PCでは撮影済みの写真を選んでください。</p>
-        <div class="stage" id="stage"><canvas id="pv" aria-label="黒板の仕上がり見本"></canvas></div>
-        <p class="hint" id="stageHint" style="margin:6px 0 0">撮影前の見本です。黒板の内容と位置を確かめてから撮影してください。黒板は指で動かせます。</p>
-        <div class="thumbs" id="pendThumbs"></div>
+        <h2>撮影</h2>
+        <p class="lead">黒板を見ながら撮影できます。撮った写真はこの端末に保存されます。</p>
+        <button class="btn primary big" id="btnOpenCam" style="width:100%">カメラを起動して撮影</button>
         <div class="capture">
-          <label class="btn primary" id="lblCam">カメラで撮影<input id="fCam" type="file" accept="image/*" capture="environment"></label>
-          <label class="btn" id="lblImp">写真を取り込む<input id="fImp" type="file" accept="image/*" multiple></label>
+          <label class="btn">写真を取り込む<input id="fImp" type="file" accept="image/*" multiple></label>
+          <label class="btn">標準カメラで撮る<input id="fCam" type="file" accept="image/*" capture="environment"></label>
         </div>
-        <label class="optrow" style="margin-top:10px;display:flex;gap:6px;align-items:center"><input id="keepOrig" type="checkbox" checked style="width:auto"> 撮影した元の写真（黒板なし）をスマホにも保存する</label>
-        <div class="row" style="margin-top:12px;justify-content:space-between">
-          <span class="status" id="saveStatus"></span>
-          <div class="row">
-            <button class="btn" id="btnClear" hidden>取り消す</button>
-            <button class="btn" id="btnRetake" hidden>撮り直す</button>
-            <button class="btn primary" id="btnSave" disabled>保存する</button>
+        <div id="impArea" hidden style="margin-top:16px">
+          <div class="stage"><canvas id="pv" aria-label="取り込み写真の仕上がり"></canvas></div>
+          <p class="hint" style="margin:6px 0 0">黒板は指でドラッグして位置を直せます。すでに黒板が写っている写真は「黒板を写し込む」を外してください。</p>
+          <div class="thumbs" id="pendThumbs"></div>
+          <div class="row" style="margin-top:10px;justify-content:space-between">
+            <span class="status" id="saveStatus"></span>
+            <div class="row"><button class="btn" id="btnClear">取り消す</button><button class="btn primary" id="btnSave">保存する</button></div>
           </div>
         </div>
-        <p class="hint" style="margin:8px 0 0">取り込む写真にすでに黒板が写っている場合は「黒板を写し込む」を外してください。黒板の内容は台帳用に記録されます。</p>
+        <p class="hint" style="margin-top:12px">「標準カメラで撮る」は、カメラ画面が開かない端末向けです。</p>
       </div>
     </div>
   </section>
 
-  <!-- 写真一覧 -->
   <section id="tab-photos" hidden>
     <div class="filters">
       <input id="q" type="search" placeholder="測点・種別・備考で検索">
       <select id="phaseFilter"><option value="">撮影区分：すべて</option></select>
     </div>
     <div class="chips" id="kindChips"></div>
+    <div class="selbar">
+      <button class="btn" id="btnSelMode">選んで写真アプリに保存</button>
+      <span id="selTools" hidden class="row">
+        <select id="selWhich" style="width:auto"><option value="orig">元の写真（黒板なし）</option><option value="img">黒板つき写真</option></select>
+        <button class="btn" id="btnSelAll">すべて選ぶ</button>
+        <button class="btn primary" id="btnSelSave" disabled>保存（0枚）</button>
+      </span>
+    </div>
     <div class="gallery" id="gallery"></div>
   </section>
 
-  <!-- 写真台帳 -->
   <section id="tab-ledger" hidden>
     <div class="panel" style="margin-bottom:18px">
       <h2>写真台帳の出力</h2>
@@ -224,23 +238,35 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
         <label class="f">台帳の表題<input id="lgTitle" value="工事写真台帳"></label>
         <label class="f">工種<select id="lgKind"><option value="">すべて</option></select></label>
         <label class="f">撮影区分<select id="lgPhase"><option value="">すべて</option></select></label>
-        <div class="row">
-          <button class="btn primary" id="btnPdf">PDFで保存</button>
-          <button class="btn" id="btnCsv">CSVで保存</button>
-        </div>
+        <div class="row"><button class="btn primary" id="btnPdf">PDFで保存</button><button class="btn" id="btnCsv">CSVで保存</button></div>
       </div>
       <div class="status" id="lgStatus"></div>
     </div>
     <div class="sheets" id="sheets"></div>
   </section>
 
-  <!-- 案件 -->
   <section id="tab-projects" hidden>
     <div class="grid2">
-      <div>
-        <h2>案件一覧</h2>
-        <p class="lead">選んだ案件の写真だけが一覧と台帳に出ます。</p>
-        <div class="plist" id="plist"></div>
+      <div style="display:grid;gap:20px">
+        <div>
+          <h2>案件一覧</h2>
+          <p class="lead">選んだ案件の写真だけが一覧と台帳に出ます。</p>
+          <div class="plist" id="plist"></div>
+        </div>
+        <div class="panel">
+          <h2>データの書き出し・読み込み</h2>
+          <p class="lead">写真と記録はこの端末の中だけに保存されています。別の端末や他の人に渡すときは、案件ごとにファイルに書き出してください。</p>
+          <label class="optrow" style="display:flex;gap:6px;align-items:center;margin-bottom:10px"><input id="expOrig" type="checkbox"> 元の写真（黒板なし）も含める（ファイルが大きくなります）</label>
+          <div class="row">
+            <button class="btn primary" id="btnExport">選択中の案件を書き出す</button>
+            <label class="btn">ファイルを読み込む<input id="fBackup" type="file" accept=".json,application/json" style="position:absolute;inset:0;opacity:0;width:100%"></label>
+          </div>
+          <div class="status" id="dataStatus" style="margin-top:8px"></div>
+          <div style="margin-top:14px">
+            <div class="hint" id="usageText">保存容量を確認中</div>
+            <div class="meter" style="margin-top:6px"><i id="usageBar" style="width:0"></i></div>
+          </div>
+        </div>
       </div>
       <form class="panel" id="pform">
         <h2 id="pformTitle">案件を追加</h2>
@@ -253,20 +279,58 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
           <label class="f">工期<input id="pTerm" placeholder="例：2026/11/1〜2027/1/31"></label>
           <label class="f full">工種（改行区切り）<textarea id="pKinds" rows="4" placeholder="配線工事&#10;機器取付&#10;支柱建柱&#10;調整・試験"></textarea></label>
         </div>
-        <div class="row" style="margin-top:14px;justify-content:flex-end">
-          <button type="button" class="btn" id="pCancel" hidden>新規に戻す</button>
-          <button type="submit" class="btn primary" id="pSubmit">追加する</button>
+        <div class="row" style="margin-top:14px;justify-content:space-between">
+          <button type="button" class="btn danger" id="pDelete" hidden>案件を削除</button>
+          <div class="row" style="margin-left:auto">
+            <button type="button" class="btn" id="pCancel" hidden>新規に戻す</button>
+            <button type="submit" class="btn primary" id="pSubmit">追加する</button>
+          </div>
         </div>
       </form>
     </div>
   </section>
 </main>
 
+<!-- カメラ画面 -->
+<div class="cam" id="cam" hidden>
+  <div class="view" id="camView">
+    <div class="vbox" id="vbox">
+      <video id="video" playsinline muted autoplay></video>
+      <canvas id="ov" aria-label="黒板"></canvas>
+      <div class="flash" id="flash"></div>
+    </div>
+    <div class="msg" id="camMsg" hidden></div>
+    <div class="topbar">
+      <button class="pill" id="camClose">閉じる</button>
+      <span class="pill" id="camCount" style="cursor:default">0枚</span>
+      <button class="pill" id="camBoard">黒板 ON</button>
+    </div>
+  </div>
+  <div class="bar">
+    <div class="quick">
+      <input id="qPoint" placeholder="測点・位置" aria-label="測点・位置">
+      <input id="qNote" placeholder="備考" aria-label="備考">
+      <select id="qPhase" aria-label="撮影区分"></select>
+    </div>
+    <div class="shoot">
+      <div class="last"><span id="lastBox" hidden style="display:flex;align-items:center;gap:8px"><img id="lastImg" alt="直前の写真"><button class="pill" id="btnLastSave">元写真を保存</button></span></div>
+      <button class="shutter" id="shutter" aria-label="撮影"></button>
+      <span class="hint" style="color:#9fb3a5;justify-self:end;text-align:right">黒板はドラッグで移動</span>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="dlg" hidden>
   <div class="sheetdlg" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
     <div class="dlghead"><h2 id="dlgTitle">写真の詳細</h2><button class="btn" id="dlgClose">閉じる</button></div>
     <div class="grid2">
-      <img class="big" id="dlgImg" alt="">
+      <div>
+        <img class="big" id="dlgImg" alt="">
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="eSaveImg">黒板つきを保存</button>
+          <button class="btn" id="eSaveOrig">元の写真を保存</button>
+        </div>
+      </div>
       <div>
         <div class="fields">
           <label class="f">工種<input id="eKind" list="kindList"></label>
@@ -277,7 +341,6 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
           <label class="f">施工者<input id="eBy"></label>
           <label class="f full">備考<input id="eNote"></label>
         </div>
-        <p class="hint" id="eWho"></p>
         <p class="hint">ここで直すのは台帳とCSVの記載です。写真に写し込んだ黒板の文字は変わりません。</p>
         <div class="row" style="justify-content:space-between;margin-top:10px">
           <button class="btn danger" id="eDel">削除</button>
@@ -290,269 +353,336 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 <div class="toast" id="toast" hidden></div>
 
 <script>
+"use strict";
+const APP_VERSION=1;
 const PHASES=["着手前","施工中","完了","材料検収","品質管理","出来形","その他"];
 const $=s=>document.querySelector(s);
-const S={db:null,assets:null,user:null,dl:null,uid:null,canWrite:true,projects:[],pid:null,photos:[],unsub:null,
-  tab:"shoot",kind:"",pending:[],cur:0,pos:"bl",size:"m",names:{}};
+const S={projects:[],pid:null,photos:[],tab:"shoot",kind:"",pending:[],cur:0,pos:"bl",size:"m",free:null,
+  selMode:false,sel:new Set(),selFiles:new Map(),lastOrig:null,camCount:0};
 const ls={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const today=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-const jpDate=s=>{if(!s)return"";const m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[1]}年${+m[2]}月${+m[3]}日`:s};
-const ymd=t=>{const d=new Date(t);return isNaN(d)?today():d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
-function banner(m){const b=$("#sysBanner");b.textContent=m||"";b.hidden=!m}
+const p2=n=>String(n).padStart(2,"0");
+const ymd=t=>{const d=t?new Date(t):new Date();return isNaN(d)?ymd():d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate())};
+const today=()=>ymd();
+const jpDate=s=>{const m=String(s||"").match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[1]}年${+m[2]}月${+m[3]}日`:(s||"")};
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2)).replace(/-/g,"");
+const safeName=s=>String(s||"案件").replace(/[\\/:*?"<>|\s]/g,"_").slice(0,60);
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2800)}
+function banner(m){$("#sysBanner").textContent=m||"";$("#sysBanner").hidden=!m}
 const proj=()=>S.projects.find(p=>p.id===S.pid);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- 端末内データベース（IndexedDB） ---------- */
+const DB={db:null,
+  open(){return new Promise((res,rej)=>{const r=indexedDB.open("genbaPhoto",1);
+    r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore("projects",{keyPath:"id"});
+      const ph=d.createObjectStore("photos",{keyPath:"id"});ph.createIndex("projectId","projectId");d.createObjectStore("blobs",{keyPath:"id"})};
+    r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
+  st(s,m){return this.db.transaction(s,m).objectStore(s)},
+  req(r){return new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})},
+  all(s){return this.req(this.st(s,"readonly").getAll())},
+  byProject(pid){return this.req(this.st("photos","readonly").index("projectId").getAll(pid))},
+  get(s,id){return this.req(this.st(s,"readonly").get(id))},
+  put(s,v){return this.req(this.st(s,"readwrite").put(v))},
+  del(s,id){return this.req(this.st(s,"readwrite").delete(id))},
+  async blob(id){if(!id)return null;const r=await this.get("blobs",id);return r?r.blob:null},
+  async putBlob(blob){const id=uid();await this.put("blobs",{id,blob});return id}};
+const urlCache=new Map();
+async function blobUrl(id){if(!id)return"";if(urlCache.has(id))return urlCache.get(id);const b=await DB.blob(id);if(!b)return"";const u=URL.createObjectURL(b);urlCache.set(id,u);return u}
+async function hydrateImgs(root){for(const el of root.querySelectorAll("img[data-blob]")){const id=el.dataset.blob;el.removeAttribute("data-blob");blobUrl(id).then(u=>{if(u)el.src=u})}}
 
 /* ---------- タブ ---------- */
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 function setTab(t){S.tab=t;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
-  ["shoot","photos","ledger","projects"].forEach(k=>$("#tab-"+k).hidden=k!==t);render();ls.set("tab",t)}
+  ["shoot","photos","ledger","projects"].forEach(k=>$("#tab-"+k).hidden=k!==t);render();ls.set("tab",t);window.scrollTo(0,0)}
 
 /* ---------- 黒板フォーム ---------- */
+["#bPhase","#ePhase","#qPhase"].forEach(id=>$(id).innerHTML=PHASES.map(p=>`<option>${p}</option>`).join(""));
+["#phaseFilter","#lgPhase"].forEach(id=>$(id).innerHTML+=PHASES.map(p=>`<option>${p}</option>`).join(""));
 const BF=["bName","bKind","bType","bPoint","bDate","bBy","bPhase","bNote"];
 function boardVals(){return{name:$("#bName").value.trim(),kind:$("#bKind").value.trim(),type:$("#bType").value.trim(),point:$("#bPoint").value.trim(),
   date:$("#bDate").value||today(),by:$("#bBy").value.trim(),phase:$("#bPhase").value,note:$("#bNote").value.trim()}}
-function fillBoardFromProject(){const p=proj();const saved=ls.get("board:"+S.pid,null);
-  $("#bName").value=saved?.name||p?.name||"";$("#bBy").value=saved?.by||p?.contractor||"";
-  $("#bKind").value=saved?.kind||"";$("#bType").value=saved?.type||"";$("#bPoint").value=saved?.point||"";
-  $("#bPhase").value=saved?.phase||"施工中";$("#bNote").value="";$("#bDate").value=today();
+function fillBoardFromProject(){const p=proj();const sv=ls.get("board:"+S.pid,null);
+  $("#bName").value=sv?.name||p?.name||"";$("#bBy").value=sv?.by||p?.contractor||"";$("#bKind").value=sv?.kind||"";$("#bType").value=sv?.type||"";
+  $("#bPoint").value=sv?.point||"";$("#bPhase").value=sv?.phase||"施工中";$("#bNote").value="";$("#bDate").value=today();
   $("#kindList").innerHTML=(p?.kinds||[]).map(k=>`<option value="${esc(k)}">`).join("")}
-let prevT;BF.forEach(id=>$("#"+id).addEventListener("input",()=>{clearTimeout(prevT);prevT=setTimeout(()=>{drawPreview();if(S.pid)ls.set("board:"+S.pid,boardVals())},250)}));
-$("#bOn").addEventListener("change",drawPreview);
+let prevT;function boardChanged(){clearTimeout(prevT);prevT=setTimeout(()=>{drawPreview();drawOverlay();if(S.pid)ls.set("board:"+S.pid,boardVals())},150)}
+BF.forEach(id=>$("#"+id).addEventListener("input",boardChanged));
+$("#bOn").addEventListener("change",()=>{drawPreview();drawOverlay();$("#camBoard").textContent=$("#bOn").checked?"黒板 ON":"黒板 OFF"});
 function segInit(id,key){$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S[key]=b.dataset.v;
-  $(id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));ls.set(key,S[key]);drawPreview()})}
+  $(id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));ls.set(key,S[key]);drawPreview();drawOverlay()})}
 segInit("#segPos","pos");segInit("#segSize","size");
-function restoreSeg(id,key){const v=ls.get(key,S[key]);S[key]=v;$(id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===v))}
-S.free=ls.get("free",null);if(S.pos==="free"&&!S.free)S.pos="bl";
-restoreSeg("#segPos","pos");restoreSeg("#segSize","size");
+S.pos=ls.get("pos","bl");S.size=ls.get("size","m");S.free=ls.get("free",null);if(S.pos==="free"&&!S.free)S.pos="bl";
+$("#segPos").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===S.pos));
+$("#segSize").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===S.size));
 
-/* ---------- 画像合成 ---------- */
+/* ---------- 黒板の描画 ---------- */
 const CFONT='"BIZ UDPGothic","Hiragino Sans","Yu Gothic","Meiryo",sans-serif';
 async function fontsReady(){try{await document.fonts.load('700 20px "BIZ UDPGothic"')}catch(e){}}
-async function loadBitmap(file){try{return await createImageBitmap(file,{imageOrientation:"from-image"})}catch(e){
-  const url=URL.createObjectURL(file);const img=new Image();img.src=url;await img.decode();return img}}
-function fitText(x,txt,maxW){if(x.measureText(txt).width<=maxW)return txt;let t=txt;while(t.length>1&&x.measureText(t+"…").width>maxW)t=t.slice(0,-1);return t+"…"}
-function drawBoard(x,w,h,b,pos,size){
-  const rows=[["工事名",b.name],["工　種",b.kind],["種　別",[b.type,b.phase].filter(Boolean).join("　")],["測　点",b.point],["撮影日",jpDate(b.date)],["施工者",b.by]];
-  if(b.note)rows.push(["備　考",b.note]);
-  const short=Math.min(w,h);const bw=Math.round(short*({s:.46,m:.6,l:.78}[size]||.6));const rh=Math.round(bw*.088);
-  const frame=Math.max(4,Math.round(bw*.018));const bh=rh*rows.length+frame*2;const m=Math.round(short*.025);
-  let bx,by;
-  if(pos==="free"&&S.free){bx=Math.round(S.free.x*w);by=Math.round(S.free.y*h)}
-  else{bx=pos[1]==="l"?m:w-bw-m;by=pos[0]==="t"?m:h-bh-m}
-  bx=Math.max(0,Math.min(w-bw,bx));by=Math.max(0,Math.min(h-bh,by));
-  x.save();x.fillStyle="#6d5a3c";x.fillRect(bx,by,bw,bh);x.fillStyle="rgba(36,64,47,.96)";x.fillRect(bx+frame,by+frame,bw-frame*2,bh-frame*2);
-  const lx=bx+frame,ly=by+frame,iw=bw-frame*2,lc=Math.round(iw*.24);
-  x.strokeStyle="rgba(244,241,230,.75)";x.lineWidth=Math.max(1,Math.round(bw*.003));
+function fitText(x,t,maxW){if(x.measureText(t).width<=maxW)return t;while(t.length>1&&x.measureText(t+"…").width>maxW)t=t.slice(0,-1);return t+"…"}
+function boardRect(w,h,rowsN){const short=Math.min(w,h);const bw=Math.round(short*({s:.46,m:.6,l:.78}[S.size]||.6));const rh=Math.round(bw*.088);
+  const frame=Math.max(4,Math.round(bw*.018));const bh=rh*rowsN+frame*2;const m=Math.round(short*.025);let bx,by;
+  if(S.pos==="free"&&S.free){bx=Math.round(S.free.x*w);by=Math.round(S.free.y*h)}else{bx=S.pos[1]==="l"?m:w-bw-m;by=S.pos[0]==="t"?m:h-bh-m}
+  return{x:Math.max(0,Math.min(w-bw,bx)),y:Math.max(0,Math.min(h-bh,by)),w:bw,h:bh,rh,frame}}
+function boardRows(b){const r=[["工事名",b.name],["工　種",b.kind],["種　別",[b.type,b.phase].filter(Boolean).join("　")],["測　点",b.point],["撮影日",jpDate(b.date)],["施工者",b.by]];
+  if(b.note)r.push(["備　考",b.note]);return r}
+function drawBoard(x,w,h,b){const rows=boardRows(b);const R=boardRect(w,h,rows.length);const{rh,frame}=R;
+  x.save();x.fillStyle="#6d5a3c";x.fillRect(R.x,R.y,R.w,R.h);x.fillStyle="rgba(36,64,47,.96)";x.fillRect(R.x+frame,R.y+frame,R.w-frame*2,R.h-frame*2);
+  const lx=R.x+frame,ly=R.y+frame,iw=R.w-frame*2,lc=Math.round(iw*.24);
+  x.strokeStyle="rgba(244,241,230,.75)";x.lineWidth=Math.max(1,Math.round(R.w*.003));
   for(let i=1;i<rows.length;i++){x.beginPath();x.moveTo(lx,ly+rh*i);x.lineTo(lx+iw,ly+rh*i);x.stroke()}
   x.beginPath();x.moveTo(lx+lc,ly);x.lineTo(lx+lc,ly+rh*rows.length);x.stroke();
-  x.fillStyle="#f4f1e6";x.textBaseline="middle";const fs=Math.round(rh*.5);
-  rows.forEach((r,i)=>{const cy=ly+rh*i+rh/2;x.font=`700 ${fs}px ${CFONT}`;x.textAlign="center";x.fillText(r[0],lx+lc/2,cy);
-    x.textAlign="left";x.font=`700 ${fs}px ${CFONT}`;x.fillText(fitText(x,r[1]||"",iw-lc-fs),lx+lc+fs*.5,cy)});
-  x.restore();return{x:bx,y:by,w:bw,h:bh}}
-function compose(bmp,b,on,pos,size,max=2048){let w=bmp.width,h=bmp.height;const s=Math.min(1,max/Math.max(w,h));w=Math.round(w*s);h=Math.round(h*s);
-  const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.drawImage(bmp,0,0,w,h);c._rect=on?drawBoard(x,w,h,b,pos,size):null;return c}
-/* 撮影前の見本（写真の代わりの下地） */
-let blankBmp=null;function blank(){if(blankBmp)return blankBmp;const c=document.createElement("canvas");c.width=1280;c.height=960;const x=c.getContext("2d");
-  const g=x.createLinearGradient(0,0,0,960);g.addColorStop(0,"#3a4a40");g.addColorStop(1,"#1a241e");x.fillStyle=g;x.fillRect(0,0,1280,960);
-  x.strokeStyle="rgba(255,255,255,.18)";x.lineWidth=2;x.setLineDash([14,10]);x.strokeRect(40,40,1200,880);x.setLineDash([]);
-  x.fillStyle="rgba(255,255,255,.55)";x.font=`700 40px ${CFONT}`;x.textAlign="center";x.fillText("撮影するとここに写真が入ります",640,300);
-  blankBmp=c;return c}
+  x.fillStyle="#f4f1e6";x.textBaseline="middle";const fs=Math.round(rh*.5);x.font=`700 ${fs}px ${CFONT}`;
+  rows.forEach((r,i)=>{const cy=ly+rh*i+rh/2;x.textAlign="center";x.fillText(r[0],lx+lc/2,cy);x.textAlign="left";x.fillText(fitText(x,r[1]||"",iw-lc-fs),lx+lc+fs*.5,cy)});
+  x.restore();return R}
+function scaleCanvas(src,max){let w=src.videoWidth||src.width,h=src.videoHeight||src.height;const s=Math.min(1,max/Math.max(w,h));w=Math.round(w*s);h=Math.round(h*s);
+  const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(src,0,0,w,h);return c}
+const toBlob=(c,q=.86)=>new Promise(r=>c.toBlob(r,"image/jpeg",q));
 
-/* ---------- 取込・プレビュー ---------- */
-async function addFiles(files,fromCamera){if(!files.length)return;await fontsReady();
-  for(const f of files){try{const bmp=await loadBitmap(f);S.pending.push({file:f,bmp,date:fromCamera?today():ymd(f.lastModified),thumb:URL.createObjectURL(f)})}catch(e){toast("読み込めない画像がありました："+f.name)}}
-  if(fromCamera&&S.pending.length)$("#bDate").value=today();
-  if(fromCamera&&$("#keepOrig").checked)files.forEach(saveOriginal);
-  S.fromCam=!!fromCamera&&files.length===1&&S.pending.length===1;
+/* ---------- 保存（端末内） ---------- */
+async function savePhoto(baseCanvas,origBlob,b,on){
+  const c=document.createElement("canvas");c.width=baseCanvas.width;c.height=baseCanvas.height;const x=c.getContext("2d");x.drawImage(baseCanvas,0,0);
+  if(on)drawBoard(x,c.width,c.height,b);
+  const img=await toBlob(c,.86);const th=await toBlob(scaleCanvas(c,480),.75);
+  const imgId=await DB.putBlob(img),thumbId=await DB.putBlob(th),origId=origBlob?await DB.putBlob(origBlob):null;
+  const rec={id:uid(),projectId:S.pid,imgId,thumbId,origId,w:c.width,h:c.height,board:b,boardBurned:on,createdAt:new Date().toISOString()};
+  await DB.put("photos",rec);S.photos.push(rec);return{rec,canvas:c}}
+
+/* ---------- ライブカメラ ---------- */
+let stream=null;const video=$("#video"),ov=$("#ov");let ovRect=null;
+$("#btnOpenCam").addEventListener("click",openCam);
+async function openCam(){if(!S.pid){toast("先に「案件・データ」で案件を登録してください");setTab("projects");return}
+  $("#qPoint").value=$("#bPoint").value;$("#qNote").value=$("#bNote").value;$("#qPhase").value=$("#bPhase").value;
+  $("#cam").hidden=false;document.body.style.overflow="hidden";S.camCount=0;$("#camCount").textContent="0枚";$("#lastBox").hidden=true;
+  const msg=$("#camMsg");msg.hidden=true;$("#bDate").value=today();await fontsReady();
+  if(!navigator.mediaDevices?.getUserMedia){msg.textContent="この画面ではカメラを使えません。https:// で始まるアドレスで開いているか確認してください。開けない場合は「標準カメラで撮る」を使ってください。";msg.hidden=false;return}
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1440}}});
+    video.srcObject=stream;await video.play();await sleep(50);fitVideo();try{await navigator.wakeLock?.request("screen")}catch(e){}}
+  catch(e){msg.textContent=e?.name==="NotAllowedError"?"カメラの使用が許可されていません。ブラウザの設定でこのサイトのカメラを許可してから、もう一度開いてください。":"カメラを起動できませんでした。「標準カメラで撮る」を使ってください。";msg.hidden=false}}
+function closeCam(){stream?.getTracks().forEach(t=>t.stop());stream=null;video.srcObject=null;$("#cam").hidden=true;document.body.style.overflow="";
+  $("#bPoint").value=$("#qPoint").value;$("#bNote").value=$("#qNote").value;$("#bPhase").value=$("#qPhase").value;if(S.pid)ls.set("board:"+S.pid,boardVals());render()}
+$("#camClose").addEventListener("click",closeCam);
+function fitVideo(){if(!video.videoWidth)return;const view=$("#camView");const vw=view.clientWidth,vh=view.clientHeight-(parseFloat(getComputedStyle(view).paddingTop)||0);
+  const a=video.videoWidth/video.videoHeight;let w=vw,h=vw/a;if(h>vh){h=vh;w=vh*a}
+  $("#vbox").style.width=Math.floor(w)+"px";$("#vbox").style.height=Math.floor(h)+"px";ov.width=video.videoWidth;ov.height=video.videoHeight;drawOverlay()}
+window.addEventListener("resize",()=>{if(stream)setTimeout(fitVideo,200)});
+video.addEventListener("loadedmetadata",fitVideo);
+function camBoardVals(){const b=boardVals();b.point=$("#qPoint").value.trim();b.note=$("#qNote").value.trim();b.phase=$("#qPhase").value;b.date=today();return b}
+function drawOverlay(){if(!stream||!ov.width)return;const x=ov.getContext("2d");x.clearRect(0,0,ov.width,ov.height);ovRect=$("#bOn").checked?drawBoard(x,ov.width,ov.height,camBoardVals()):null}
+["qPoint","qNote","qPhase"].forEach(id=>$("#"+id).addEventListener("input",drawOverlay));
+$("#camBoard").addEventListener("click",()=>{$("#bOn").checked=!$("#bOn").checked;$("#camBoard").textContent=$("#bOn").checked?"黒板 ON":"黒板 OFF";drawOverlay();drawPreview()});
+let shooting=false;
+$("#shutter").addEventListener("click",async()=>{if(!stream||!video.videoWidth||shooting)return;shooting=true;
+  const fl=$("#flash");fl.classList.add("on");requestAnimationFrame(()=>requestAnimationFrame(()=>fl.classList.remove("on")));
+  try{const base=scaleCanvas(video,2048);const orig=await toBlob(base,.92);const b=camBoardVals();
+    const {canvas}=await savePhoto(base,orig,b,$("#bOn").checked);
+    S.lastOrig={blob:orig,name:fileName(b,"元")};S.camCount++;$("#camCount").textContent=S.camCount+"枚";
+    $("#lastImg").src=URL.createObjectURL(await toBlob(scaleCanvas(canvas,240),.7));$("#lastBox").hidden=false}
+  catch(e){toast(e?.name==="QuotaExceededError"?"端末の保存容量が足りません":"保存できませんでした")}
+  shooting=false});
+$("#btnLastSave").addEventListener("click",()=>{if(S.lastOrig)shareFiles([new File([S.lastOrig.blob],S.lastOrig.name,{type:"image/jpeg"})])});
+function fileName(b,tag,ext="jpg"){const d=new Date();return `${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}_${safeName(b.point||b.kind||"現場").slice(0,24)}_${tag}.${ext}`}
+
+/* ---------- 黒板のドラッグ（ライブ画面・取込プレビュー共通） ---------- */
+function draggable(cv,getRect,redraw){let drag=null;
+  const pt=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}};
+  cv.addEventListener("pointerdown",e=>{const R=getRect();if(!R)return;const p=pt(e);
+    if(p.x<R.x||p.x>R.x+R.w||p.y<R.y||p.y>R.y+R.h)return;drag={dx:p.x-R.x,dy:p.y-R.y,w:R.w,h:R.h};cv.setPointerCapture(e.pointerId);e.preventDefault()});
+  cv.addEventListener("pointermove",e=>{if(!drag)return;const p=pt(e);
+    S.free={x:Math.max(0,Math.min(cv.width-drag.w,p.x-drag.dx))/cv.width,y:Math.max(0,Math.min(cv.height-drag.h,p.y-drag.dy))/cv.height};
+    if(S.pos!=="free"){S.pos="free";$("#segPos").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed","false"))}redraw()});
+  const end=()=>{if(!drag)return;drag=null;ls.set("pos",S.pos);ls.set("free",S.free)};cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end)}
+let raf1=0;draggable(ov,()=>ovRect,()=>{if(!raf1)raf1=requestAnimationFrame(()=>{raf1=0;drawOverlay()})});
+
+/* ---------- 写真の取り込み ---------- */
+async function loadBitmap(file){try{return await createImageBitmap(file,{imageOrientation:"from-image"})}catch(e){const u=URL.createObjectURL(file);const i=new Image();i.src=u;await i.decode();return i}}
+async function addFiles(files,fromCam){if(!files.length)return;if(!S.pid){toast("先に案件を登録してください");setTab("projects");return}await fontsReady();
+  for(const f of files){try{S.pending.push({file:f,bmp:await loadBitmap(f),date:fromCam?today():ymd(f.lastModified),thumb:URL.createObjectURL(f)})}catch(e){toast("読み込めない画像がありました")}}
   S.cur=S.pending.length-1;drawPending()}
-$("#keepOrig").checked=ls.get("keepOrig",true);$("#keepOrig").addEventListener("change",e=>ls.set("keepOrig",e.target.checked));
-async function saveOriginal(f){if(!S.dl){toast("この表示では元の写真をスマホに保存できません");return}
-  const ext=({"image/jpeg":"jpg","image/png":"png","image/heic":"heic","image/heif":"heif","image/webp":"webp"})[f.type]||(f.name.split(".").pop()||"jpg");
-  const d=new Date(),p2=n=>String(n).padStart(2,"0");const b=boardVals();
-  const name=`${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}_${safeName(b.point||b.kind||"現場写真").slice(0,30)}.${ext}`;
-  try{await S.dl.save({filename:name,data:f});toast("元の写真をスマホに保存しました")}
-  catch(e){if(e?.code==="declined")return;toast(e?.code==="rejected_extension"?"この形式の写真はスマホに保存できませんでした":"元の写真を保存できませんでした")}}
-$("#fCam").addEventListener("change",e=>{addFiles([...e.target.files],true);e.target.value=""});
 $("#fImp").addEventListener("change",e=>{addFiles([...e.target.files],false);e.target.value=""});
-function drawPending(){const n=S.pending.length;$("#btnSave").disabled=!n||!S.canWrite||!S.assets||!S.pid;$("#btnSave").textContent=n>1?`${n}枚を保存する`:"保存する";
-  $("#btnClear").hidden=!n||S.fromCam;$("#btnRetake").hidden=!(n&&S.fromCam);
-  $("#stageHint").textContent=n?"黒板は指（マウス）でドラッグして位置を直せます。この位置で保存されます。":"撮影前の見本です。黒板の内容と位置を確かめてから撮影してください。黒板は指で動かせます。";
-  $("#pendThumbs").innerHTML=n>1?S.pending.map((p,i)=>`<img src="${p.thumb}" data-i="${i}" class="${i===S.cur?"on":""}" alt="取込写真${i+1}">`).join(""):"";
-  $("#saveStatus").textContent=n?`${n}枚 選択中`+(n>1?"（撮影日は各写真の日付を使います）":""):"";drawPreview()}
+$("#fCam").addEventListener("change",e=>{addFiles([...e.target.files],true);e.target.value=""});
+let pvRect=null;const pv=$("#pv");
+function drawPending(){const n=S.pending.length;$("#impArea").hidden=!n;$("#btnSave").textContent=n>1?`${n}枚を保存する`:"保存する";
+  $("#pendThumbs").innerHTML=n>1?S.pending.map((p,i)=>`<img src="${p.thumb}" data-i="${i}" class="${i===S.cur?"on":""}" alt="">`).join(""):"";
+  $("#saveStatus").textContent=n>1?`${n}枚（撮影日は各写真の日付）`:"";drawPreview()}
 $("#pendThumbs").addEventListener("click",e=>{const i=e.target.dataset?.i;if(i!=null){S.cur=+i;drawPending()}});
-function clearPending(){S.pending.forEach(p=>URL.revokeObjectURL(p.thumb));S.pending=[];S.fromCam=false;drawPending()}
+function drawPreview(){const p=S.pending[S.cur];if(!p)return;const b=boardVals();if(S.pending.length>1)b.date=p.date;
+  const c=scaleCanvas(p.bmp,1280);pv.width=c.width;pv.height=c.height;const x=pv.getContext("2d");x.drawImage(c,0,0);pvRect=$("#bOn").checked?drawBoard(x,c.width,c.height,b):null}
+let raf2=0;draggable(pv,()=>pvRect,()=>{if(!raf2)raf2=requestAnimationFrame(()=>{raf2=0;drawPreview()})});
+function clearPending(){S.pending.forEach(p=>URL.revokeObjectURL(p.thumb));S.pending=[];drawPending()}
 $("#btnClear").addEventListener("click",clearPending);
-$("#btnRetake").addEventListener("click",()=>{clearPending();$("#fCam").click()});
-let lastRect=null,pvRaf=0;
-function drawPreview(){const p=S.pending[S.cur];const b=boardVals();if(p&&S.pending.length>1)b.date=p.date;
-  const c=compose(p?p.bmp:blank(),b,$("#bOn").checked,S.pos,S.size,1280);const pv=$("#pv");
-  if(pv.width!==c.width||pv.height!==c.height){pv.width=c.width;pv.height=c.height}
-  pv.getContext("2d").drawImage(c,0,0);lastRect=c._rect}
-function schedulePreview(){if(pvRaf)return;pvRaf=requestAnimationFrame(()=>{pvRaf=0;drawPreview()})}
-/* 黒板をドラッグして位置を決める */
-(()=>{const pv=$("#pv");let drag=null;
-  const pt=e=>{const r=pv.getBoundingClientRect();return{x:(e.clientX-r.left)*pv.width/r.width,y:(e.clientY-r.top)*pv.height/r.height}};
-  pv.addEventListener("pointerdown",e=>{if(!lastRect)return;const p=pt(e);const R=lastRect;
-    if(p.x<R.x||p.x>R.x+R.w||p.y<R.y||p.y>R.y+R.h)return;
-    drag={dx:p.x-R.x,dy:p.y-R.y,w:R.w,h:R.h};pv.setPointerCapture(e.pointerId);pv.classList.add("drag");e.preventDefault()});
-  pv.addEventListener("pointermove",e=>{if(!drag)return;const p=pt(e);
-    const x=Math.max(0,Math.min(pv.width-drag.w,p.x-drag.dx)),y=Math.max(0,Math.min(pv.height-drag.h,p.y-drag.dy));
-    S.free={x:x/pv.width,y:y/pv.height};if(S.pos!=="free"){S.pos="free";$("#segPos").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed","false"))}
-    schedulePreview()});
-  const end=()=>{if(!drag)return;drag=null;pv.classList.remove("drag");ls.set("pos",S.pos);ls.set("free",S.free)};
-  pv.addEventListener("pointerup",end);pv.addEventListener("pointercancel",end)})();
-$("#btnSave").addEventListener("click",async()=>{
-  if(!S.pid){toast("先に案件を選んでください");return}
-  const btn=$("#btnSave");btn.disabled=true;const base=boardVals();const on=$("#bOn").checked;let ok=0;const total=S.pending.length;
-  for(let i=0;i<total;i++){const p=S.pending[i];$("#saveStatus").textContent=`保存中 ${i+1} / ${total}`;
-    const b={...base};if(total>1)b.date=p.date;
-    try{const c=compose(p.bmp,b,on,S.pos,S.size);const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.86));
-      let up;try{up=await S.assets.upload(blob,{type:"image/jpeg"})}catch(e){if(e?.code==="store_unavailable"){await new Promise(r=>setTimeout(r,800));up=await S.assets.upload(blob,{type:"image/jpeg"})}else throw e}
-      await S.db.collection("photos").add({projectId:S.pid,assetId:up.id,w:c.width,h:c.height,board:b,boardBurned:on,
-        createdAt:new Date().toISOString(),createdBy:S.uid||null});ok++}
-    catch(e){const m={too_large:"写真が大きすぎます",quota_or_state:"保存容量がいっぱいです。不要な写真を削除してください",rate_limited:"保存が続きすぎました。少し待ってからもう一度保存してください",quota_exceeded:"保存できる件数の上限に達しました"}[e?.code];
-      $("#saveStatus").textContent=(m||"保存できませんでした")+`（${ok}枚は保存済み）`;btn.disabled=false;S.pending=S.pending.slice(i);S.cur=0;drawPending();return}}
-  $("#bNote").value="";clearPending();toast(`${ok}枚を保存しました。続けて撮影できます`)});
+$("#btnSave").addEventListener("click",async()=>{const btn=$("#btnSave");btn.disabled=true;const base=boardVals();const on=$("#bOn").checked;let ok=0;const n=S.pending.length;
+  for(let i=0;i<n;i++){const p=S.pending[i];$("#saveStatus").textContent=`保存中 ${i+1} / ${n}`;const b={...base};if(n>1)b.date=p.date;
+    try{await savePhoto(scaleCanvas(p.bmp,2048),p.file.type.startsWith("image/")?p.file:null,b,on);ok++}
+    catch(e){$("#saveStatus").textContent=(e?.name==="QuotaExceededError"?"端末の保存容量が足りません":"保存できませんでした")+`（${ok}枚は保存済み）`;btn.disabled=false;return}}
+  btn.disabled=false;$("#bNote").value="";clearPending();toast(`${ok}枚を保存しました`)});
+
+/* ---------- ファイルを端末へ渡す ---------- */
+async function shareFiles(files){
+  try{if(navigator.canShare&&navigator.canShare({files})){await navigator.share({files});return true}}
+  catch(e){if(e?.name==="AbortError")return false}
+  for(const f of files){const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=f.name;document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),10000);await sleep(300)}
+  return true}
 
 /* ---------- 一覧 ---------- */
 const sorted=()=>[...S.photos].sort((a,b)=>((a.board?.date||"")+(a.createdAt||"")).localeCompare((b.board?.date||"")+(b.createdAt||"")));
-$("#q").addEventListener("input",()=>renderPhotos());$("#phaseFilter").addEventListener("change",()=>renderPhotos());
-$("#phaseFilter").innerHTML+=PHASES.map(p=>`<option>${p}</option>`).join("");
-$("#kindChips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;S.kind=b.dataset.k;renderPhotos()});
-function kindsOf(list){const m=new Map();list.forEach(p=>{const k=p.board?.kind||"（工種なし）";m.set(k,(m.get(k)||0)+1)});return m}
+const kindOf=p=>p.board?.kind||"（工種なし）";
+function kindsOf(list){const m=new Map();list.forEach(p=>m.set(kindOf(p),(m.get(kindOf(p))||0)+1));return m}
 function filtered(){const q=$("#q").value.trim().toLowerCase(),ph=$("#phaseFilter").value;
-  return sorted().filter(p=>(!S.kind||(p.board?.kind||"（工種なし）")===S.kind)&&(!ph||p.board?.phase===ph)&&
-    (!q||[p.board?.type,p.board?.point,p.board?.note,p.board?.kind].join(" ").toLowerCase().includes(q)))}
+  return sorted().filter(p=>(!S.kind||kindOf(p)===S.kind)&&(!ph||p.board?.phase===ph)&&(!q||[p.board?.type,p.board?.point,p.board?.note,p.board?.kind].join(" ").toLowerCase().includes(q)))}
+$("#q").addEventListener("input",()=>renderPhotos());$("#phaseFilter").addEventListener("change",()=>renderPhotos());
+$("#kindChips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(b){S.kind=b.dataset.k;renderPhotos()}});
 function renderPhotos(){const all=sorted();const km=kindsOf(all);
-  $("#kindChips").innerHTML=`<button class="chip" data-k="" aria-pressed="${!S.kind}">すべて<b>${all.length}</b></button>`+
-    [...km].map(([k,n])=>`<button class="chip" data-k="${esc(k)}" aria-pressed="${S.kind===k}">${esc(k)}<b>${n}</b></button>`).join("");
-  const list=filtered();const g=$("#gallery");
-  if(!S.pid){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>案件がまだありません</strong>「案件」タブで工事を登録すると、写真をためられます。</div>`;return}
-  if(!all.length){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>この案件の写真はまだありません</strong>「撮影・取込」から黒板つきで撮影するか、撮影済みの写真を取り込んでください。</div>`;return}
-  if(!list.length){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>条件に合う写真がありません</strong>検索語や工種の絞り込みを変えてください。</div>`;return}
+  $("#kindChips").innerHTML=`<button class="chip" data-k="" aria-pressed="${!S.kind}">すべて<b>${all.length}</b></button>`+[...km].map(([k,n])=>`<button class="chip" data-k="${esc(k)}" aria-pressed="${S.kind===k}">${esc(k)}<b>${n}</b></button>`).join("");
+  const g=$("#gallery");const list=filtered();
+  const empty=(t,s)=>g.innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>${t}</strong>${s}</div>`;
+  if(!S.pid)return empty("案件がまだありません","「案件・データ」で工事を登録すると、写真をためられます。");
+  if(!all.length)return empty("この案件の写真はまだありません","「撮影」からカメラを起動して撮影してください。");
+  if(!list.length)return empty("条件に合う写真がありません","検索語や絞り込みを変えてください。");
   const idx=new Map(all.map((p,i)=>[p.id,i+1]));
-  g.innerHTML=list.map(p=>`<button class="card" data-id="${p.id}"><div class="im"><img loading="lazy" src="/_blob/${esc(p.assetId)}" alt="${esc(p.board?.point||"工事写真")}" onerror="this.style.opacity=0"></div>
-    <div class="meta"><span class="no">No.${idx.get(p.id)}</span><span class="k">${esc(p.board?.type||p.board?.kind||"—")}</span><span class="d">${esc(p.board?.point||"")}</span><span class="d">${esc(jpDate(p.board?.date))}・${esc(p.board?.phase||"")}</span></div></button>`).join("")}
-$("#gallery").addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openDlg(c.dataset.id)});
+  g.innerHTML=list.map(p=>`<button class="card ${S.sel.has(p.id)?"sel":""}" data-id="${p.id}">${S.selMode?`<span class="tick">${S.sel.has(p.id)?"✓":""}</span>`:""}<div class="im"><img data-blob="${p.thumbId||p.imgId}" alt=""></div>
+    <div class="meta"><span class="no">No.${idx.get(p.id)}</span><span class="k">${esc(p.board?.type||p.board?.kind||"—")}</span><span class="d">${esc(p.board?.point||"")}</span><span class="d">${esc(jpDate(p.board?.date))}・${esc(p.board?.phase||"")}</span></div></button>`).join("");
+  hydrateImgs(g);updSel()}
+$("#gallery").addEventListener("click",e=>{const c=e.target.closest(".card");if(!c)return;if(S.selMode){toggleSel(c.dataset.id);renderPhotos()}else openDlg(c.dataset.id)});
+/* 選んで写真アプリに保存 */
+$("#btnSelMode").addEventListener("click",()=>{S.selMode=!S.selMode;S.sel.clear();S.selFiles.clear();$("#selTools").hidden=!S.selMode;
+  $("#btnSelMode").textContent=S.selMode?"選択をやめる":"選んで写真アプリに保存";renderPhotos()});
+$("#selWhich").addEventListener("change",()=>{S.selFiles.clear();S.sel.forEach(prefetch);updSel()});
+$("#btnSelAll").addEventListener("click",()=>{filtered().forEach(p=>{if(!S.sel.has(p.id)){S.sel.add(p.id);prefetch(p.id)}});renderPhotos()});
+function toggleSel(id){if(S.sel.has(id)){S.sel.delete(id);S.selFiles.delete(id)}else{S.sel.add(id);prefetch(id)}}
+async function prefetch(id){const p=S.photos.find(x=>x.id===id);if(!p)return;const which=$("#selWhich").value;const bid=which==="orig"?(p.origId||p.imgId):p.imgId;
+  const b=await DB.blob(bid);if(b&&S.sel.has(id))S.selFiles.set(id,new File([b],`${(p.board?.date||"").replace(/-/g,"")}_${safeName(p.board?.point||p.board?.kind||"現場")}_${p.id.slice(0,6)}${which==="orig"?"_元":""}.jpg`,{type:"image/jpeg"}));updSel()}
+function updSel(){const n=S.sel.size,ready=S.selFiles.size;$("#btnSelSave").textContent=ready<n?`準備中 ${ready}/${n}`:`保存（${n}枚）`;$("#btnSelSave").disabled=!n||ready<n}
+$("#btnSelSave").addEventListener("click",async()=>{const files=[...S.selFiles.values()];if(await shareFiles(files))toast("共有メニューで「画像を保存」を選ぶと写真アプリに入ります")});
 
-/* ---------- 詳細ダイアログ ---------- */
-let editing=null;$("#ePhase").innerHTML=PHASES.map(p=>`<option>${p}</option>`).join("");
-async function openDlg(id){const p=S.photos.find(x=>x.id===id);if(!p)return;editing=p;const b=p.board||{};
-  $("#dlgImg").src="/_blob/"+p.assetId;$("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";
-  $("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";$("#eBy").value=b.by||"";$("#eNote").value=b.note||"";
-  ["eKind","eType","ePoint","eDate","ePhase","eBy","eNote","eSave","eDel"].forEach(i=>$("#"+i).disabled=!S.canWrite);
-  $("#eDel").classList.remove("armed");$("#eDel").textContent="削除";$("#eWho").textContent="";
-  $("#dlg").hidden=false;$("#dlgClose").focus();
-  if(p.createdBy&&S.user){try{const ps=await S.user.profiles([p.createdBy]);const n=ps?.[p.createdBy]?.name;if(n&&editing===p)$("#eWho").textContent="登録者："+n}catch(e){}}}
+/* ---------- 詳細 ---------- */
+let editing=null;
+async function openDlg(id){const p=S.photos.find(x=>x.id===id);if(!p)return;editing=p;const b=p.board||{};$("#dlgImg").src=await blobUrl(p.imgId);
+  $("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";$("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";
+  $("#eBy").value=b.by||"";$("#eNote").value=b.note||"";$("#eDel").classList.remove("armed");$("#eDel").textContent="削除";$("#eSaveOrig").hidden=!p.origId;
+  editing._files={};for(const [k,bid] of [["img",p.imgId],["orig",p.origId]]){if(bid)DB.blob(bid).then(bl=>{if(bl&&editing===p)p._files[k]=new File([bl],`${(b.date||"").replace(/-/g,"")}_${safeName(b.point||b.kind||"現場")}${k==="orig"?"_元":""}.jpg`,{type:"image/jpeg"})})}
+  $("#dlg").hidden=false}
 function closeDlg(){$("#dlg").hidden=true;editing=null}
 $("#dlgClose").addEventListener("click",closeDlg);$("#dlg").addEventListener("click",e=>{if(e.target.id==="dlg")closeDlg()});
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#dlg").hidden)closeDlg()});
-$("#eSave").addEventListener("click",async()=>{if(!editing)return;const b={...(editing.board||{}),kind:$("#eKind").value.trim(),type:$("#eType").value.trim(),
-  point:$("#ePoint").value.trim(),date:$("#eDate").value,phase:$("#ePhase").value,by:$("#eBy").value.trim(),note:$("#eNote").value.trim()};
-  try{await S.db.doc("photos/"+editing.id).update({board:b});toast("記載を更新しました");closeDlg()}catch(e){toast("更新できませんでした。権限を確認してください")}});
+$("#eSaveImg").addEventListener("click",()=>{const f=editing?._files?.img;if(f)shareFiles([f]);else toast("読み込み中です。もう一度押してください")});
+$("#eSaveOrig").addEventListener("click",()=>{const f=editing?._files?.orig;if(f)shareFiles([f]);else toast("読み込み中です。もう一度押してください")});
+$("#eSave").addEventListener("click",async()=>{if(!editing)return;const p=editing;
+  p.board={...(p.board||{}),kind:$("#eKind").value.trim(),type:$("#eType").value.trim(),point:$("#ePoint").value.trim(),date:$("#eDate").value,phase:$("#ePhase").value,by:$("#eBy").value.trim(),note:$("#eNote").value.trim()};
+  const {_files,...rec}=p;await DB.put("photos",rec);toast("記載を更新しました");closeDlg();render()});
 $("#eDel").addEventListener("click",async()=>{const btn=$("#eDel");if(!btn.classList.contains("armed")){btn.classList.add("armed");btn.textContent="もう一度押すと削除";return}
-  const p=editing;try{await S.db.doc("photos/"+p.id).delete();if(S.assets){try{await S.assets.delete(p.assetId)}catch(e){}}toast("写真を削除しました");closeDlg()}
-  catch(e){toast("削除できませんでした。権限を確認してください")}});
+  const p=editing;for(const id of [p.imgId,p.thumbId,p.origId])if(id)await DB.del("blobs",id);await DB.del("photos",p.id);
+  S.photos=S.photos.filter(x=>x.id!==p.id);toast("写真を削除しました");closeDlg();render()});
 
 /* ---------- 台帳 ---------- */
-$("#lgPhase").innerHTML+=PHASES.map(p=>`<option>${p}</option>`).join("");
-["lgKind","lgPhase","lgTitle"].forEach(i=>$("#"+i).addEventListener(i==="lgTitle"?"input":"change",()=>renderLedger()));
-function ledgerList(){const k=$("#lgKind").value,ph=$("#lgPhase").value;const all=sorted();
-  return all.map((p,i)=>({...p,no:i+1})).filter(p=>(!k||(p.board?.kind||"（工種なし）")===k)&&(!ph||p.board?.phase===ph))}
+["lgKind","lgPhase"].forEach(i=>$("#"+i).addEventListener("change",()=>renderLedger()));$("#lgTitle").addEventListener("input",()=>renderLedger());
+function ledgerList(){const k=$("#lgKind").value,ph=$("#lgPhase").value;return sorted().map((p,i)=>({...p,no:i+1})).filter(p=>(!k||kindOf(p)===k)&&(!ph||p.board?.phase===ph))}
 function chunk(a,n){const r=[];for(let i=0;i<a.length;i+=n)r.push(a.slice(i,i+n));return r}
 function infoRows(p){const b=p.board||{};return[["写真番号","No."+p.no],["撮影日",jpDate(b.date)],["工種",b.kind],["種別・部位",b.type],["撮影区分",b.phase],["測点・位置",b.point],["施工者",b.by],["備考",b.note]]}
 function renderLedger(){const km=kindsOf(sorted());const cur=$("#lgKind").value;
   $("#lgKind").innerHTML='<option value="">すべて</option>'+[...km.keys()].map(k=>`<option ${k===cur?"selected":""}>${esc(k)}</option>`).join("");
-  const list=ledgerList();const pages=chunk(list,3);const p=proj();const title=$("#lgTitle").value||"工事写真台帳";
-  $("#btnPdf").disabled=$("#btnCsv").disabled=!list.length;
-  $("#lgStatus").textContent=list.length?`${list.length}枚・${pages.length}ページ`:"";
-  if(!list.length){$("#sheets").innerHTML=`<div class="empty" style="width:100%"><strong>台帳にする写真がありません</strong>写真を保存すると、ここにA4台帳の見本が並びます。</div>`;return}
-  $("#sheets").innerHTML=pages.map((pg,i)=>`<div class="a4"><div class="hd"><b>${esc(title)}</b><span>${esc(p?.name||"")}　${i+1} / ${pages.length}</span></div>`+
-    pg.map(ph=>`<div class="slot"><div class="pi"><img loading="lazy" src="/_blob/${esc(ph.assetId)}" alt=""></div><dl>${infoRows(ph).map(([a,b])=>`<dt>${a}</dt><dd>${esc(b||"")}</dd>`).join("")}</dl></div>`).join("")+
-    `</div>`).join("")}
-function wrapText(x,txt,maxW){const out=[];let line="";for(const ch of String(txt||"")){if(x.measureText(line+ch).width>maxW&&line){out.push(line);line=ch}else line+=ch}if(line)out.push(line);return out.length?out:[""]}
-function loadImg(src){return new Promise((res)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
+  const list=ledgerList();const pages=chunk(list,3);const title=$("#lgTitle").value||"工事写真台帳";
+  $("#btnPdf").disabled=$("#btnCsv").disabled=!list.length;$("#lgStatus").textContent=list.length?`${list.length}枚・${pages.length}ページ`:"";
+  if(!list.length){$("#sheets").innerHTML=`<div class="empty" style="width:100%"><strong>台帳にする写真がありません</strong>写真を撮ると、ここにA4台帳の見本が並びます。</div>`;return}
+  $("#sheets").innerHTML=pages.map((pg,i)=>`<div class="a4"><div class="hd"><b>${esc(title)}</b><span>${esc(proj()?.name||"")}　${i+1} / ${pages.length}</span></div>`+
+    pg.map(ph=>`<div class="slot"><div class="pi"><img data-blob="${ph.imgId}" alt=""></div><dl>${infoRows(ph).map(([a,b])=>`<dt>${a}</dt><dd>${esc(b||"")}</dd>`).join("")}</dl></div>`).join("")+`</div>`).join("");
+  hydrateImgs($("#sheets"))}
+function wrapText(x,t,maxW){const out=[];let line="";for(const ch of String(t||"")){if(x.measureText(line+ch).width>maxW&&line){out.push(line);line=ch}else line+=ch}if(line)out.push(line);return out.length?out:[""]}
+function loadImg(src){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
 async function pageCanvas(pg,idx,total,title,pname){const W=1240,H=1754,M=80;const c=document.createElement("canvas");c.width=W;c.height=H;const x=c.getContext("2d");
-  x.fillStyle="#fff";x.fillRect(0,0,W,H);x.fillStyle="#111";x.textBaseline="alphabetic";
-  x.font=`700 34px ${CFONT}`;x.fillText(title,M,M+30);x.font=`400 20px ${CFONT}`;x.textAlign="right";x.fillText(`${pname}　${idx+1} / ${total}`,W-M,M+28);x.textAlign="left";
+  x.fillStyle="#fff";x.fillRect(0,0,W,H);x.fillStyle="#111";x.font=`700 34px ${CFONT}`;x.fillText(title,M,M+30);
+  x.font=`400 20px ${CFONT}`;x.textAlign="right";x.fillText(`${pname}　${idx+1} / ${total}`,W-M,M+28);x.textAlign="left";
   x.lineWidth=3;x.beginPath();x.moveTo(M,M+48);x.lineTo(W-M,M+48);x.stroke();
   const top=M+70,gap=24,bh=(H-top-M-gap*2)/3,pw=Math.round((W-M*2)*.62);
-  for(let i=0;i<pg.length;i++){const p=pg[i],y=top+i*(bh+gap);x.lineWidth=1.5;x.strokeStyle="#333";x.strokeRect(M,y,W-M*2,bh);
-    x.beginPath();x.moveTo(M+pw,y);x.lineTo(M+pw,y+bh);x.stroke();
-    const img=await loadImg("/_blob/"+p.assetId);const pad=14,aw=pw-pad*2,ah=bh-pad*2;
+  for(let i=0;i<pg.length;i++){const p=pg[i],y=top+i*(bh+gap);x.lineWidth=1.5;x.strokeStyle="#333";x.strokeRect(M,y,W-M*2,bh);x.beginPath();x.moveTo(M+pw,y);x.lineTo(M+pw,y+bh);x.stroke();
+    const img=await loadImg(await blobUrl(p.imgId));const pad=14,aw=pw-pad*2,ah=bh-pad*2;
     if(img){const s=Math.min(aw/img.naturalWidth,ah/img.naturalHeight);const iw=img.naturalWidth*s,ih=img.naturalHeight*s;x.drawImage(img,M+pad+(aw-iw)/2,y+pad+(ah-ih)/2,iw,ih)}
-    else{x.fillStyle="#888";x.font=`400 18px ${CFONT}`;x.fillText("（画像を読み込めませんでした）",M+pad+20,y+bh/2);x.fillStyle="#111"}
     const ix=M+pw,iw2=W-M-ix,lw=118;let ry=y;x.font=`400 19px ${CFONT}`;
-    for(const [a,b] of infoRows(p)){const lines=wrapText(x,b,iw2-lw-20).slice(0,a==="備考"?4:2);const rh=Math.max(42,lines.length*26+16);
-      if(ry+rh>y+bh)break;x.fillStyle="#555";x.fillText(a,ix+12,ry+28);x.fillStyle="#111";lines.forEach((l,j)=>x.fillText(l,ix+lw+8,ry+28+j*26));
-      ry+=rh;x.strokeStyle="#bbb";x.lineWidth=1;x.beginPath();x.moveTo(ix,ry);x.lineTo(W-M,ry);x.stroke();x.strokeStyle="#333"}
-    x.strokeStyle="#bbb";x.beginPath();x.moveTo(ix+lw,y);x.lineTo(ix+lw,ry);x.stroke();x.strokeStyle="#333"}
+    for(const [a,b] of infoRows(p)){const lines=wrapText(x,b,iw2-lw-20).slice(0,a==="備考"?4:2);const rh=Math.max(42,lines.length*26+16);if(ry+rh>y+bh)break;
+      x.fillStyle="#555";x.fillText(a,ix+12,ry+28);x.fillStyle="#111";lines.forEach((l,j)=>x.fillText(l,ix+lw+8,ry+28+j*26));
+      ry+=rh;x.strokeStyle="#bbb";x.lineWidth=1;x.beginPath();x.moveTo(ix,ry);x.lineTo(W-M,ry);x.stroke()}
+    x.strokeStyle="#bbb";x.beginPath();x.moveTo(ix+lw,y);x.lineTo(ix+lw,ry);x.stroke()}
   return c}
-const safeName=s=>String(s||"案件").replace(/[\\/:*?"<>|]/g,"_").slice(0,60);
-async function saveFile(filename,data){if(!S.dl){toast("この表示ではファイルを保存できません。claude.aiで開いてください");return false}
-  try{await S.dl.save({filename,data});return true}catch(e){if(e?.code!=="declined")toast("保存できませんでした");return false}}
-$("#btnPdf").addEventListener("click",async()=>{const list=ledgerList();if(!list.length)return;if(!window.jspdf){toast("PDF作成の部品を読み込めませんでした。再読み込みしてください");return}
-  const btn=$("#btnPdf");btn.disabled=true;await fontsReady();const pages=chunk(list,3);const p=proj();const title=$("#lgTitle").value||"工事写真台帳";
+$("#btnPdf").addEventListener("click",async()=>{const list=ledgerList();if(!list.length)return;if(!window.jspdf){toast("PDF作成の部品を読み込めませんでした。通信できる場所で開き直してください");return}
+  const btn=$("#btnPdf");btn.disabled=true;await fontsReady();const pages=chunk(list,3);const title=$("#lgTitle").value||"工事写真台帳";const pname=proj()?.name||"";
   try{const pdf=new window.jspdf.jsPDF({unit:"mm",format:"a4",compress:true});
-    for(let i=0;i<pages.length;i++){$("#lgStatus").textContent=`PDFを作成中 ${i+1} / ${pages.length}ページ`;
-      const c=await pageCanvas(pages[i],i,pages.length,title,p?.name||"");if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",.85),"JPEG",0,0,210,297)}
+    for(let i=0;i<pages.length;i++){$("#lgStatus").textContent=`PDFを作成中 ${i+1} / ${pages.length}ページ`;const c=await pageCanvas(pages[i],i,pages.length,title,pname);
+      if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",.85),"JPEG",0,0,210,297)}
     $("#lgStatus").textContent=`${list.length}枚・${pages.length}ページ`;
-    if(await saveFile(`${safeName(p?.name)}_${safeName(title)}.pdf`,pdf.output("arraybuffer")))toast("PDFを保存しました")}
+    const f=new File([pdf.output("blob")],`${safeName(pname)}_${safeName(title)}.pdf`,{type:"application/pdf"});lastFile=f;
+    $("#lgStatus").innerHTML=`${list.length}枚・${pages.length}ページのPDFができました <button class="btn primary" id="btnPdfGo">保存・共有する</button>`;
+    $("#btnPdfGo").addEventListener("click",()=>shareFiles([lastFile]))}
   catch(e){toast("PDFを作れませんでした")}btn.disabled=false});
-$("#btnCsv").addEventListener("click",async()=>{const list=ledgerList();const p=proj();
-  const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;const head=["写真番号","撮影日","工種","種別・部位","撮影区分","測点・位置","施工者","備考","黒板写し込み"];
+let lastFile=null;
+$("#btnCsv").addEventListener("click",()=>{const list=ledgerList();const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
+  const head=["写真番号","撮影日","工種","種別・部位","撮影区分","測点・位置","施工者","備考","黒板写し込み"];
   const rows=list.map(x=>{const b=x.board||{};return[x.no,b.date,b.kind,b.type,b.phase,b.point,b.by,b.note,x.boardBurned?"あり":"なし"]});
-  const csv="﻿"+[head,...rows].map(r=>r.map(q).join(",")).join("\r\n");
-  if(await saveFile(`${safeName(p?.name)}_写真一覧.csv`,new Blob([csv],{type:"text/csv"})))toast("CSVを保存しました")});
+  shareFiles([new File(["﻿"+[head,...rows].map(r=>r.map(q).join(",")).join("\r\n")],`${safeName(proj()?.name)}_写真一覧.csv`,{type:"text/csv"})])});
 
 /* ---------- 案件 ---------- */
 let editPid=null;
 $("#projPick").addEventListener("change",e=>selectProject(e.target.value));
-function selectProject(id){S.pid=id||null;ls.set("pid",S.pid);S.kind="";fillBoardFromProject();subPhotos();render()}
-function subPhotos(){if(S.unsub){S.unsub();S.unsub=null}S.photos=[];if(!S.db||!S.pid){render();return}
-  const pid=S.pid;S.unsub=S.db.collection("photos").where("projectId","==",pid).onSnapshot(snap=>{if(pid!==S.pid)return;
-    S.photos=snap.docs.map(d=>({id:d.id,...d.data()}));render()},e=>banner("写真の読み込みが止まりました。ページを開き直してください"))}
-function renderProjects(){const sel=$("#projPick");
-  sel.innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}" ${p.id===S.pid?"selected":""}>${esc(p.name)}</option>`).join(""):'<option value="">案件を登録してください</option>';
+async function selectProject(id){S.pid=id||null;ls.set("pid",S.pid);S.kind="";S.sel.clear();fillBoardFromProject();S.photos=S.pid?await DB.byProject(S.pid):[];render()}
+function renderProjects(){$("#projPick").innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}" ${p.id===S.pid?"selected":""}>${esc(p.name)}</option>`).join(""):'<option value="">案件を登録してください</option>';
   $("#plist").innerHTML=S.projects.length?S.projects.map(p=>`<div class="pitem ${p.id===S.pid?"on":""}"><div style="min-width:0"><div class="t">${esc(p.name)}</div>
     <div class="s">${esc([p.client,p.place,p.term].filter(Boolean).join("・"))}</div><div class="s">工種：${esc((p.kinds||[]).join("、")||"未登録")}</div></div>
-    <div class="row">${p.id===S.pid?'<span class="s">選択中</span>':`<button class="btn" data-sel="${p.id}">選ぶ</button>`}${S.canWrite?`<button class="btn" data-edit="${p.id}">編集</button>`:""}</div></div>`).join("")
-    :`<div class="empty"><strong>まだ案件がありません</strong>右のフォームに工事名を入れて追加してください。社内の皆さんで同じ案件を見られます。</div>`}
+    <div class="row">${p.id===S.pid?'<span class="s">選択中</span>':`<button class="btn" data-sel="${p.id}">選ぶ</button>`}<button class="btn" data-edit="${p.id}">編集</button></div></div>`).join("")
+    :`<div class="empty"><strong>まだ案件がありません</strong>右のフォームに工事名を入れて追加してください。</div>`}
 $("#plist").addEventListener("click",e=>{const s=e.target.closest("[data-sel]"),ed=e.target.closest("[data-edit]");
   if(s){selectProject(s.dataset.sel);toast("案件を切り替えました")}
-  if(ed){const p=S.projects.find(x=>x.id===ed.dataset.edit);if(!p)return;editPid=p.id;$("#pName").value=p.name||"";$("#pClient").value=p.client||"";
-    $("#pBy").value=p.contractor||"";$("#pPlace").value=p.place||"";$("#pTerm").value=p.term||"";$("#pKinds").value=(p.kinds||[]).join("\n");
-    $("#pformTitle").textContent="案件を編集";$("#pSubmit").textContent="変更を保存";$("#pCancel").hidden=false;$("#pName").focus()}});
-function resetPform(){editPid=null;$("#pform").reset();$("#pformTitle").textContent="案件を追加";$("#pSubmit").textContent="追加する";$("#pCancel").hidden=true}
+  if(ed){const p=S.projects.find(x=>x.id===ed.dataset.edit);if(!p)return;editPid=p.id;$("#pName").value=p.name||"";$("#pClient").value=p.client||"";$("#pBy").value=p.contractor||"";
+    $("#pPlace").value=p.place||"";$("#pTerm").value=p.term||"";$("#pKinds").value=(p.kinds||[]).join("\n");$("#pformTitle").textContent="案件を編集";$("#pSubmit").textContent="変更を保存";
+    $("#pCancel").hidden=false;$("#pDelete").hidden=false;$("#pDelete").classList.remove("armed");$("#pDelete").textContent="案件を削除";$("#pName").focus()}});
+function resetPform(){editPid=null;$("#pform").reset();$("#pformTitle").textContent="案件を追加";$("#pSubmit").textContent="追加する";$("#pCancel").hidden=true;$("#pDelete").hidden=true}
 $("#pCancel").addEventListener("click",resetPform);
-$("#pform").addEventListener("submit",async e=>{e.preventDefault();if(!S.db)return;
-  const data={name:$("#pName").value.trim(),client:$("#pClient").value.trim(),contractor:$("#pBy").value.trim(),place:$("#pPlace").value.trim(),
-    term:$("#pTerm").value.trim(),kinds:$("#pKinds").value.split(/[\n,、]/).map(s=>s.trim()).filter(Boolean)};if(!data.name)return;
-  try{if(editPid){await S.db.doc("projects/"+editPid).update(data);toast("案件を更新しました");if(editPid===S.pid)fillBoardFromProject()}
-    else{const ref=await S.db.collection("projects").add({...data,createdAt:new Date().toISOString(),createdBy:S.uid||null});toast("案件を追加しました");selectProject(ref.id)}
-    resetPform()}catch(err){toast(err?.code==="invalid_argument"?"この表示では案件を登録できません（閲覧のみの権限です）":"保存できませんでした")}});
+$("#pform").addEventListener("submit",async e=>{e.preventDefault();
+  const d={name:$("#pName").value.trim(),client:$("#pClient").value.trim(),contractor:$("#pBy").value.trim(),place:$("#pPlace").value.trim(),term:$("#pTerm").value.trim(),kinds:$("#pKinds").value.split(/[\n,、]/).map(s=>s.trim()).filter(Boolean)};
+  if(!d.name)return;
+  if(editPid){const p=S.projects.find(x=>x.id===editPid);Object.assign(p,d);await DB.put("projects",p);toast("案件を更新しました");if(editPid===S.pid)fillBoardFromProject();render()}
+  else{const p={id:uid(),...d,createdAt:new Date().toISOString()};await DB.put("projects",p);S.projects.unshift(p);toast("案件を追加しました");await selectProject(p.id)}
+  resetPform()});
+$("#pDelete").addEventListener("click",async()=>{const btn=$("#pDelete");const n=(await DB.byProject(editPid)).length;
+  if(!btn.classList.contains("armed")){btn.classList.add("armed");btn.textContent=`写真${n}枚も消えます。もう一度押すと削除`;return}
+  for(const p of await DB.byProject(editPid)){for(const id of [p.imgId,p.thumbId,p.origId])if(id)await DB.del("blobs",id);await DB.del("photos",p.id)}
+  await DB.del("projects",editPid);S.projects=S.projects.filter(p=>p.id!==editPid);const was=editPid;resetPform();toast("案件を削除しました");
+  if(was===S.pid)await selectProject(S.projects[0]?.id||null);else render()});
+
+/* ---------- 書き出し・読み込み ---------- */
+const b2d=b=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=()=>rej(r.error);r.readAsDataURL(b)});
+const d2b=async d=>(await fetch(d)).blob();
+$("#btnExport").addEventListener("click",async()=>{const p=proj();if(!p){toast("書き出す案件を選んでください");return}const st=$("#dataStatus");const btn=$("#btnExport");btn.disabled=true;
+  try{const photos=await DB.byProject(p.id);const withOrig=$("#expOrig").checked;const out=[];
+    for(let i=0;i<photos.length;i++){st.textContent=`書き出し中 ${i+1} / ${photos.length}`;const ph=photos[i];
+      out.push({...ph,img:await b2d(await DB.blob(ph.imgId)),thumb:ph.thumbId?await b2d(await DB.blob(ph.thumbId)):null,orig:withOrig&&ph.origId?await b2d(await DB.blob(ph.origId)):null})}
+    const json=JSON.stringify({app:"genba-photo-daicho",version:APP_VERSION,exportedAt:new Date().toISOString(),project:p,photos:out});
+    const f=new File([json],`${safeName(p.name)}_${ymd().replace(/-/g,"")}.json`,{type:"application/json"});
+    st.textContent=`${photos.length}枚を書き出しました（${(f.size/1048576).toFixed(1)}MB）`;await shareFiles([f])}
+  catch(e){st.textContent="書き出せませんでした"}btn.disabled=false});
+$("#fBackup").addEventListener("change",async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const st=$("#dataStatus");
+  try{const data=JSON.parse(await f.text());if(data.app!=="genba-photo-daicho"||!data.project)throw new Error("format");
+    const p=data.project;const ex=S.projects.find(x=>x.id===p.id);if(!ex){await DB.put("projects",p);S.projects.unshift(p)}
+    const have=new Set((await DB.byProject(p.id)).map(x=>x.id));let added=0;
+    for(let i=0;i<data.photos.length;i++){const ph=data.photos[i];st.textContent=`読み込み中 ${i+1} / ${data.photos.length}`;if(have.has(ph.id))continue;
+      const imgId=await DB.putBlob(await d2b(ph.img));const thumbId=ph.thumb?await DB.putBlob(await d2b(ph.thumb)):null;const origId=ph.orig?await DB.putBlob(await d2b(ph.orig)):null;
+      const {img,thumb,orig,...rec}=ph;await DB.put("photos",{...rec,projectId:p.id,imgId,thumbId,origId});added++}
+    st.textContent=`「${p.name}」に${added}枚を読み込みました`+(data.photos.length-added?`（${data.photos.length-added}枚はすでにありました）`:"");await selectProject(p.id)}
+  catch(err){st.textContent="このファイルは読み込めません。現場フォト台帳で書き出したファイルを選んでください"}});
+async function showUsage(){try{const e=await navigator.storage.estimate();const u=e.usage||0,q=e.quota||0;
+  $("#usageText").textContent=`この端末での使用量 ${(u/1048576).toFixed(0)}MB`+(q?` / 使える目安 ${(q/1073741824).toFixed(1)}GB`:"");$("#usageBar").style.width=q?Math.min(100,u/q*100)+"%":"0"}catch(e){$("#usageText").textContent=""}}
 
 /* ---------- 描画 ---------- */
-function render(){renderProjects();if(S.tab==="photos")renderPhotos();if(S.tab==="ledger")renderLedger();
-  const lock=!S.canWrite||!S.assets;$("#lblCam").style.opacity=$("#lblImp").style.opacity=lock?.45:1;
-  $("#fCam").disabled=$("#fImp").disabled=lock;drawPending()}
+function render(){renderProjects();if(S.tab==="photos")renderPhotos();if(S.tab==="ledger")renderLedger();if(S.tab==="projects")showUsage()}
 
 /* ---------- 起動 ---------- */
-(async()=>{const use=n=>window.claude?.use?window.claude.use(n).catch(()=>null):Promise.resolve(null);
-  setTab(ls.get("tab","shoot"));fillBoardFromProject();render();fontsReady().then(drawPreview);
-  const [db,assets,user,dl]=await Promise.all(["db","assets","user","downloads"].map(use));
-  Object.assign(S,{db,assets,user,dl});
-  if(!db){banner("このページはclaude.aiにサインインして開くと、案件と写真を社内で共有して保存できます。");render();return}
-  if(user){try{S.uid=await user.id()}catch(e){}try{const c=await user.can("data.write");S.canWrite=c!==false}catch(e){}}
-  if(!S.canWrite)banner("閲覧のみの権限です。写真の追加や記載の変更はできません。");
-  else if(!assets)banner("写真の保存には、このページの投稿権限（Contributor以上）が必要です。共有した人に権限を依頼してください。");
-  S.pid=ls.get("pid",null);
-  db.collection("projects").orderBy("createdAt","desc").onSnapshot(snap=>{S.projects=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!S.projects.some(p=>p.id===S.pid)){const first=S.projects[0]?.id||null;if(first!==S.pid||!S.unsub){S.pid=first;ls.set("pid",S.pid);fillBoardFromProject();subPhotos()}}
-    else if(!S.unsub){fillBoardFromProject();subPhotos()}
-    render()},e=>banner("案件を読み込めませんでした。ページを開き直してください"));
+(async()=>{
+  if(location.protocol==="file:")banner("ファイルを直接開いているため、カメラ画面が使えない場合があります。https:// のアドレスに置いて開くと、黒板を見ながら撮影できます。");
+  try{await DB.open()}catch(e){banner("この端末では保存領域を使えません。プライベートブラウズを解除して開いてください。");return}
+  try{const persisted=await navigator.storage?.persist?.();if(persisted===false&&/iPhone|iPad/.test(navigator.userAgent)&&!navigator.standalone)
+    banner("iPhoneでは、しばらく開かないとデータが消えることがあります。共有ボタンから「ホーム画面に追加」して使ってください。")}catch(e){}
+  S.projects=(await DB.all("projects")).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  S.pid=ls.get("pid",null);if(!S.projects.some(p=>p.id===S.pid))S.pid=S.projects[0]?.id||null;
+  await selectProject(S.pid);setTab(S.projects.length?ls.get("tab","shoot"):"projects");fontsReady();
 })();
 </script>
-
-</body></html>
+</body>
+</html>
