@@ -118,7 +118,13 @@ textarea{resize:vertical;min-height:64px}
 .kzcell img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#0d1410}
 .kzcell .f{padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kzcell.empty{border-style:dashed;display:grid;place-items:center;color:var(--muted);min-height:60px}
-.kzpg{font-size:12px;color:var(--muted);margin-top:6px}
+.kzpg{font-size:12px;color:var(--muted);margin-top:10px;padding-bottom:2px;border-bottom:1px dashed var(--line);font-weight:700}
+button.kzcell{font:inherit;color:inherit;padding:0;text-align:left;cursor:pointer;width:100%}
+.kzcell.sel{outline:3px solid var(--chalk);outline-offset:-1px}
+.kztools{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 6px}
+.kztools button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:3px 8px;cursor:pointer;min-height:30px}
+.kztools button:disabled{opacity:.35;cursor:default}
+.kztools button[aria-pressed="true"]{background:var(--board);color:var(--board-ink);border-color:var(--board)}
 #kzRoot{position:fixed;left:-10000px;top:0;width:794px}
 .kz-page{width:794px;min-height:1123px;background:#fff;color:#11202f;box-sizing:border-box;padding:40px 44px;position:relative;font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;line-height:1.55}
 .kz-page *{box-sizing:border-box}
@@ -371,7 +377,9 @@ textarea{resize:vertical;min-height:64px}
             <p class="hint" style="margin:0">写真ごとのコメントや「完成図書に載せない」は、写真一覧で写真を開いて設定できます。</p>
           </div>
         </div>
-        <div class="panel"><h2 id="kzPrevTitle">写真の並び</h2><div id="kzPrev" class="kzprev"></div></div>
+        <div class="panel"><div class="row" style="justify-content:space-between"><h2 id="kzPrevTitle">写真の並び</h2><button class="btn" id="kzAutoBtn" hidden>自動の並びに戻す</button></div>
+          <p class="hint" id="kzOrderHint" style="margin:4px 0 10px">写真をタップして選び、入れ替えたい写真か「空き」をタップすると入れ替わります。行ごとの「↑↓」で並べ替え、「⇄ 左右」で左右を入れ替えられます。</p>
+          <div id="kzPrev" class="kzprev"></div></div>
       </div>
     </div>
     <div id="kzRoot" aria-hidden="true"></div>
@@ -1198,26 +1206,65 @@ $("#kzReset").addEventListener("click",()=>{const p=proj();if(!p)return;const d=
   ["kz_company","kz_client","kz_site","kz_addr","kz_class","kz_work","kz_sales","kz_mgr"].forEach(i=>$("#"+i).value=d[i]);kzSave();toast("案件の内容を入れ直しました")});
 const kzHeader=ph=>ph===BEFORE?"施工前":isAfter(ph)?"施工後":(ph||"");
 const byDate=(a,b)=>((a.board?.date||"")+(a.createdAt||"")).localeCompare((b.board?.date||"")+(b.createdAt||""));
-/* 写真を「行（左・右）」に並べる：地点ごとに 施工前｜施工後、その他の区分は2枚ずつ、地点なしは撮影日順 */
-function kzRows(){const use=S.photos.filter(p=>!p.excludeReport);const spots=projSpots();const rows=[];const used=new Set();
+/* 自動の並び：地点ごとに 施工前｜施工後、その他の区分は2枚ずつ、地点なしは撮影日順（写真IDの行で返す） */
+function kzAutoIds(use){const spots=projSpots();const rows=[];const used=new Set();
   for(const s of spots){const mine=use.filter(p=>p.spotId===s.id).sort(byDate);if(!mine.length)continue;
     const B=mine.filter(p=>p.board?.phase===BEFORE),A=mine.filter(p=>isAfter(p.board?.phase)),O=mine.filter(p=>p.board?.phase!==BEFORE&&!isAfter(p.board?.phase));
-    for(let i=0;i<Math.max(B.length,A.length);i++)rows.push([B[i]||null,A[i]||null]);
-    for(let i=0;i<O.length;i+=2)rows.push([O[i],O[i+1]||null]);mine.forEach(p=>used.add(p.id))}
-  const rest=use.filter(p=>!used.has(p.id)).sort(byDate);for(let i=0;i<rest.length;i+=2)rows.push([rest[i],rest[i+1]||null]);
-  let no=0;const sp=new Map(spots.map(s=>[s.id,s]));
-  return rows.map(r=>r.map((p,ci)=>p?{p,no:++no,header:kzHeader(p.board?.phase)||(ci?"施工後":"施工前"),place:(sp.get(p.spotId)?spotLabel(sp.get(p.spotId)):"")||p.board?.point||"",cmt:p.reportCmt||""}:null))}
+    for(let i=0;i<Math.max(B.length,A.length);i++)rows.push({c:[B[i]?.id||null,A[i]?.id||null]});
+    for(let i=0;i<O.length;i+=2)rows.push({c:[O[i].id,O[i+1]?.id||null]});mine.forEach(p=>used.add(p.id))}
+  const rest=use.filter(p=>!used.has(p.id)).sort(byDate);for(let i=0;i<rest.length;i+=2)rows.push({c:[rest[i].id,rest[i+1]?.id||null]});
+  return rows}
+/* 保存した並び（手で変えた順番）を使い、消えた写真は除き、新しい写真は自動の並びで末尾に足す */
+function kzLayoutIds(){const use=S.photos.filter(p=>!p.excludeReport);const ok=new Set(use.map(p=>p.id));const saved=proj()?.reportLayout;
+  if(!saved)return kzAutoIds(use);
+  const rows=[];const seen=new Set();
+  for(const r of saved){const c=r.c.map(id=>id&&ok.has(id)&&!seen.has(id)?(seen.add(id),id):null);if(c[0]||c[1]||r.blank)rows.push({c,brk:!!r.brk,blank:!!r.blank})}
+  const missing=use.filter(p=>!seen.has(p.id));if(missing.length)rows.push(...kzAutoIds(missing));return rows}
+function kzRows(){const ids=kzLayoutIds();const byId=new Map(S.photos.map(p=>[p.id,p]));const sp=new Map(projSpots().map(s=>[s.id,s]));let no=0;
+  return ids.map(r=>{const row=r.c.map((id,ci)=>{const p=id&&byId.get(id);return p?{p,no:++no,header:kzHeader(p.board?.phase)||(ci?"施工後":"施工前"),place:(sp.get(p.spotId)?spotLabel(sp.get(p.spotId)):"")||p.board?.point||"",cmt:p.reportCmt||""}:null});
+    row.brk=!!r.brk;return row})}
+/* ページ割り：1ページ3行（6枚）、「ここから新しいページ」の行で改ページ */
+function kzPaginate(rows){const pages=[];let cur=[];rows.forEach(r=>{if(cur.length&&(cur.length>=3||r.brk)){pages.push(cur);cur=[]}cur.push(r)});if(cur.length)pages.push(cur);return pages}
 function kzAutoDates(){const use=S.photos.filter(p=>!p.excludeReport);const b=use.filter(p=>p.board?.phase===BEFORE).map(p=>p.board.date).filter(Boolean).sort();
   const a=use.filter(p=>isAfter(p.board?.phase)).map(p=>p.board.date).filter(Boolean).sort();return{pbefore:b[0]||"",pafter:a[a.length-1]||""}}
 function kzCover(){const c={};KZ_IDS.forEach(id=>c[id]=$("#"+id).value.trim());const au=kzAutoDates();
   c.kz_pbefore=c.kz_pbefore||au.pbefore;c.kz_pafter=c.kz_pafter||au.pafter;c.kz_start=c.kz_start||c.kz_pbefore;c.kz_end=c.kz_end||c.kz_pafter;return c}
+S.kzSel=null;
 function renderReport(){if(!proj()){$("#kzPrev").innerHTML=`<div class="empty"><strong>案件がまだありません</strong>「案件・データ」で登録してください。</div>`;return}
   const au=kzAutoDates();$("#kzAuto").textContent=au.pbefore||au.pafter?`写真の撮影日：施工前 ${au.pbefore?jpDate(au.pbefore):"—"}／施工後 ${au.pafter?jpDate(au.pafter):"—"}`:"";
-  const rows=kzRows();const pages=Math.ceil(rows.length/3);const n=rows.flat().filter(Boolean).length;
-  $("#kzPrevTitle").textContent=n?`写真の並び（${n}枚・現場写真${pages}ページ）`:"写真の並び";$("#kzPdf").disabled=$("#kzXlsx").disabled=!n;
+  const rows=kzRows();const pages=kzPaginate(rows);const n=rows.flat().filter(Boolean).length;
+  $("#kzPrevTitle").textContent=n?`写真の並び（${n}枚・現場写真${pages.length}ページ）`:"写真の並び";$("#kzPdf").disabled=$("#kzXlsx").disabled=!n;
+  $("#kzAutoBtn").hidden=!proj().reportLayout;$("#kzOrderHint").hidden=!n;
   if(!n){$("#kzPrev").innerHTML=`<div class="empty"><strong>載せる写真がありません</strong>写真を撮ると、ここに完成図書での並びが出ます。</div>`;return}
-  const wb=$("#kz_board").value==="on";const cell=c=>c?`<div class="kzcell"><div class="h">${esc(c.header)}</div><img data-blob="${wb?(c.p.thumbId||c.p.imgId):(c.p.origId||c.p.imgId)}" alt=""><div class="f">No.${c.no} ${esc(c.place)}</div></div>`:`<div class="kzcell empty">（空き）</div>`;
-  $("#kzPrev").innerHTML=rows.map((r,i)=>(i%3===0?`<div class="kzpg">現場写真 ${i/3+1}ページ</div>`:"")+`<div class="kzrow">${cell(r[0])}${cell(r[1])}</div>`).join("");hydrateImgs($("#kzPrev"))}
+  const wb=$("#kz_board").value==="on";const sel=S.kzSel;
+  const cell=(c,r,ci)=>{const on=sel&&sel.r===r&&sel.c===ci?" sel":"";return c?`<button class="kzcell${on}" data-r="${r}" data-c="${ci}"><div class="h">${esc(c.header)}</div><img data-blob="${wb?(c.p.thumbId||c.p.imgId):(c.p.origId||c.p.imgId)}" alt=""><div class="f">No.${c.no} ${esc(c.place)}</div></button>`
+    :`<button class="kzcell empty${on}" data-r="${r}" data-c="${ci}">（空き）</button>`};
+  let ri=0,html="";
+  pages.forEach((pg,pi)=>{html+=`<div class="kzpg">現場写真 ${pi+1}ページ</div>`;
+    pg.forEach(r=>{const i=ri++;const empty=!r[0]&&!r[1];
+      html+=`<div class="kzrow">${cell(r[0],i,0)}${cell(r[1],i,1)}</div><div class="kztools" data-r="${i}">
+        <button data-a="up" ${i===0?"disabled":""} title="この行を上へ">↑</button><button data-a="down" ${i===rows.length-1?"disabled":""} title="この行を下へ">↓</button>
+        <button data-a="swap" title="左右を入れ替え">⇄ 左右</button>
+        <button data-a="brk" aria-pressed="${r.brk}" ${i===0?"disabled":""} title="この行から新しいページにする">改ページ</button>
+        <button data-a="add" title="下に空き行を追加">＋空き行</button>
+        ${empty?`<button data-a="del" title="空き行を削除">行を削除</button>`:""}</div>`})});
+  $("#kzPrev").innerHTML=html;hydrateImgs($("#kzPrev"))}
+async function kzSetLayout(rows){const p=proj();p.reportLayout=rows.map(r=>({c:[...r.c],brk:!!r.brk,blank:!!r.blank}));try{await DB.put("projects",p)}catch(e){}renderReport()}
+$("#kzPrev").addEventListener("click",e=>{const cb=e.target.closest(".kzcell[data-r]"),tb=e.target.closest(".kztools button");
+  if(cb){const r=+cb.dataset.r,c=+cb.dataset.c;const sel=S.kzSel;
+    if(!sel){if(cb.classList.contains("empty")){toast("先に動かしたい写真をタップしてください");return}S.kzSel={r,c};renderReport();toast("入れ替え先の写真か空きをタップしてください");return}
+    if(sel.r===r&&sel.c===c){S.kzSel=null;renderReport();return}
+    const L=kzLayoutIds();const a=L[sel.r].c[sel.c];L[sel.r].c[sel.c]=L[r].c[c];L[r].c[c]=a;
+    L.forEach(x=>{if(!x.c[0]&&!x.c[1])x.blank=true});S.kzSel=null;kzSetLayout(L);return}
+  if(tb&&!tb.disabled){const i=+tb.closest(".kztools").dataset.r;const L=kzLayoutIds();const a=tb.dataset.a;S.kzSel=null;
+    if(a==="up"&&i>0)[L[i-1],L[i]]=[L[i],L[i-1]];
+    else if(a==="down"&&i<L.length-1)[L[i+1],L[i]]=[L[i],L[i+1]];
+    else if(a==="swap")L[i].c.reverse();
+    else if(a==="brk")L[i].brk=!L[i].brk;
+    else if(a==="add")L.splice(i+1,0,{c:[null,null],blank:true});
+    else if(a==="del")L.splice(i,1);
+    kzSetLayout(L)}});
+$("#kzAutoBtn").addEventListener("click",async()=>{const p=proj();if(!p)return;delete p.reportLayout;S.kzSel=null;try{await DB.put("projects",p)}catch(e){}renderReport();toast("自動の並びに戻しました")});
 /* 写真の取り込み設定は「縮小専用」と同じ（640×640以内・鮮鋭化・JPEG品質92%） */
 const KZ_MAX=640,KZ_Q=.92,KZ_SHARP=.35;
 function kzSharpen(ctx,w,h,amt){const src=ctx.getImageData(0,0,w,h),d=src.data,o=new Uint8ClampedArray(d),c=1+4*amt;
@@ -1256,7 +1303,7 @@ const kzWait=root=>Promise.all([...root.querySelectorAll("img")].map(im=>im.comp
 async function ensureH2C(){if(window.html2canvas)return;await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js")}
 const kzFile=ext=>`${projFile()}_完成図書.${ext}`;
 $("#kzPdf").addEventListener("click",async()=>{const btn=$("#kzPdf");btn.disabled=true;const st=t=>$("#kzStatus").textContent=t;const root=$("#kzRoot");
-  try{if(!window.jspdf)throw new Error("lib");await ensureH2C();await fontsReady();const rows=await kzPrepare(st);const pr=chunk(rows,3);
+  try{if(!window.jspdf)throw new Error("lib");await ensureH2C();await fontsReady();const rows=await kzPrepare(st);const pr=kzPaginate(rows);
     const pages=[kzCoverPage(kzCover()),...pr.map((r,i)=>kzPhotoPage(r,i+1,pr.length))];root.innerHTML="";pages.forEach(p=>root.appendChild(p));await kzWait(root);await sleep(60);
     const doc=new window.jspdf.jsPDF("p","mm","a4");
     for(let i=0;i<pages.length;i++){st(`PDFを作成中 ${i+1} / ${pages.length}ページ`);const cv=await html2canvas(pages[i],{scale:1.8,backgroundColor:"#ffffff",logging:false,useCORS:true,imageTimeout:0});
@@ -1325,7 +1372,7 @@ async function kzPhotoSheetX(wb,rows,pageNo,total){const nos=rows.flat().filter(
     r=(L>0?cr2:infor)+1;ws.getRow(r).height=GAP_H;r++}
   ws.pageSetup.printArea=`A1:Q${r-1}`}
 $("#kzXlsx").addEventListener("click",async()=>{const btn=$("#kzXlsx");btn.disabled=true;const st=t=>$("#kzStatus").textContent=t;
-  try{await ensureExcelJS();const rows=await kzPrepare(st);const wb=new ExcelJS.Workbook();wb.creator="現場フォト台帳";kzCoverX(wb,kzCover());const pr=chunk(rows,3);
+  try{await ensureExcelJS();const rows=await kzPrepare(st);const wb=new ExcelJS.Workbook();wb.creator="現場フォト台帳";kzCoverX(wb,kzCover());const pr=kzPaginate(rows);
     for(let i=0;i<pr.length;i++){st(`Excelを作成中 ${i+1} / ${pr.length}ページ`);await kzPhotoSheetX(wb,pr[i],i+1,pr.length)}
     const f=new File([await wb.xlsx.writeBuffer()],kzFile("xlsx"),{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});lastFile=f;
     $("#kzStatus").innerHTML=`完成図書Excel（表紙＋写真${pr.length}ページ）ができました <button class="btn primary" id="kzGo">${isMobile?"保存・共有する":"保存先を選んで保存"}</button>`;$("#kzGo").addEventListener("click",()=>shareFiles([lastFile]))}
