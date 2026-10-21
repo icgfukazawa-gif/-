@@ -110,6 +110,44 @@ textarea{resize:vertical;min-height:64px}
 .dlghead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .big{width:100%;border-radius:8px;background:#0d1410;display:block}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
+/* 完成図書 */
+.kzprev{display:grid;gap:6px}
+.kzrow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kzcell{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--bg);font-size:11px;min-width:0}
+.kzcell .h{background:var(--board);color:var(--board-ink);text-align:center;font-weight:700;padding:2px}
+.kzcell img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#0d1410}
+.kzcell .f{padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kzcell.empty{border-style:dashed;display:grid;place-items:center;color:var(--muted);min-height:60px}
+.kzpg{font-size:12px;color:var(--muted);margin-top:6px}
+#kzRoot{position:fixed;left:-10000px;top:0;width:794px}
+.kz-page{width:794px;min-height:1123px;background:#fff;color:#11202f;box-sizing:border-box;padding:40px 44px;position:relative;font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;line-height:1.55}
+.kz-page *{box-sizing:border-box}
+.kz-page .pc-top{text-align:right;margin-bottom:6px}
+.kz-page .pc-date{font-size:13px}
+.kz-page .pc-company{margin-top:6px;font-size:12px;line-height:1.55;color:#11202f}
+.kz-page .pc-company .nm{font-size:14.5px;font-weight:700;margin-bottom:2px}
+.kz-page .pc-title{text-align:center;font-size:30px;font-weight:700;letter-spacing:.3em;margin:14px 0 30px;padding-bottom:12px;border-bottom:3px solid #11202f}
+.kz-page .pc-tbl{width:100%;border-collapse:collapse;font-size:14px}
+.kz-page .pc-tbl th,.kz-page .pc-tbl td{border:1px solid #11202f;padding:9px 11px;vertical-align:top}
+.kz-page .pc-tbl th{background:#EEF1F4;font-weight:700;text-align:left;white-space:nowrap;width:120px}
+.kz-page .pc-tbl .tall td,.kz-page .pc-tbl .tall th{height:54px}
+.kz-page .pc-mat{min-height:120px;height:120px}
+.kz-page .pc-sign{margin-top:22px;display:flex;gap:18px}
+.kz-page .pc-sign .box{flex:1;border:1px solid #11202f}
+.kz-page .pc-sign .box .h{background:#EEF1F4;border-bottom:1px solid #11202f;padding:7px 10px;font-weight:700;font-size:13px}
+.kz-page .pc-sign .box .v{padding:16px 10px;font-size:15px;min-height:56px}
+.kz-page .pp-head{display:flex;align-items:baseline;justify-content:space-between;border-bottom:2px solid #11202f;padding-bottom:8px;margin-bottom:14px}
+.kz-page .pp-head .t{font-size:18px;font-weight:700;letter-spacing:.08em}
+.kz-page .pp-head .pg{font-size:12.5px;color:#5B6B7B}
+.kz-page .pp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.kz-page .pp-cell{border:1px solid #11202f;display:flex;flex-direction:column;overflow:hidden}
+.kz-page .pp-cell .h{background:#EEF1F4;border-bottom:1px solid #11202f;text-align:center;font-weight:700;font-size:13.5px;padding:6px 4px}
+.kz-page .pp-cell .im{height:244px;flex:none;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden}
+.kz-page .pp-cell .im img{display:block;max-width:none}
+.kz-page .pp-cell .f{border-top:1px solid #11202f;display:flex;align-items:center;gap:8px;padding:6px 9px;font-size:13px}
+.kz-page .pp-cell .f .no{font-weight:700;background:#11202f;color:#fff;border-radius:5px;padding:2px 8px;font-size:12px}
+.kz-page .pp-cell .f .pl{color:#11202f}
+.kz-page .pp-cell .c{border-top:1px solid #11202f;padding:5px 9px;font-size:11.5px;line-height:1.45;color:#11202f;background:#fff;overflow:hidden}
 /* 撮影地点 */
 .spothead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
 .spothead > div:first-child{flex:1 1 320px;min-width:0}
@@ -195,6 +233,7 @@ textarea{resize:vertical;min-height:64px}
       <button role="tab" data-tab="spots" aria-selected="false">撮影地点</button>
       <button role="tab" data-tab="photos" aria-selected="false">写真一覧</button>
       <button role="tab" data-tab="ledger" aria-selected="false">写真台帳</button>
+      <button role="tab" data-tab="report" aria-selected="false">完成図書</button>
       <button role="tab" data-tab="projects" aria-selected="false">案件・データ</button>
     </nav>
   </div>
@@ -295,6 +334,47 @@ textarea{resize:vertical;min-height:64px}
       <div class="status" id="lgStatus"></div>
     </div>
     <div class="sheets" id="sheets"></div>
+  </section>
+
+  <section id="tab-report" hidden>
+    <div class="grid2">
+      <div class="panel">
+        <h2>完成図書の表紙（完了報告書）</h2>
+        <p class="lead">案件と連携シートの内容が入っています。直した内容は案件ごとに保存されます。日付が空欄のときは、写真の撮影日を使います。</p>
+        <div class="fields">
+          <label class="f full">作成日<span class="row" style="gap:6px;flex-wrap:nowrap"><input id="kz_y" inputmode="numeric" style="max-width:6em"><span>年</span><input id="kz_m" inputmode="numeric" style="max-width:4em"><span>月</span><input id="kz_d" inputmode="numeric" style="max-width:4em"><span>日</span></span></label>
+          <label class="f full">自社（作成日の下に表示）<select id="kz_company"><option value="">なし</option><option value="ideal">株式会社アイデアル</option><option value="ivory">株式会社アイベリー</option></select></label>
+          <label class="f">ご契約者様<input id="kz_client"></label>
+          <label class="f">現場名<input id="kz_site"></label>
+          <label class="f full">住所<input id="kz_addr"></label>
+          <label class="f">分類<input id="kz_class"></label>
+          <label class="f">工事内容<input id="kz_work"></label>
+          <label class="f full">工事工程（任意）<input id="kz_sched" placeholder="例）養生 → 清掃 → 点灯確認"></label>
+          <label class="f">着工日<input id="kz_start" type="date"></label>
+          <label class="f">完工日<input id="kz_end" type="date"></label>
+          <label class="f">施工前撮影日<input id="kz_pbefore" type="date"></label>
+          <label class="f">施工後撮影日<input id="kz_pafter" type="date"></label>
+          <label class="f full">使用部材（1行に1品目・最大6行）<textarea id="kz_mat" rows="3"></textarea></label>
+          <label class="f">営業担当者<input id="kz_sales"></label>
+          <label class="f">施工管理責任者<input id="kz_mgr"></label>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="kzReset">案件の内容で入れ直す</button><span class="status" id="kzAuto"></span></div>
+      </div>
+      <div style="display:grid;gap:16px;align-content:start">
+        <div class="panel">
+          <h2>現場写真のページ</h2>
+          <p class="lead">撮影地点ごとに、左に施工前・右に施工後を並べます（1ページ6枚）。地点のない写真は撮影日順で後ろに続きます。</p>
+          <div style="display:grid;gap:10px">
+            <label class="f">載せる写真<select id="kz_board"><option value="on">黒板入りの写真</option><option value="off">元の写真（黒板なし）</option></select></label>
+            <div class="row"><button class="btn primary" id="kzPdf">完成図書PDF</button><button class="btn primary" id="kzXlsx">完成図書Excel</button></div>
+            <div class="status" id="kzStatus"></div>
+            <p class="hint" style="margin:0">写真ごとのコメントや「完成図書に載せない」は、写真一覧で写真を開いて設定できます。</p>
+          </div>
+        </div>
+        <div class="panel"><h2 id="kzPrevTitle">写真の並び</h2><div id="kzPrev" class="kzprev"></div></div>
+      </div>
+    </div>
+    <div id="kzRoot" aria-hidden="true"></div>
   </section>
 
   <section id="tab-projects" hidden>
@@ -419,6 +499,8 @@ textarea{resize:vertical;min-height:64px}
           <label class="f">撮影区分<select id="ePhase"></select></label>
           <label class="f">施工者<input id="eBy"></label>
           <label class="f full">備考<input id="eNote"></label>
+          <label class="f full">完成図書のコメント<textarea id="eCmt" rows="2" placeholder="完成図書の写真の下に入る説明"></textarea></label>
+          <label class="optrow full" style="display:flex;gap:6px;align-items:center"><input id="eExcl" type="checkbox"> 完成図書に載せない</label>
         </div>
         <div id="eBurnBox" style="display:grid;gap:8px;margin-top:12px">
           <label class="optrow" style="display:flex;gap:6px;align-items:center"><input id="eBurn" type="checkbox"> 写真に黒板を写し込む（直した内容で描き直します）</label>
@@ -516,7 +598,7 @@ async function hydrateImgs(root){for(const el of root.querySelectorAll("img[data
 /* ---------- タブ ---------- */
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 function setTab(t){S.tab=t;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
-  ["shoot","spots","photos","ledger","projects"].forEach(k=>$("#tab-"+k).hidden=k!==t);render();ls.set("tab",t);window.scrollTo(0,0)}
+  ["shoot","spots","photos","ledger","report","projects"].forEach(k=>$("#tab-"+k).hidden=k!==t);render();ls.set("tab",t);window.scrollTo(0,0)}
 
 /* ---------- 黒板フォーム ---------- */
 ["#bPhase","#ePhase","#qPhase"].forEach(id=>$(id).innerHTML=PHASES.map(p=>`<option>${p}</option>`).join(""));
@@ -800,7 +882,7 @@ async function openDlg(id){const p=S.photos.find(x=>x.id===id);if(!p)return;edit
   $("#eBurnBox").hidden=!p.origId;$("#eNoOrig").hidden=!!p.origId;$("#eBurn").checked=p.boardBurned!==false;
   if(p.origId)DB.blob(p.origId).then(async bl=>{if(!bl||editing!==p)return;try{const bm=await loadBitmap(bl);if(editing!==p)return;eOrigBmp=bm;
     drawEditPreview();$("#dlgImg").hidden=true;$("#dlgCv").hidden=false;$("#dlgCvHint").hidden=false}catch(e){$("#eBurnBox").hidden=true;$("#eNoOrig").hidden=false}});
-  fillESpot(p.spotId);$("#eName").value=b.name||proj()?.name||"";$("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";$("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";
+  fillESpot(p.spotId);$("#eCmt").value=p.reportCmt||"";$("#eExcl").checked=!!p.excludeReport;$("#eName").value=b.name||proj()?.name||"";$("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";$("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";
   $("#eBy").value=b.by||"";$("#eNote").value=b.note||"";$("#eDel").classList.remove("armed");$("#eDel").textContent="削除";$("#eSaveOrig").hidden=!p.origId;
   editing._files={};for(const [k,bid] of [["img",p.imgId],["orig",p.origId]]){if(bid)DB.blob(bid).then(bl=>{if(bl&&editing===p)p._files[k]=new File([bl],`${(b.date||"").replace(/-/g,"")}_${safeName(b.point||b.kind||"現場")}${k==="orig"?"_元":""}.jpg`,{type:"image/jpeg"})})}
   $("#dlg").hidden=false}
@@ -816,7 +898,7 @@ $("#eSave").addEventListener("click",async()=>{if(!editing)return;const p=editin
       const imgId=await DB.putBlob(img),thumbId=await DB.putBlob(th);
       for(const old of [p.imgId,p.thumbId]){if(old){await DB.del("blobs",old);const u=urlCache.get(old);if(u){URL.revokeObjectURL(u);urlCache.delete(old)}}}
       Object.assign(p,{imgId,thumbId,w:c.width,h:c.height,boardBurned:$("#eBurn").checked,layout:editLayout()});redrawn=true}
-    p.board=nb;const {_files,...rec}=p;await DB.put("photos",rec);
+    p.board=nb;p.reportCmt=$("#eCmt").value.trim();p.excludeReport=$("#eExcl").checked;const {_files,...rec}=p;await DB.put("photos",rec);
     toast(redrawn?"黒板を描き直して更新しました":"記載を更新しました");closeDlg();render()}
   catch(e){toast(e?.name==="QuotaExceededError"?"端末の保存容量が足りません":"更新できませんでした")}
   btn.disabled=false});
@@ -931,7 +1013,7 @@ $("#btnCsv").addEventListener("click",()=>{const list=ledgerList();const q=v=>`"
 let editPid=null;
 $("#projPick").addEventListener("change",e=>selectProject(e.target.value));
 async function selectProject(id){S.pid=id||null;ls.set("pid",S.pid);S.kind="";S.sel.clear();S.spotId=S.pid?ls.get("spot:"+S.pid,null):null;if(!curSpot())S.spotId=null;
-  fillBoardFromProject();S.photos=S.pid?await DB.byProject(S.pid):[];
+  fillBoardFromProject();kzFill();S.photos=S.pid?await DB.byProject(S.pid):[];
   for(const ph of S.photos){if(ph.board?.phase==="着手前"){ph.board.phase="着工前";try{await DB.put("photos",ph)}catch(e){}}}
   if($("#bPhase").value===""||$("#bPhase").value==="着手前")$("#bPhase").value="施工中";render()}
 function renderProjects(){$("#projPick").innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}" ${p.id===S.pid?"selected":""}>${esc(projHeader(p))}</option>`).join(""):'<option value="">案件を登録してください</option>';
@@ -1096,8 +1178,162 @@ $("#bulkCheck").addEventListener("click",()=>{bulkRows=parseSpots($("#bulkText")
 $("#bulkSave").addEventListener("click",async()=>{if(!bulkRows.length)return;const now=new Date().toISOString();
   await saveSpots([...projSpots(),...bulkRows.map(d=>({id:uid(),...d,createdAt:now}))]);toast(`${bulkRows.length}件の地点を登録しました`);bulkRows=[];$("#bulkDlg").hidden=true;render()});
 
+/* ---------- 完成図書（完了報告書）：添付の完成図書フォーマットと同じ表紙・現場写真ページ ---------- */
+const KZ_COMPANIES={
+  ideal:{name:"株式会社アイデアル",lines:["〒550-0002　大阪市西区江戸堀1丁目9-1　肥後橋センタービル2階","TEL:06-6136-6700　FAX:06-6441-8997"]},
+  ivory:{name:"株式会社アイベリー",lines:["〒552-0016　大阪市港区三先1丁目15-15","TEL:06-6577-8989　FAX:06-6577-7997"]}};
+const KZ_IDS=["kz_y","kz_m","kz_d","kz_company","kz_client","kz_site","kz_addr","kz_class","kz_work","kz_sched","kz_start","kz_end","kz_pbefore","kz_pafter","kz_mat","kz_sales","kz_mgr"];
+const kzCompanyKey=v=>/アイデアル/.test(v||"")?"ideal":/アイベリー/.test(v||"")?"ivory":"";
+function kzDefaults(p){const t=new Date();return{kz_y:String(t.getFullYear()),kz_m:String(t.getMonth()+1),kz_d:String(t.getDate()),kz_company:kzCompanyKey(p?.contractor),
+  kz_client:p?.client||"",kz_site:p?.building||"",kz_addr:p?.place||"",kz_class:p?.category||"",kz_work:p?.name||"",kz_sched:"",kz_start:"",kz_end:"",kz_pbefore:"",kz_pafter:"",kz_mat:"",kz_sales:p?.sales||"",kz_mgr:p?.worker||""}}
+function kzFill(){const p=proj();const c={...kzDefaults(p),...(p?.cover||{})};KZ_IDS.forEach(id=>$("#"+id).value=c[id]??"");$("#kz_board").value=p?.coverBoard||ls.get("kzBoard","on")}
+let kzSaveT=0;
+function kzSave(){clearTimeout(kzSaveT);kzSaveT=setTimeout(async()=>{const p=proj();if(!p)return;const c={};KZ_IDS.forEach(id=>c[id]=$("#"+id).value);p.cover=c;p.coverBoard=$("#kz_board").value;
+  ls.set("kzBoard",p.coverBoard);try{await DB.put("projects",p)}catch(e){}},400)}
+KZ_IDS.concat(["kz_board"]).forEach(id=>$("#"+id).addEventListener("input",()=>{kzSave();if(id==="kz_board")renderReport()}));
+$("#kz_board").addEventListener("change",()=>{kzSave();renderReport()});
+$("#kz_start").addEventListener("change",e=>{const v=e.target.value;if(!v)return;["kz_end","kz_pbefore","kz_pafter"].forEach(i=>{if(!$("#"+i).value)$("#"+i).value=v});kzSave()});
+$("#kz_end").addEventListener("change",e=>{const v=e.target.value;if(v&&!$("#kz_pafter").value)$("#kz_pafter").value=v;kzSave()});
+$("#kzReset").addEventListener("click",()=>{const p=proj();if(!p)return;const d=kzDefaults(p);
+  ["kz_company","kz_client","kz_site","kz_addr","kz_class","kz_work","kz_sales","kz_mgr"].forEach(i=>$("#"+i).value=d[i]);kzSave();toast("案件の内容を入れ直しました")});
+const kzHeader=ph=>ph===BEFORE?"施工前":isAfter(ph)?"施工後":(ph||"");
+const byDate=(a,b)=>((a.board?.date||"")+(a.createdAt||"")).localeCompare((b.board?.date||"")+(b.createdAt||""));
+/* 写真を「行（左・右）」に並べる：地点ごとに 施工前｜施工後、その他の区分は2枚ずつ、地点なしは撮影日順 */
+function kzRows(){const use=S.photos.filter(p=>!p.excludeReport);const spots=projSpots();const rows=[];const used=new Set();
+  for(const s of spots){const mine=use.filter(p=>p.spotId===s.id).sort(byDate);if(!mine.length)continue;
+    const B=mine.filter(p=>p.board?.phase===BEFORE),A=mine.filter(p=>isAfter(p.board?.phase)),O=mine.filter(p=>p.board?.phase!==BEFORE&&!isAfter(p.board?.phase));
+    for(let i=0;i<Math.max(B.length,A.length);i++)rows.push([B[i]||null,A[i]||null]);
+    for(let i=0;i<O.length;i+=2)rows.push([O[i],O[i+1]||null]);mine.forEach(p=>used.add(p.id))}
+  const rest=use.filter(p=>!used.has(p.id)).sort(byDate);for(let i=0;i<rest.length;i+=2)rows.push([rest[i],rest[i+1]||null]);
+  let no=0;const sp=new Map(spots.map(s=>[s.id,s]));
+  return rows.map(r=>r.map((p,ci)=>p?{p,no:++no,header:kzHeader(p.board?.phase)||(ci?"施工後":"施工前"),place:(sp.get(p.spotId)?spotLabel(sp.get(p.spotId)):"")||p.board?.point||"",cmt:p.reportCmt||""}:null))}
+function kzAutoDates(){const use=S.photos.filter(p=>!p.excludeReport);const b=use.filter(p=>p.board?.phase===BEFORE).map(p=>p.board.date).filter(Boolean).sort();
+  const a=use.filter(p=>isAfter(p.board?.phase)).map(p=>p.board.date).filter(Boolean).sort();return{pbefore:b[0]||"",pafter:a[a.length-1]||""}}
+function kzCover(){const c={};KZ_IDS.forEach(id=>c[id]=$("#"+id).value.trim());const au=kzAutoDates();
+  c.kz_pbefore=c.kz_pbefore||au.pbefore;c.kz_pafter=c.kz_pafter||au.pafter;c.kz_start=c.kz_start||c.kz_pbefore;c.kz_end=c.kz_end||c.kz_pafter;return c}
+function renderReport(){if(!proj()){$("#kzPrev").innerHTML=`<div class="empty"><strong>案件がまだありません</strong>「案件・データ」で登録してください。</div>`;return}
+  const au=kzAutoDates();$("#kzAuto").textContent=au.pbefore||au.pafter?`写真の撮影日：施工前 ${au.pbefore?jpDate(au.pbefore):"—"}／施工後 ${au.pafter?jpDate(au.pafter):"—"}`:"";
+  const rows=kzRows();const pages=Math.ceil(rows.length/3);const n=rows.flat().filter(Boolean).length;
+  $("#kzPrevTitle").textContent=n?`写真の並び（${n}枚・現場写真${pages}ページ）`:"写真の並び";$("#kzPdf").disabled=$("#kzXlsx").disabled=!n;
+  if(!n){$("#kzPrev").innerHTML=`<div class="empty"><strong>載せる写真がありません</strong>写真を撮ると、ここに完成図書での並びが出ます。</div>`;return}
+  const wb=$("#kz_board").value==="on";const cell=c=>c?`<div class="kzcell"><div class="h">${esc(c.header)}</div><img data-blob="${wb?(c.p.thumbId||c.p.imgId):(c.p.origId||c.p.imgId)}" alt=""><div class="f">No.${c.no} ${esc(c.place)}</div></div>`:`<div class="kzcell empty">（空き）</div>`;
+  $("#kzPrev").innerHTML=rows.map((r,i)=>(i%3===0?`<div class="kzpg">現場写真 ${i/3+1}ページ</div>`:"")+`<div class="kzrow">${cell(r[0])}${cell(r[1])}</div>`).join("");hydrateImgs($("#kzPrev"))}
+/* 写真の取り込み設定は「縮小専用」と同じ（640×640以内・鮮鋭化・JPEG品質92%） */
+const KZ_MAX=640,KZ_Q=.92,KZ_SHARP=.35;
+function kzSharpen(ctx,w,h,amt){const src=ctx.getImageData(0,0,w,h),d=src.data,o=new Uint8ClampedArray(d),c=1+4*amt;
+  for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){const i=(y*w+x)*4;for(let k=0;k<3;k++)o[i+k]=c*d[i+k]-amt*(d[i+k-4]+d[i+k+4]+d[i+k-w*4]+d[i+k+w*4])}src.data.set(o);ctx.putImageData(src,0,0)}
+async function kzImage(p,withBoard){const bl=await DB.blob(withBoard?p.imgId:(p.origId||p.imgId));if(!bl)return null;const im=await loadBitmap(bl);
+  const w=im.width,h=im.height,s=Math.min(1,KZ_MAX/w,KZ_MAX/h),tw=Math.max(1,Math.round(w*s)),th=Math.max(1,Math.round(h*s));
+  let src=im,cw=w,ch=h;while(cw/2>=tw*1.5&&ch/2>=th*1.5){const t=document.createElement("canvas");t.width=Math.round(cw/2);t.height=Math.round(ch/2);const tc=t.getContext("2d");tc.imageSmoothingQuality="high";tc.drawImage(src,0,0,t.width,t.height);src=t;cw=t.width;ch=t.height}
+  const cv=document.createElement("canvas");cv.width=tw;cv.height=th;const x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,tw,th);x.imageSmoothingQuality="high";x.drawImage(src,0,0,tw,th);
+  if(s<1)kzSharpen(x,tw,th,KZ_SHARP);const url=cv.toDataURL("image/jpeg",KZ_Q);return{b64:url.split(",")[1],ext:"jpeg",w:tw,h:th,url}}
+async function kzPrepare(st){const rows=kzRows();const wb=$("#kz_board").value==="on";const cells=rows.flat().filter(Boolean);let i=0;
+  for(const c of cells){st(`写真を準備中 ${++i} / ${cells.length}`);c.img=await kzImage(c.p,wb)}return rows}
+const kzFmt=v=>{if(!v)return"";const p=v.split("-");return p.length===3?`${+p[0]}/${+p[1]}/${+p[2]}`:v};
+function kzCommentLines(t){if(!t||!t.trim())return 0;let total=0;t.replace(/\s+$/,"").split(/\r?\n/).forEach(l=>{let w=0;for(const ch of l)w+=/[\x00-\xff]/.test(ch)?.5:1;total+=Math.max(1,Math.ceil(w/17))});return total}
+const elc=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e};
+function kzCoverPage(c){const date=(c.kz_y||c.kz_m||c.kz_d)?`作成日　${c.kz_y||"　"}年 ${c.kz_m||"　"}月 ${c.kz_d||"　"}日`:"";
+  const mats=c.kz_mat.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).slice(0,6);const co=KZ_COMPANIES[c.kz_company];
+  const coHtml=co?`<div class="pc-company"><div class="nm">${esc(co.name)}</div>${co.lines.map(l=>`<div>${esc(l)}</div>`).join("")}</div>`:"";
+  const pg=elc("div","kz-page");pg.innerHTML=`<div class="pc-top"><div class="pc-date">${date}</div>${coHtml}</div><div class="pc-title">完了報告書</div>
+    <table class="pc-tbl"><tr class="tall"><th>ご契約者様</th><td colspan="3">${esc(c.kz_client)}</td></tr><tr class="tall"><th>現場名</th><td colspan="3">${esc(c.kz_site)}</td></tr>
+    <tr class="tall"><th>住所</th><td colspan="3">${esc(c.kz_addr)}</td></tr><tr class="tall"><th>分類</th><td>${esc(c.kz_class)}</td><th>工事内容</th><td>${esc(c.kz_work)}</td></tr>
+    <tr class="tall"><th>工事工程</th><td colspan="3">${esc(c.kz_sched)}</td></tr>
+    <tr><th>着工日</th><td>${esc(kzFmt(c.kz_start))}</td><th>施工前撮影日</th><td>${esc(kzFmt(c.kz_pbefore))}</td></tr>
+    <tr><th>完工日</th><td>${esc(kzFmt(c.kz_end))}</td><th>施工後撮影日</th><td>${esc(kzFmt(c.kz_pafter))}</td></tr>
+    <tr><th>使用部材</th><td class="pc-mat" colspan="3">${mats.map(esc).join("<br>")}</td></tr></table>
+    <div class="pc-sign"><div class="box"><div class="h">営業担当者</div><div class="v">${esc(c.kz_sales)}</div></div><div class="box"><div class="h">施工管理責任者</div><div class="v">${esc(c.kz_mgr)}</div></div></div>`;return pg}
+function kzPhotoPage(rows,pageNo,total){const IMG_W=348,IMG_H=244;const pg=elc("div","kz-page");pg.appendChild(elc("div","pp-head",`<span class="t">現場写真</span><span class="pg">${pageNo} / ${total} ページ</span>`));
+  const grid=elc("div","pp-grid");
+  const mk=(c,cmtH)=>{const cell=elc("div","pp-cell");cell.appendChild(elc("div","h",esc(c.header)));const im=elc("div","im");
+    if(c.img){const s=Math.min(IMG_W/c.img.w,IMG_H/c.img.h);const i2=new Image();i2.src=c.img.url;i2.width=Math.round(c.img.w*s);i2.height=Math.round(c.img.h*s);im.appendChild(i2)}
+    cell.appendChild(im);cell.appendChild(elc("div","f",`<span class="no">No.${c.no}</span>`+(c.place?`<span class="pl">場所：${esc(c.place)}</span>`:"")));
+    if(cmtH>0){const cc=elc("div","c",c.cmt?esc(c.cmt.trim()).replace(/\n/g,"<br>"):"");cc.style.height=cmtH+"px";cell.appendChild(cc)}return cell};
+  for(const r of rows){const L=Math.max(r[0]?kzCommentLines(r[0].cmt):0,r[1]?kzCommentLines(r[1].cmt):0);const h=L>0?L*17+10:0;
+    grid.appendChild(r[0]?mk(r[0],h):elc("div",""));grid.appendChild(r[1]?mk(r[1],h):elc("div",""))}
+  pg.appendChild(grid);return pg}
+const kzWait=root=>Promise.all([...root.querySelectorAll("img")].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r})));
+async function ensureH2C(){if(window.html2canvas)return;await loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js")}
+const kzFile=ext=>`${projFile()}_完成図書.${ext}`;
+$("#kzPdf").addEventListener("click",async()=>{const btn=$("#kzPdf");btn.disabled=true;const st=t=>$("#kzStatus").textContent=t;const root=$("#kzRoot");
+  try{if(!window.jspdf)throw new Error("lib");await ensureH2C();await fontsReady();const rows=await kzPrepare(st);const pr=chunk(rows,3);
+    const pages=[kzCoverPage(kzCover()),...pr.map((r,i)=>kzPhotoPage(r,i+1,pr.length))];root.innerHTML="";pages.forEach(p=>root.appendChild(p));await kzWait(root);await sleep(60);
+    const doc=new window.jspdf.jsPDF("p","mm","a4");
+    for(let i=0;i<pages.length;i++){st(`PDFを作成中 ${i+1} / ${pages.length}ページ`);const cv=await html2canvas(pages[i],{scale:1.8,backgroundColor:"#ffffff",logging:false,useCORS:true,imageTimeout:0});
+      if(i)doc.addPage();let w=210,h=210*cv.height/cv.width;if(h>297){h=297;w=297*cv.width/cv.height}doc.addImage(cv.toDataURL("image/jpeg",.9),"JPEG",(210-w)/2,0,w,h)}
+    const f=new File([doc.output("blob")],kzFile("pdf"),{type:"application/pdf"});lastFile=f;
+    $("#kzStatus").innerHTML=`完成図書PDF（${pages.length}ページ）ができました <button class="btn primary" id="kzGo">${isMobile?"保存・共有する":"保存先を選んで保存"}</button>`;$("#kzGo").addEventListener("click",()=>shareFiles([lastFile]))}
+  catch(e){st(e?.message==="lib"||!window.html2canvas?"PDF作成の部品を読み込めませんでした。通信できる場所でもう一度押してください":"PDFを作れませんでした")}
+  finally{root.innerHTML="";btn.disabled=false}});
+/* ---- Excel（表紙・写真ページともセルで作成＝Excelで文字を編集できる） ---- */
+const XF2="Meiryo UI",XFILL={type:"pattern",pattern:"solid",fgColor:{argb:"FFEEF1F4"}};
+const xColPx=w=>Math.round(w*7),xRowPx=h=>Math.round(h*4/3);
+function xBd(cell,side,style){const b=Object.assign({},cell.border);b[side]={style};cell.border=b}
+function xBox(ws,r1,c1,r2,c2,style){for(let c=c1;c<=c2;c++){xBd(ws.getRow(r1).getCell(c),"top",style);xBd(ws.getRow(r2).getCell(c),"bottom",style)}
+  for(let r=r1;r<=r2;r++){xBd(ws.getRow(r).getCell(c1),"left",style);xBd(ws.getRow(r).getCell(c2),"right",style)}}
+function kzCoverX(wb,c){const ws=wb.addWorksheet("表紙");
+  ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:1,margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2}};
+  ws.getColumn(1).width=2;ws.getColumn(2).width=15;[3,4,5,6].forEach(k=>ws.getColumn(k).width=8);ws.getColumn(7).width=15;[8,9,10,11].forEach(k=>ws.getColumn(k).width=8);ws.getColumn(12).width=2;
+  let r=2;ws.getRow(r).height=18;ws.mergeCells(r,8,r,11);const dc=ws.getCell(r,8);dc.value=(c.kz_y||c.kz_m||c.kz_d)?`作成日　${c.kz_y||"　"} 年 ${c.kz_m||"　"} 月 ${c.kz_d||"　"} 日`:"";dc.font={name:XF2,size:11};dc.alignment={horizontal:"right"};r++;
+  const co=KZ_COMPANIES[c.kz_company];
+  if(co){[co.name,...co.lines].forEach((line,k)=>{ws.getRow(r).height=18;ws.mergeCells(r,2,r,11);const cc=ws.getCell(r,2);cc.value=line;cc.font={name:XF2,size:k===0?11:10,bold:k===0};cc.alignment={horizontal:"right",vertical:"middle"};r++});ws.getRow(r).height=12;r++}
+  else{ws.getRow(r).height=26;r++}
+  ws.getRow(r).height=34;ws.getRow(r+1).height=12;ws.mergeCells(r,2,r+1,11);const t=ws.getCell(r,2);t.value="完 了 報 告 書";t.font={name:XF2,size:22,bold:true};t.alignment={horizontal:"center",vertical:"middle"};
+  for(let k=2;k<=11;k++)xBd(ws.getRow(r+1).getCell(k),"bottom","medium");r+=2;ws.getRow(r).height=20;r++;
+  const full=(label,value,h)=>{ws.getRow(r).height=h||40;const lc=ws.getCell(r,2);lc.value=label;lc.font={name:XF2,size:11,bold:true};lc.alignment={vertical:"middle"};lc.fill=XFILL;
+    ws.mergeCells(r,3,r,11);const vc=ws.getCell(r,3);vc.value=value||"";vc.font={name:XF2,size:11};vc.alignment={vertical:"middle",wrapText:true};xBox(ws,r,2,r,11,"thin");r++};
+  const two=(l1,v1,l2,v2,h)=>{ws.getRow(r).height=h||40;const a=ws.getCell(r,2);a.value=l1;a.font={name:XF2,size:11,bold:true};a.alignment={vertical:"middle"};a.fill=XFILL;
+    ws.mergeCells(r,3,r,6);const b=ws.getCell(r,3);b.value=v1||"";b.font={name:XF2,size:11};b.alignment={vertical:"middle",wrapText:true};
+    const cc=ws.getCell(r,7);cc.value=l2;cc.font={name:XF2,size:11,bold:true};cc.alignment={vertical:"middle"};cc.fill=XFILL;
+    ws.mergeCells(r,8,r,11);const d=ws.getCell(r,8);d.value=v2||"";d.font={name:XF2,size:11};d.alignment={vertical:"middle",wrapText:true};
+    xBox(ws,r,2,r,11,"thin");xBd(ws.getRow(r).getCell(6),"right","thin");xBd(ws.getRow(r).getCell(7),"left","thin");r++};
+  const bodyStart=r;full("ご契約者様",c.kz_client);full("現場名",c.kz_site);full("住所",c.kz_addr);two("分類",c.kz_class,"工事内容",c.kz_work);full("工事工程",c.kz_sched);
+  two("着工日",kzFmt(c.kz_start),"施工前撮影日",kzFmt(c.kz_pbefore),30);two("完工日",kzFmt(c.kz_end),"施工後撮影日",kzFmt(c.kz_pafter),30);
+  const mats=c.kz_mat.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);full("使用部材",mats.join("\n"),Math.max(90,mats.length*20+12));
+  ws.getRow(r).height=18;r++;ws.getRow(r).height=24;
+  ws.mergeCells(r,2,r,6);const s1=ws.getCell(r,2);s1.value="営業担当者";s1.font={name:XF2,size:11,bold:true};s1.alignment={vertical:"middle",horizontal:"center"};s1.fill=XFILL;
+  ws.mergeCells(r,7,r,11);const s2=ws.getCell(r,7);s2.value="施工管理責任者";s2.font={name:XF2,size:11,bold:true};s2.alignment={vertical:"middle",horizontal:"center"};s2.fill=XFILL;
+  xBox(ws,r,2,r,6,"thin");xBox(ws,r,7,r,11,"thin");r++;ws.getRow(r).height=42;
+  ws.mergeCells(r,2,r,6);const w1=ws.getCell(r,2);w1.value=c.kz_sales;w1.font={name:XF2,size:13};w1.alignment={vertical:"middle",horizontal:"center"};
+  ws.mergeCells(r,7,r,11);const w2=ws.getCell(r,7);w2.value=c.kz_mgr;w2.font={name:XF2,size:13};w2.alignment={vertical:"middle",horizontal:"center"};
+  xBox(ws,r,2,r,6,"thin");xBox(ws,r,7,r,11,"thin");r++;
+  const last=r-1;if(!ws.getRow(1).height)ws.getRow(1).height=15;let widthPx=0;for(let k=1;k<=12;k++)widthPx+=Math.trunc((ws.getColumn(k).width||8.43)*7+5);
+  const targetPt=widthPx*.75*(277/200)*.96;let headPt=0,bodyPt=0;for(let k=1;k<=last;k++){const h=ws.getRow(k).height||15;if(k<bodyStart)headPt+=h;else bodyPt+=h}
+  const f=Math.max(1,Math.min(1.9,(targetPt-headPt)/bodyPt));for(let k=bodyStart;k<=last;k++){const h=ws.getRow(k).height||15;ws.getRow(k).height=Math.min(409,Math.round(h*f*10)/10)}
+  ws.pageSetup.horizontalCentered=true;ws.pageSetup.printArea=`A1:L${last}`}
+function kzLetterbox(img,W,H){return new Promise(res=>{const im=new Image();im.onload=()=>{const S2=2,cv=document.createElement("canvas");cv.width=W*S2;cv.height=H*S2;const x=cv.getContext("2d");
+  x.fillStyle="#fff";x.fillRect(0,0,cv.width,cv.height);const pad=4*S2,aw=cv.width-pad*2,ah=cv.height-pad*2,k=Math.min(aw/im.naturalWidth,ah/im.naturalHeight),dw=im.naturalWidth*k,dh=im.naturalHeight*k;
+  x.drawImage(im,(cv.width-dw)/2,(cv.height-dh)/2,dw,dh);res(cv.toDataURL("image/jpeg",.9).split(",")[1])};im.onerror=()=>res(null);im.src=img.url})}
+function kzCardX(wb,ws,c,c1,c2,hr,ir1,ir2,infor,cr1,cr2,boxB64){ws.mergeCells(hr,c1,hr,c2);const hc=ws.getCell(hr,c1);hc.value=c.header;hc.font={name:XF2,size:11,bold:true};hc.alignment={horizontal:"center",vertical:"middle"};hc.fill=XFILL;
+  ws.mergeCells(infor,c1,infor,c1+1);const nb=ws.getCell(infor,c1);nb.value="No."+c.no;nb.font={name:XF2,size:10,bold:true,color:{argb:"FFFFFFFF"}};nb.alignment={horizontal:"center",vertical:"middle"};nb.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1B2A41"}};
+  ws.mergeCells(infor,c1+2,infor,c2);const pc=ws.getCell(infor,c1+2);pc.value=c.place?"場所："+c.place:"";pc.font={name:XF2,size:10};pc.alignment={vertical:"middle",indent:1};
+  const hasC=cr2>=cr1;if(hasC){ws.mergeCells(cr1,c1,cr2,c2);const cc=ws.getCell(cr1,c1);cc.value=c.cmt?c.cmt.trim():"";cc.font={name:XF2,size:10};cc.alignment={vertical:"top",wrapText:true}}
+  const bottom=hasC?cr2:infor;xBox(ws,hr,c1,bottom,c2,"thin");for(let k=c1;k<=c2;k++){xBd(ws.getRow(hr).getCell(k),"bottom","thin");xBd(ws.getRow(infor).getCell(k),"top","thin");if(hasC)xBd(ws.getRow(cr1).getCell(k),"top","thin")}
+  if(boxB64){const id=wb.addImage({base64:boxB64,extension:"jpeg"});const E=9525,cw=xColPx(6.6),rh=xRowPx(16);
+    ws.addImage(id,{tl:{nativeCol:c1-1,nativeColOff:3*E,nativeRow:ir1-1,nativeRowOff:2*E},br:{nativeCol:c2-1,nativeColOff:(cw-3)*E,nativeRow:ir2-1,nativeRowOff:(rh-2)*E},editAs:"twoCell"})}}
+async function kzPhotoSheetX(wb,rows,pageNo,total){const nos=rows.flat().filter(Boolean).map(c=>c.no);const ws=wb.addWorksheet(`写真${nos[0]}～${nos[nos.length-1]}`);
+  ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,margins:{left:.4,right:.4,top:.4,bottom:.4,header:.2,footer:.2}};ws.views=[{showGridLines:false}];
+  const CCW=6.6,IMG_RH=16,IMG_ROWS=12,HDR_H=22,INFO_H=20,CMT_RH=15,GAP_H=10;ws.getColumn(1).width=1.6;for(let k=2;k<=8;k++)ws.getColumn(k).width=CCW;ws.getColumn(9).width=2.2;for(let k=10;k<=16;k++)ws.getColumn(k).width=CCW;ws.getColumn(17).width=1.6;
+  const boxW=xColPx(CCW)*7,boxH=xRowPx(IMG_RH)*IMG_ROWS;
+  ws.getRow(1).height=26;ws.mergeCells(1,2,1,12);ws.mergeCells(1,13,1,16);const tc=ws.getCell(1,2);tc.value="現場写真";tc.font={name:XF2,size:14,bold:true};tc.alignment={vertical:"middle"};
+  const pc=ws.getCell(1,13);pc.value=`${pageNo} / ${total} ページ`;pc.font={name:XF2,size:10,color:{argb:"FF5B6B7B"}};pc.alignment={horizontal:"right",vertical:"middle"};for(let k=2;k<=16;k++)xBd(ws.getRow(1).getCell(k),"bottom","medium");
+  ws.getRow(2).height=10;let r=3;
+  for(const row of rows){const L=Math.max(row[0]?kzCommentLines(row[0].cmt):0,row[1]?kzCommentLines(row[1].cmt):0);const hr=r,ir1=r+1,ir2=r+IMG_ROWS,infor=ir2+1,cr1=infor+1,cr2=infor+L;
+    ws.getRow(hr).height=HDR_H;for(let k=ir1;k<=ir2;k++)ws.getRow(k).height=IMG_RH;ws.getRow(infor).height=INFO_H;for(let k=cr1;k<=cr2;k++)ws.getRow(k).height=CMT_RH;
+    if(row[0])kzCardX(wb,ws,row[0],2,8,hr,ir1,ir2,infor,cr1,cr2,row[0].img?await kzLetterbox(row[0].img,boxW,boxH):null);
+    if(row[1])kzCardX(wb,ws,row[1],10,16,hr,ir1,ir2,infor,cr1,cr2,row[1].img?await kzLetterbox(row[1].img,boxW,boxH):null);
+    r=(L>0?cr2:infor)+1;ws.getRow(r).height=GAP_H;r++}
+  ws.pageSetup.printArea=`A1:Q${r-1}`}
+$("#kzXlsx").addEventListener("click",async()=>{const btn=$("#kzXlsx");btn.disabled=true;const st=t=>$("#kzStatus").textContent=t;
+  try{await ensureExcelJS();const rows=await kzPrepare(st);const wb=new ExcelJS.Workbook();wb.creator="現場フォト台帳";kzCoverX(wb,kzCover());const pr=chunk(rows,3);
+    for(let i=0;i<pr.length;i++){st(`Excelを作成中 ${i+1} / ${pr.length}ページ`);await kzPhotoSheetX(wb,pr[i],i+1,pr.length)}
+    const f=new File([await wb.xlsx.writeBuffer()],kzFile("xlsx"),{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});lastFile=f;
+    $("#kzStatus").innerHTML=`完成図書Excel（表紙＋写真${pr.length}ページ）ができました <button class="btn primary" id="kzGo">${isMobile?"保存・共有する":"保存先を選んで保存"}</button>`;$("#kzGo").addEventListener("click",()=>shareFiles([lastFile]))}
+  catch(e){console.error(e);st(window.ExcelJS?"Excelを作れませんでした":"Excel作成の部品を読み込めませんでした。通信できる場所でもう一度押してください")}
+  btn.disabled=false});
+
 /* ---------- 描画 ---------- */
-function render(){renderProjects();fillSpotSelect($("#bSpot"),curSpot()?.id||"");fillSpotFilter();if(S.tab==="spots")renderSpots();if(S.tab==="photos")renderPhotos();if(S.tab==="ledger")renderLedger();if(S.tab==="projects")showUsage()}
+function render(){renderProjects();fillSpotSelect($("#bSpot"),curSpot()?.id||"");fillSpotFilter();if(S.tab==="spots")renderSpots();if(S.tab==="photos")renderPhotos();if(S.tab==="ledger")renderLedger();if(S.tab==="report")renderReport();if(S.tab==="projects")showUsage()}
 
 /* ---------- 起動 ---------- */
 (async()=>{
