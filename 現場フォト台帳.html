@@ -110,6 +110,26 @@ textarea{resize:vertical;min-height:64px}
 .dlghead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .big{width:100%;border-radius:8px;background:#0d1410;display:block}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
+/* 撮影地点 */
+.spothead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+.spothead > div:first-child{flex:1 1 320px;min-width:0}
+.spotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.spot{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;display:flex;flex-direction:column}
+.spot table{width:100%;border-collapse:collapse;background:#fff;color:#1d2621;font-size:13px}
+.spot td{border:1px solid #9aa5a0;padding:5px 8px;overflow-wrap:anywhere}
+.spot td:first-child{width:6.2em;white-space:nowrap;font-size:12px;color:#3b4740;background:#f4f6f3}
+.spot .shots{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px}
+.spot .shot{font:inherit;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0;cursor:pointer;overflow:hidden;display:flex;flex-direction:column;text-align:left}
+.spot .shot .im{aspect-ratio:4/3;background:#0d1410;display:grid;place-items:center;color:#9fb3a5;font-size:12px;position:relative}
+.spot .shot .im img{width:100%;height:100%;object-fit:cover;display:block}
+.spot .shot .lb{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;font-size:12px;font-weight:700;gap:6px}
+.spot .shot .st{font-size:11px;padding:1px 7px;border-radius:999px;background:var(--line);color:var(--muted);font-weight:700;white-space:nowrap}
+.spot .shot.done .st{background:var(--accent);color:#fff}
+.spot .foot{display:flex;justify-content:space-between;align-items:center;padding:0 10px 10px;font-size:12px;color:var(--muted);gap:8px}
+.spot .foot .btn{min-height:34px;padding:4px 12px;font-size:13px}
+.cam .spotrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+.cam .spotrow select{background:#1c2620;color:#fff;border-color:#33433a;font-size:15px;padding:7px 8px;min-width:0}
+@media (orientation:landscape){.cam .spotrow{grid-template-columns:1fr 1fr}.cam .spotrow select{grid-column:1/-1}}
 /* カメラ */
 .cam{position:fixed;inset:0;background:#000;z-index:40;display:flex;flex-direction:column;color:#fff}
 .cam .view{flex:1;display:grid;place-items:center;min-height:0;position:relative;padding-top:env(safe-area-inset-top,0px)}
@@ -118,7 +138,7 @@ textarea{resize:vertical;min-height:64px}
 .cam canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 .cam .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .25s}
 .cam .flash.on{opacity:.8;transition:none}
-.cam .topbar{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;gap:8px;z-index:2}
+.cam .topbar{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));left:max(10px,env(safe-area-inset-left,0px));right:max(10px,env(safe-area-inset-right,0px));display:flex;justify-content:space-between;gap:8px;z-index:6}
 .cam .pill{background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 11px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;min-height:40px;white-space:nowrap}
 .cam .pill.on{background:var(--chalk);color:#1d2621;border-color:var(--chalk)}
 .cam .bar{background:#0e1511;padding:10px max(14px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));display:grid;gap:10px}
@@ -172,6 +192,7 @@ textarea{resize:vertical;min-height:64px}
     <div class="projsel"><select id="projPick" aria-label="案件を選択"></select></div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="shoot" aria-selected="true">撮影</button>
+      <button role="tab" data-tab="spots" aria-selected="false">撮影地点</button>
       <button role="tab" data-tab="photos" aria-selected="false">写真一覧</button>
       <button role="tab" data-tab="ledger" aria-selected="false">写真台帳</button>
       <button role="tab" data-tab="projects" aria-selected="false">案件・データ</button>
@@ -188,6 +209,7 @@ textarea{resize:vertical;min-height:64px}
         <h2>黒板の内容</h2>
         <p class="lead">カメラ画面に重ねて表示し、そのまま写真に写し込みます。</p>
         <div class="fields">
+          <label class="f full">撮影地点（登録した地点から選ぶ）<select id="bSpot"></select></label>
           <label class="f full">工事名<input id="bName" placeholder="案件を選ぶと自動で入ります"></label>
           <label class="f">工種<input id="bKind" list="kindList" placeholder="例：配線工事"></label>
           <label class="f">種別・部位<input id="bType" placeholder="例：防犯カメラ設置"></label>
@@ -232,10 +254,20 @@ textarea{resize:vertical;min-height:64px}
     </div>
   </section>
 
+  <section id="tab-spots" hidden>
+    <div class="spothead">
+      <div><h2>撮影地点</h2><p class="lead" style="margin:0">地点ごとに着工前・施工後の撮影状況がわかります。「撮る」を押すと、その地点の黒板でカメラが起動します。</p></div>
+      <div class="row"><button class="btn" id="btnSpotBulk">まとめて登録</button><button class="btn primary" id="btnSpotAdd">地点を追加</button></div>
+    </div>
+    <div class="chips" id="spotChips"></div>
+    <div class="spotgrid" id="spotGrid"></div>
+  </section>
+
   <section id="tab-photos" hidden>
     <div class="filters">
       <input id="q" type="search" placeholder="測点・種別・備考で検索">
       <select id="phaseFilter"><option value="">撮影区分：すべて</option></select>
+      <select id="spotFilter"><option value="">撮影地点：すべて</option></select>
     </div>
     <div class="chips" id="kindChips"></div>
     <div class="selbar">
@@ -257,6 +289,7 @@ textarea{resize:vertical;min-height:64px}
         <label class="f">台帳の表題<input id="lgTitle" value="工事写真台帳"></label>
         <label class="f">工種<select id="lgKind"><option value="">すべて</option></select></label>
         <label class="f">撮影区分<select id="lgPhase"><option value="">すべて</option></select></label>
+        <label class="f">並び順<select id="lgSort"><option value="date">撮影日順</option><option value="spot">撮影地点順（着工前→施工後）</option></select></label>
         <div class="row"><button class="btn primary" id="btnPdf">PDFで保存</button><button class="btn primary" id="btnXlsx">Excelで保存</button><button class="btn" id="btnCsv">CSVで保存</button></div>
       </div>
       <div class="status" id="lgStatus"></div>
@@ -344,6 +377,11 @@ textarea{resize:vertical;min-height:64px}
     </div>
   </div>
   <div class="bar">
+    <div class="spotrow" id="spotRow" hidden>
+      <select id="qSpot" aria-label="撮影地点"></select>
+      <button class="pill" id="camGhost" hidden>比較 40%</button>
+      <button class="pill" id="btnNextSpot">次の地点</button>
+    </div>
     <div class="quick">
       <input id="qPoint" placeholder="測点・位置" aria-label="測点・位置">
       <input id="qNote" placeholder="備考" aria-label="備考">
@@ -372,6 +410,7 @@ textarea{resize:vertical;min-height:64px}
       </div>
       <div>
         <div class="fields">
+          <label class="f full">撮影地点<select id="eSpot"></select></label>
           <label class="f full">工事名<input id="eName"></label>
           <label class="f">工種<input id="eKind" list="kindList"></label>
           <label class="f">種別・部位<input id="eType"></label>
@@ -402,12 +441,41 @@ textarea{resize:vertical;min-height:64px}
     </div>
   </div>
 </div>
+<div class="overlay" id="spotDlg" hidden>
+  <div class="sheetdlg" role="dialog" aria-modal="true" aria-labelledby="spotDlgTitle" style="max-width:560px">
+    <div class="dlghead"><h2 id="spotDlgTitle">撮影地点を追加</h2><button class="btn" id="spotClose">閉じる</button></div>
+    <form id="spotForm">
+      <div class="fields">
+        <label class="f">棟名・階数<input id="sBldg" placeholder="例：校舎3F"></label>
+        <label class="f">図面番号<input id="sDraw" placeholder="例：17"></label>
+        <label class="f full">部屋名・撮影場所<input id="sRoom" placeholder="例：教材室1"></label>
+        <label class="f">工種<input id="sKind" list="kindList" placeholder="例：照明器具取替"></label>
+        <label class="f">種別・部位<input id="sType" placeholder="例：天井照明"></label>
+        <label class="f full">備考<input id="sNote" placeholder="例：器具3台"></label>
+      </div>
+      <div class="row" style="margin-top:14px;justify-content:space-between">
+        <button type="button" class="btn danger" id="spotDel" hidden>地点を削除</button>
+        <div class="row" style="margin-left:auto"><button type="submit" class="btn primary" id="spotSave">追加する</button></div>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="overlay" id="bulkDlg" hidden>
+  <div class="sheetdlg" role="dialog" aria-modal="true" aria-labelledby="bulkTitle" style="max-width:640px">
+    <div class="dlghead"><h2 id="bulkTitle">撮影地点をまとめて登録</h2><button class="btn" id="bulkClose">閉じる</button></div>
+    <p class="lead">Excelで「棟名・階数｜図面番号｜部屋名」の順に並べた範囲をコピーして貼り付けてください。1行目に見出し（棟名・階数、図面番号、部屋名、工種、種別、備考）があれば、その並びで読み取ります。部屋名だけの1列でも登録できます。</p>
+    <textarea id="bulkText" rows="8" placeholder="校舎3F&#9;17&#9;教材室1&#10;校舎3F&#9;22&#9;図工室"></textarea>
+    <div class="status" id="bulkMsg" style="margin-top:8px"></div>
+    <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn" id="bulkCheck">読み取る</button><button class="btn primary" id="bulkSave" disabled>登録する</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
 "use strict";
 const APP_VERSION=1;
-const PHASES=["着手前","施工中","完了","材料検収","品質管理","出来形","その他"];
+const PHASES=["着工前","施工中","施工後","完了","材料検収","品質管理","出来形","その他"];
+const BEFORE="着工前",AFTERS=["施工後","完了"];const isAfter=ph=>AFTERS.includes(ph);
 const $=s=>document.querySelector(s);
 const S={projects:[],pid:null,photos:[],tab:"shoot",kind:"",pending:[],cur:0,pos:"bl",size:"m",free:null,
   selMode:false,sel:new Set(),selFiles:new Map(),lastOrig:null,camCount:0};
@@ -448,13 +516,13 @@ async function hydrateImgs(root){for(const el of root.querySelectorAll("img[data
 /* ---------- タブ ---------- */
 document.querySelectorAll("nav.tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.tab)));
 function setTab(t){S.tab=t;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
-  ["shoot","photos","ledger","projects"].forEach(k=>$("#tab-"+k).hidden=k!==t);render();ls.set("tab",t);window.scrollTo(0,0)}
+  ["shoot","spots","photos","ledger","projects"].forEach(k=>$("#tab-"+k).hidden=k!==t);render();ls.set("tab",t);window.scrollTo(0,0)}
 
 /* ---------- 黒板フォーム ---------- */
 ["#bPhase","#ePhase","#qPhase"].forEach(id=>$(id).innerHTML=PHASES.map(p=>`<option>${p}</option>`).join(""));
 ["#phaseFilter","#lgPhase"].forEach(id=>$(id).innerHTML+=PHASES.map(p=>`<option>${p}</option>`).join(""));
 const BF=["bName","bKind","bType","bPoint","bDate","bBy","bPhase","bNote"];
-function boardVals(){return{name:$("#bName").value.trim(),kind:$("#bKind").value.trim(),type:$("#bType").value.trim(),point:$("#bPoint").value.trim(),
+function boardVals(){const sp=curSpot();return{spotId:sp?.id||null,drawingNo:sp?.drawingNo||"",name:$("#bName").value.trim(),kind:$("#bKind").value.trim(),type:$("#bType").value.trim(),point:$("#bPoint").value.trim(),
   date:$("#bDate").value||today(),by:$("#bBy").value.trim(),phase:$("#bPhase").value,note:$("#bNote").value.trim()}}
 function fillBoardFromProject(){const p=proj();const sv=ls.get("board:"+S.pid,null);
   $("#bName").value=sv?.name||p?.name||"";$("#bBy").value=sv?.by||p?.contractor||"";$("#bKind").value=sv?.kind||"";$("#bType").value=sv?.type||"";
@@ -463,12 +531,12 @@ function fillBoardFromProject(){const p=proj();const sv=ls.get("board:"+S.pid,nu
 let prevT;function boardChanged(){clearTimeout(prevT);prevT=setTimeout(()=>{drawPreview();drawOverlay();if(S.pid)ls.set("board:"+S.pid,boardVals())},150)}
 BF.forEach(id=>$("#"+id).addEventListener("input",boardChanged));
 $("#bOn").addEventListener("change",()=>{drawPreview();drawOverlay();$("#camBoard").textContent=$("#bOn").checked?"黒板 ON":"黒板 OFF"});
-function segInit(id,key){$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S[key]=b.dataset.v;
+function segInit(id,key){$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;S[key]=b.dataset.v;if(key==="size"){S.scale=null;ls.set("scale",null)}
   $(id).querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));ls.set(key,S[key]);drawPreview();drawOverlay()})}
 segInit("#segPos","pos");segInit("#segSize","size");
-S.pos=ls.get("pos","bl");S.size=ls.get("size","m");S.free=ls.get("free",null);if(S.pos==="free"&&!S.free)S.pos="bl";
+S.pos=ls.get("pos","bl");S.size=ls.get("size","m");S.free=ls.get("free",null);S.scale=ls.get("scale",null);if(S.pos==="free"&&!S.free)S.pos="bl";
 $("#segPos").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===S.pos));
-$("#segSize").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.v===S.size));
+$("#segSize").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",!S.scale&&x.dataset.v===S.size));
 
 /* ---------- 黒板の描画 ---------- */
 const CFONT='"BIZ UDPGothic","Hiragino Sans","Yu Gothic","Meiryo",sans-serif';
@@ -479,7 +547,7 @@ function boardRect(w,h,rowsN,L=S){const short=Math.min(w,h);const bw=Math.min(w,
   const frame=Math.max(4,Math.round(bw*.018));const bh=rh*rowsN+frame*2;const m=Math.round(short*.025);let bx,by;const pos=L.pos||"bl";
   if(pos==="free"&&L.free){bx=Math.round(L.free.x*w);by=Math.round(L.free.y*h)}else{const q=pos==="free"?"bl":pos;bx=q[1]==="l"?m:w-bw-m;by=q[0]==="t"?m:h-bh-m}
   return{x:Math.max(0,Math.min(w-bw,bx)),y:Math.max(0,Math.min(h-bh,by)),w:bw,h:bh,rh,frame}}
-function boardRows(b){const r=[["工事名",b.name],["工　種",b.kind],["種　別",[b.type,b.phase].filter(Boolean).join("　")],["測　点",b.point],["撮影日",jpDate(b.date)],["施工者",b.by]];
+function boardRows(b){const r=[["工事名",b.name],["工　種",b.kind],["種　別",[b.type,b.phase].filter(Boolean).join("　")],["測　点",b.point]];if(b.drawingNo)r.push(["図面No",b.drawingNo]);r.push(["撮影日",jpDate(b.date)],["施工者",b.by]);
   if(b.note)r.push(["備　考",b.note]);return r}
 function drawBoard(x,w,h,b,L){const rows=boardRows(b);const R=boardRect(w,h,rows.length,L);const{rh,frame}=R;
   x.save();x.fillStyle="#6d5a3c";x.fillRect(R.x,R.y,R.w,R.h);x.fillStyle="rgba(36,64,47,.96)";x.fillRect(R.x+frame,R.y+frame,R.w-frame*2,R.h-frame*2);
@@ -500,8 +568,8 @@ async function savePhoto(baseCanvas,origBlob,b,on){
   if(on)drawBoard(x,c.width,c.height,b);
   const img=await toBlob(c,.86);const th=await toBlob(scaleCanvas(c,480),.75);
   const imgId=await DB.putBlob(img),thumbId=await DB.putBlob(th),origId=origBlob?await DB.putBlob(origBlob):null;
-  const rec={id:uid(),projectId:S.pid,imgId,thumbId,origId,w:c.width,h:c.height,board:b,boardBurned:on,
-    layout:{pos:S.pos,size:S.size,free:S.free?{...S.free}:null},createdAt:new Date().toISOString()};
+  const rec={id:uid(),projectId:S.pid,spotId:b.spotId||null,imgId,thumbId,origId,w:c.width,h:c.height,board:b,boardBurned:on,
+    layout:{pos:S.pos,size:S.size,scale:S.scale||null,free:S.free?{...S.free}:null},createdAt:new Date().toISOString()};
   await DB.put("photos",rec);S.photos.push(rec);return{rec,canvas:c}}
 
 /* ---------- ライブカメラ ---------- */
@@ -537,6 +605,7 @@ function unlockOrient(){try{screen.orientation?.unlock?.()}catch(e){}if(document
 async function openCam(){if(!S.pid){toast("先に「案件・データ」で案件を登録してください");setTab("projects");return}
   S.allowPortrait=false;startSensor();const lockP=lockLandscape();
   $("#qPoint").value=$("#bPoint").value;$("#qNote").value=$("#bNote").value;$("#qPhase").value=$("#bPhase").value;
+  fillSpotSelect($("#qSpot"),curSpot()?.id||"");$("#spotRow").hidden=!projSpots().length;loadGhost();
   $("#cam").hidden=false;document.body.style.overflow="hidden";S.camCount=0;$("#camCount").textContent="0枚";$("#lastBox").hidden=true;
   const msg=$("#camMsg");msg.hidden=true;$("#bDate").value=today();await lockP;checkOrient();await fontsReady();
   if(!navigator.mediaDevices?.getUserMedia){msg.textContent="この画面ではカメラを使えません。https:// で始まるアドレスで開いているか確認してください。開けない場合は「標準カメラで撮る」を使ってください。";msg.hidden=false;return}
@@ -553,14 +622,18 @@ window.addEventListener("resize",()=>{checkOrient();if(stream)setTimeout(fitVide
 video.addEventListener("loadedmetadata",fitVideo);video.addEventListener("resize",fitVideo);
 function camBoardVals(){const b=boardVals();b.point=$("#qPoint").value.trim();b.note=$("#qNote").value.trim();b.phase=$("#qPhase").value;b.date=today();return b}
 let ovGeo={r:0};
+const ovOff=document.createElement("canvas");
+function drawCover(x,img,w,h){const iw=img.width,ih=img.height;const s=Math.max(w/iw,h/ih);const dw=iw*s,dh=ih*s;x.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh)}
 function drawOverlay(){if(!stream||!ov.width)return;const x=ov.getContext("2d");const W=ov.width,H=ov.height;x.clearRect(0,0,W,H);ovRect=null;
-  const r=camRot();ovGeo=r?{r,W,H,ow:H,oh:W}:{r:0,W,H,ow:W,oh:H};if(!$("#bOn").checked)return;
-  if(!r){ovRect=drawBoard(x,W,H,camBoardVals());return}
-  const off=document.createElement("canvas");off.width=H;off.height=W;ovRect=drawBoard(off.getContext("2d"),H,W,camBoardVals());
-  x.save();if(r===-90){x.translate(W,0);x.rotate(Math.PI/2)}else{x.translate(0,H);x.rotate(-Math.PI/2)}x.drawImage(off,0,0);x.restore()}
+  const r=camRot();ovGeo=r?{r,W,H,ow:H,oh:W}:{r:0,W,H,ow:W,oh:H};const ow=ovGeo.ow,oh=ovGeo.oh;
+  if(ovOff.width!==ow||ovOff.height!==oh){ovOff.width=ow;ovOff.height=oh}const o=ovOff.getContext("2d");o.clearRect(0,0,ow,oh);
+  if(S.ghost&&S.ghostAlpha>0){o.globalAlpha=S.ghostAlpha;drawCover(o,S.ghost.bmp,ow,oh);o.globalAlpha=1}
+  if($("#bOn").checked)ovRect=drawBoard(o,ow,oh,camBoardVals());
+  x.save();if(r===-90){x.translate(W,0);x.rotate(Math.PI/2)}else if(r===90){x.translate(0,H);x.rotate(-Math.PI/2)}x.drawImage(ovOff,0,0);x.restore()}
 /* 画面上の位置 → 写真（横向き）上の位置 */
 function ovMap(p){const g=ovGeo;if(g.r===-90)return{x:p.y,y:g.W-p.x,cw:g.ow,ch:g.oh};if(g.r===90)return{x:g.H-p.y,y:p.x,cw:g.ow,ch:g.oh};return{x:p.x,y:p.y,cw:g.W,ch:g.H}}
-["qPoint","qNote","qPhase"].forEach(id=>$("#"+id).addEventListener("input",drawOverlay));
+["qPoint","qNote"].forEach(id=>$("#"+id).addEventListener("input",drawOverlay));
+$("#qPhase").addEventListener("change",()=>{$("#bPhase").value=$("#qPhase").value;loadGhost();drawOverlay()});
 $("#camBoard").addEventListener("click",()=>{$("#bOn").checked=!$("#bOn").checked;$("#camBoard").textContent=$("#bOn").checked?"黒板 ON":"黒板 OFF";drawOverlay();drawPreview()});
 let shooting=false;
 $("#shutter").addEventListener("click",async()=>{if(!stream||!video.videoWidth||shooting||!$("#rotate").hidden)return;shooting=true;
@@ -574,16 +647,39 @@ $("#shutter").addEventListener("click",async()=>{if(!stream||!video.videoWidth||
 $("#btnLastSave").addEventListener("click",()=>{if(S.lastOrig)shareFiles([new File([S.lastOrig.blob],S.lastOrig.name,{type:"image/jpeg"})])});
 function fileName(b,tag,ext="jpg"){const d=new Date();return `${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}_${safeName(b.point||b.kind||"現場").slice(0,24)}_${tag}.${ext}`}
 
-/* ---------- 黒板のドラッグ（ライブ画面・取込プレビュー共通） ---------- */
-function draggable(cv,getRect,redraw,map){let drag=null;
-  const pt=e=>{const r=cv.getBoundingClientRect();const p={x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};return map?map(p):{...p,cw:cv.width,ch:cv.height}};
-  cv.addEventListener("pointerdown",e=>{const R=getRect();if(!R)return;const p=pt(e);
-    if(p.x<R.x||p.x>R.x+R.w||p.y<R.y||p.y>R.y+R.h)return;drag={dx:p.x-R.x,dy:p.y-R.y,w:R.w,h:R.h};cv.setPointerCapture(e.pointerId);e.preventDefault()});
-  cv.addEventListener("pointermove",e=>{if(!drag)return;const p=pt(e);
-    S.free={x:Math.max(0,Math.min(p.cw-drag.w,p.x-drag.dx))/p.cw,y:Math.max(0,Math.min(p.ch-drag.h,p.y-drag.dy))/p.ch};
-    if(S.pos!=="free"){S.pos="free";$("#segPos").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed","false"))}redraw()});
-  const end=()=>{if(!drag)return;drag=null;ls.set("pos",S.pos);ls.set("free",S.free)};cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end)}
-let raf1=0;draggable(ov,()=>ovRect,()=>{if(!raf1)raf1=requestAnimationFrame(()=>{raf1=0;drawOverlay()})},ovMap);
+/* ---------- 黒板の操作（ドラッグで移動・右下の角で大きさ・2本指ピンチで拡大縮小）共通 ---------- */
+function boardGestures(cv,o){const pts=new Map();let g=null;
+  const P=e=>{const r=cv.getBoundingClientRect();const q={x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height};
+    const m=o.map?o.map(q):{x:q.x,y:q.y,cw:cv.width,ch:cv.height};m.k=cv.width/r.width;return m};
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const curScale=()=>{const L=o.get();return L.scale||SIZE_SCALE[L.size]||.6};
+  function startPinch(){const R=o.rect();if(!R){g=null;return}const [a,b]=[...pts.values()];g={mode:"pinch",d0:Math.hypot(a.x-b.x,a.y-b.y)||1,s0:curScale(),cx:R.x+R.w/2,cy:R.y+R.h/2}}
+  cv.addEventListener("pointerdown",e=>{const p=P(e);pts.set(e.pointerId,p);try{cv.setPointerCapture(e.pointerId)}catch(_){}
+    if(pts.size===2){startPinch();e.preventDefault();return}if(pts.size>2)return;
+    const R=o.rect();if(!R){g=null;return}const grab=Math.max(28*p.k,R.w*.16);
+    const inB=p.x>=R.x&&p.x<=R.x+R.w&&p.y>=R.y&&p.y<=R.y+R.h,corner=Math.abs(p.x-(R.x+R.w))<grab&&Math.abs(p.y-(R.y+R.h))<grab;
+    if(!inB&&!corner){g=null;return}
+    o.set({pos:"free",free:{x:R.x/p.cw,y:R.y/p.ch}});
+    g=corner?{mode:"size",x0:R.x}:{mode:"move",dx:p.x-R.x,dy:p.y-R.y,w:R.w,h:R.h};
+    cv.style.cursor="grabbing";e.preventDefault()});
+  cv.addEventListener("pointermove",e=>{const p=P(e);
+    if(!pts.has(e.pointerId)){const R=o.rect();if(R&&e.pointerType==="mouse"){const gr=Math.max(28*p.k,R.w*.16);
+      cv.style.cursor=Math.abs(p.x-(R.x+R.w))<gr&&Math.abs(p.y-(R.y+R.h))<gr?"nwse-resize":(p.x>=R.x&&p.x<=R.x+R.w&&p.y>=R.y&&p.y<=R.y+R.h?"grab":"default")}return}
+    pts.set(e.pointerId,p);if(!g)return;
+    if(g.mode==="move")o.set({pos:"free",free:{x:clamp(p.x-g.dx,0,p.cw-g.w)/p.cw,y:clamp(p.y-g.dy,0,p.ch-g.h)/p.ch}});
+    else if(g.mode==="size")o.set({scale:Math.round(clamp((p.x-g.x0)/Math.min(p.cw,p.ch),.25,.95)*100)/100});
+    else if(g.mode==="pinch"&&pts.size>=2){const [a,b]=[...pts.values()];const sc=Math.round(clamp(g.s0*Math.hypot(a.x-b.x,a.y-b.y)/g.d0,.25,.95)*100)/100;
+      const R2=boardRect(p.cw,p.ch,o.rows(),{scale:sc,pos:"free",free:{x:0,y:0}});
+      o.set({scale:sc,pos:"free",free:{x:clamp(g.cx-R2.w/2,0,p.cw-R2.w)/p.cw,y:clamp(g.cy-R2.h/2,0,p.ch-R2.h)/p.ch}})}
+    o.redraw();e.preventDefault()});
+  const up=e=>{pts.delete(e.pointerId);if(g?.mode==="pinch"&&pts.size<2)g=null;if(!pts.size){if(g||o.dirty)o.end?.();g=null;cv.style.cursor=""}};
+  cv.addEventListener("pointerup",up);cv.addEventListener("pointercancel",up)}
+/* 撮影・取込画面の黒板レイアウト（S）を書き換える */
+const camLayout={get:()=>({pos:S.pos,size:S.size,scale:S.scale,free:S.free}),
+  set(u){if(u.pos){S.pos=u.pos;$("#segPos").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.v===S.pos))}
+    if("free" in u)S.free=u.free;if(u.scale){S.scale=u.scale;$("#segSize").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed","false"))}},
+  end(){ls.set("pos",S.pos);ls.set("free",S.free);ls.set("scale",S.scale)}};
+let raf1=0;boardGestures(ov,{...camLayout,rect:()=>ovRect,map:ovMap,rows:()=>boardRows(camBoardVals()).length,redraw:()=>{if(!raf1)raf1=requestAnimationFrame(()=>{raf1=0;drawOverlay()})}});
 
 /* ---------- 写真の取り込み ---------- */
 async function loadBitmap(file){try{return await createImageBitmap(file,{imageOrientation:"from-image"})}catch(e){const u=URL.createObjectURL(file);const i=new Image();i.src=u;await i.decode();return i}}
@@ -599,7 +695,7 @@ function drawPending(){const n=S.pending.length;$("#impArea").hidden=!n;$("#btnS
 $("#pendThumbs").addEventListener("click",e=>{const i=e.target.dataset?.i;if(i!=null){S.cur=+i;drawPending()}});
 function drawPreview(){const p=S.pending[S.cur];if(!p)return;const b=boardVals();if(S.pending.length>1)b.date=p.date;
   const c=scaleCanvas(p.bmp,1280);pv.width=c.width;pv.height=c.height;const x=pv.getContext("2d");x.drawImage(c,0,0);pvRect=$("#bOn").checked?drawBoard(x,c.width,c.height,b):null}
-let raf2=0;draggable(pv,()=>pvRect,()=>{if(!raf2)raf2=requestAnimationFrame(()=>{raf2=0;drawPreview()})});
+let raf2=0;boardGestures(pv,{...camLayout,rect:()=>pvRect,rows:()=>boardRows(boardVals()).length,redraw:()=>{if(!raf2)raf2=requestAnimationFrame(()=>{raf2=0;drawPreview()})}});
 function clearPending(){S.pending.forEach(p=>URL.revokeObjectURL(p.thumb));S.pending=[];drawPending()}
 $("#btnClear").addEventListener("click",clearPending);
 $("#btnSave").addEventListener("click",async()=>{const btn=$("#btnSave");btn.disabled=true;const base=boardVals();const on=$("#bOn").checked;let ok=0;const n=S.pending.length;
@@ -646,9 +742,9 @@ async function shareFiles(files){
 const sorted=()=>[...S.photos].sort((a,b)=>((a.board?.date||"")+(a.createdAt||"")).localeCompare((b.board?.date||"")+(b.createdAt||"")));
 const kindOf=p=>p.board?.kind||"（工種なし）";
 function kindsOf(list){const m=new Map();list.forEach(p=>m.set(kindOf(p),(m.get(kindOf(p))||0)+1));return m}
-function filtered(){const q=$("#q").value.trim().toLowerCase(),ph=$("#phaseFilter").value;
-  return sorted().filter(p=>(!S.kind||kindOf(p)===S.kind)&&(!ph||p.board?.phase===ph)&&(!q||[p.board?.type,p.board?.point,p.board?.note,p.board?.kind].join(" ").toLowerCase().includes(q)))}
-$("#q").addEventListener("input",()=>renderPhotos());$("#phaseFilter").addEventListener("change",()=>renderPhotos());
+function filtered(){const q=$("#q").value.trim().toLowerCase(),ph=$("#phaseFilter").value,sp=$("#spotFilter").value;
+  return sorted().filter(p=>(!S.kind||kindOf(p)===S.kind)&&(!ph||p.board?.phase===ph)&&(!sp||(sp==="none"?!p.spotId:p.spotId===sp))&&(!q||[p.board?.type,p.board?.point,p.board?.note,p.board?.kind].join(" ").toLowerCase().includes(q)))}
+$("#q").addEventListener("input",()=>renderPhotos());$("#phaseFilter").addEventListener("change",()=>renderPhotos());$("#spotFilter").addEventListener("change",()=>renderPhotos());
 $("#kindChips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(b){S.kind=b.dataset.k;renderPhotos()}});
 function renderPhotos(){const all=sorted();const km=kindsOf(all);
   $("#kindChips").innerHTML=`<button class="chip" data-k="" aria-pressed="${!S.kind}">すべて<b>${all.length}</b></button>`+[...km].map(([k,n])=>`<button class="chip" data-k="${esc(k)}" aria-pressed="${S.kind===k}">${esc(k)}<b>${n}</b></button>`).join("");
@@ -676,7 +772,7 @@ $("#btnSelSave").addEventListener("click",async()=>{const files=[...S.selFiles.v
 /* ---------- 詳細 ---------- */
 let editing=null,eOrigBmp=null,eLayout=null,ePrevUrl=null,ePrevT=0;
 const EF=["eName","eKind","eType","ePoint","eDate","ePhase","eBy","eNote"];
-function editVals(){return{...(editing.board||{}),name:$("#eName").value.trim(),kind:$("#eKind").value.trim(),type:$("#eType").value.trim(),point:$("#ePoint").value.trim(),
+function editVals(){const sid=$("#eSpot").value||null;const sp=sid?projSpots().find(x=>x.id===sid):null;return{...(editing.board||{}),spotId:sid,drawingNo:sp?sp.drawingNo||"":(sid?editing.board?.drawingNo||"":""),name:$("#eName").value.trim(),kind:$("#eKind").value.trim(),type:$("#eType").value.trim(),point:$("#ePoint").value.trim(),
   date:$("#eDate").value,phase:$("#ePhase").value,by:$("#eBy").value.trim(),note:$("#eNote").value.trim()}}
 /* 編集中の黒板レイアウト（pos:四隅 or free、scale:写真の短辺に対する黒板の幅） */
 let eL=null,eBase=null,eRect=null,ePv=null,eRaf=0;
@@ -692,31 +788,19 @@ function drawEditPreview(){if(!eOrigBmp)return;const cv=$("#dlgCv");if(!ePv)ePv=
     const hs=Math.max(18,Math.round(R.w*.12));x.save();x.fillStyle="#e6c341";x.beginPath();x.moveTo(R.x+R.w,R.y+R.h-hs);x.lineTo(R.x+R.w,R.y+R.h);x.lineTo(R.x+R.w-hs,R.y+R.h);x.closePath();x.fill();
     x.setLineDash([8,6]);x.strokeStyle="rgba(230,195,65,.9)";x.lineWidth=2;x.strokeRect(R.x+1,R.y+1,R.w-2,R.h-2);x.restore()}}
 function editChanged(){if(!eOrigBmp)return;if(!eRaf)eRaf=requestAnimationFrame(()=>{eRaf=0;drawEditPreview()})}
-EF.forEach(id=>$("#"+id).addEventListener("input",editChanged));$("#eBurn").addEventListener("change",editChanged);
+EF.forEach(id=>$("#"+id).addEventListener("input",editChanged));$("#eSpot").addEventListener("change",()=>{const sp=projSpots().find(x=>x.id===$("#eSpot").value);if(sp){$("#ePoint").value=spotLabel(sp);if(sp.kind)$("#eKind").value=sp.kind;if(sp.type)$("#eType").value=sp.type}editChanged()});$("#eBurn").addEventListener("change",editChanged);
 $("#ePos").addEventListener("click",e=>{const b=e.target.closest("button");if(!b||!eL)return;eL.pos=b.dataset.v;eL.free=null;syncLayoutUI();editChanged()});
 $("#eScale").addEventListener("input",e=>{if(!eL)return;eL.scale=+e.target.value/100;$("#eScaleVal").textContent=e.target.value+"%";editChanged()});
 $("#eReset").addEventListener("click",()=>{if(!eBase)return;eL=normLayout(eBase);syncLayoutUI();editChanged()});
-/* 黒板をドラッグで移動、右下の角で大きさ変更 */
-(()=>{const cv=$("#dlgCv");let drag=null;
-  const pt=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height,k:cv.width/r.width}};
-  cv.addEventListener("pointerdown",e=>{const R=eRect;if(!R||!eL)return;const p=pt(e);const grab=Math.max(28*p.k,R.w*.16);
-    const inBoard=p.x>=R.x&&p.x<=R.x+R.w&&p.y>=R.y&&p.y<=R.y+R.h;const nearCorner=Math.abs(p.x-(R.x+R.w))<grab&&Math.abs(p.y-(R.y+R.h))<grab;
-    if(!inBoard&&!nearCorner)return;eL.pos="free";eL.free={x:R.x/cv.width,y:R.y/cv.height};
-    drag=nearCorner?{mode:"size",x0:R.x,short:Math.min(cv.width,cv.height)}:{mode:"move",dx:p.x-R.x,dy:p.y-R.y,w:R.w,h:R.h};
-    cv.setPointerCapture(e.pointerId);cv.style.cursor="grabbing";syncLayoutUI();e.preventDefault()});
-  cv.addEventListener("pointermove",e=>{const p=pt(e);
-    if(!drag){const R=eRect;if(R){const g=Math.max(28*p.k,R.w*.16);cv.style.cursor=Math.abs(p.x-(R.x+R.w))<g&&Math.abs(p.y-(R.y+R.h))<g?"nwse-resize":"grab"}return}
-    if(drag.mode==="move"){eL.free={x:Math.max(0,Math.min(cv.width-drag.w,p.x-drag.dx))/cv.width,y:Math.max(0,Math.min(cv.height-drag.h,p.y-drag.dy))/cv.height}}
-    else{const s=Math.max(.2,Math.min(1,(p.x-drag.x0)/drag.short));eL.scale=Math.round(s*100)/100;$("#eScale").value=Math.round(eL.scale*100);$("#eScaleVal").textContent=Math.round(eL.scale*100)+"%"}
-    editChanged()});
-  const end=()=>{if(!drag)return;drag=null;cv.style.cursor="grab"};cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end)})();
+boardGestures($("#dlgCv"),{rect:()=>eRect,rows:()=>boardRows(editVals()).length,redraw:editChanged,
+  get:()=>eL||{},set(u){if(!eL)return;if(u.pos)eL.pos=u.pos;if("free" in u)eL.free=u.free;if(u.scale)eL.scale=u.scale;syncLayoutUI()}});
 async function openDlg(id){const p=S.photos.find(x=>x.id===id);if(!p)return;editing=p;const b=p.board||{};$("#dlgImg").src=await blobUrl(p.imgId);
   eOrigBmp=null;ePv=null;eRect=null;eBase=p.layout||{pos:S.pos,size:S.size,free:S.free};eL=normLayout(eBase);syncLayoutUI();
   $("#dlgImg").hidden=false;$("#dlgCv").hidden=true;$("#dlgCvHint").hidden=true;
   $("#eBurnBox").hidden=!p.origId;$("#eNoOrig").hidden=!!p.origId;$("#eBurn").checked=p.boardBurned!==false;
   if(p.origId)DB.blob(p.origId).then(async bl=>{if(!bl||editing!==p)return;try{const bm=await loadBitmap(bl);if(editing!==p)return;eOrigBmp=bm;
     drawEditPreview();$("#dlgImg").hidden=true;$("#dlgCv").hidden=false;$("#dlgCvHint").hidden=false}catch(e){$("#eBurnBox").hidden=true;$("#eNoOrig").hidden=false}});
-  $("#eName").value=b.name||proj()?.name||"";$("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";$("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";
+  fillESpot(p.spotId);$("#eName").value=b.name||proj()?.name||"";$("#eKind").value=b.kind||"";$("#eType").value=b.type||"";$("#ePoint").value=b.point||"";$("#eDate").value=b.date||"";$("#ePhase").value=b.phase||"その他";
   $("#eBy").value=b.by||"";$("#eNote").value=b.note||"";$("#eDel").classList.remove("armed");$("#eDel").textContent="削除";$("#eSaveOrig").hidden=!p.origId;
   editing._files={};for(const [k,bid] of [["img",p.imgId],["orig",p.origId]]){if(bid)DB.blob(bid).then(bl=>{if(bl&&editing===p)p._files[k]=new File([bl],`${(b.date||"").replace(/-/g,"")}_${safeName(b.point||b.kind||"現場")}${k==="orig"?"_元":""}.jpg`,{type:"image/jpeg"})})}
   $("#dlg").hidden=false}
@@ -727,7 +811,7 @@ $("#eSaveOrig").addEventListener("click",()=>{const f=editing?._files?.orig;if(f
 $("#eSave").addEventListener("click",async()=>{if(!editing)return;const p=editing;const btn=$("#eSave");
   if(p.origId&&!eOrigBmp&&!$("#eBurnBox").hidden){toast("写真を読み込み中です。少し待ってから押してください");return}
   btn.disabled=true;
-  try{const nb=editVals();let redrawn=false;
+  try{const nb=editVals();const sid=$("#eSpot").value||null;const sp=sid?projSpots().find(x=>x.id===sid):null;nb.spotId=sid;nb.drawingNo=sp?.drawingNo||(sid?nb.drawingNo:"");p.spotId=sid;let redrawn=false;
     if(p.origId&&eOrigBmp){const c=renderEdit();const img=await toBlob(c,.86),th=await toBlob(scaleCanvas(c,480),.75);
       const imgId=await DB.putBlob(img),thumbId=await DB.putBlob(th);
       for(const old of [p.imgId,p.thumbId]){if(old){await DB.del("blobs",old);const u=urlCache.get(old);if(u){URL.revokeObjectURL(u);urlCache.delete(old)}}}
@@ -741,10 +825,14 @@ $("#eDel").addEventListener("click",async()=>{const btn=$("#eDel");if(!btn.class
   S.photos=S.photos.filter(x=>x.id!==p.id);toast("写真を削除しました");closeDlg();render()});
 
 /* ---------- 台帳 ---------- */
-["lgKind","lgPhase"].forEach(i=>$("#"+i).addEventListener("change",()=>renderLedger()));$("#lgTitle").addEventListener("input",()=>renderLedger());
-function ledgerList(){const k=$("#lgKind").value,ph=$("#lgPhase").value;return sorted().map((p,i)=>({...p,no:i+1})).filter(p=>(!k||kindOf(p)===k)&&(!ph||p.board?.phase===ph))}
+["lgKind","lgPhase","lgSort"].forEach(i=>$("#"+i).addEventListener("change",()=>{if(i==="lgSort")ls.set("lgSort",$("#lgSort").value);renderLedger()}));$("#lgTitle").addEventListener("input",()=>renderLedger());
+function spotOrdered(list){const idx=new Map(projSpots().map((s,i)=>[s.id,i]));const pi=ph=>{const i=PHASES.indexOf(ph);return i<0?99:i};
+  return [...list].sort((a,b)=>{const sa=idx.has(a.spotId)?idx.get(a.spotId):1e6,sb=idx.has(b.spotId)?idx.get(b.spotId):1e6;if(sa!==sb)return sa-sb;
+    const d=pi(a.board?.phase)-pi(b.board?.phase);if(d)return d;return((a.board?.date||"")+(a.createdAt||"")).localeCompare((b.board?.date||"")+(b.createdAt||""))})}
+function ledgerList(){const k=$("#lgKind").value,ph=$("#lgPhase").value;const base=$("#lgSort").value==="spot"?spotOrdered(S.photos):sorted();
+  return base.map((p,i)=>({...p,no:i+1})).filter(p=>(!k||kindOf(p)===k)&&(!ph||p.board?.phase===ph))}
 function chunk(a,n){const r=[];for(let i=0;i<a.length;i+=n)r.push(a.slice(i,i+n));return r}
-function infoRows(p){const b=p.board||{};return[["写真番号","No."+p.no],["撮影日",jpDate(b.date)],["工種",b.kind],["種別・部位",b.type],["撮影区分",b.phase],["測点・位置",b.point],["施工者",b.by],["備考",b.note]]}
+function infoRows(p){const b=p.board||{};return[["写真番号","No."+p.no],["撮影日",jpDate(b.date)],["工種",b.kind],["種別・部位",b.type],["撮影区分",b.phase],["測点・位置",[b.point,b.drawingNo?`（図面No.${b.drawingNo}）`:""].filter(Boolean).join(" ")],["施工者",b.by],["備考",b.note]]}
 function renderLedger(){const km=kindsOf(sorted());const cur=$("#lgKind").value;
   $("#lgKind").innerHTML='<option value="">すべて</option>'+[...km.keys()].map(k=>`<option ${k===cur?"selected":""}>${esc(k)}</option>`).join("");
   const list=ledgerList();const pages=chunk(list,3);const title=$("#lgTitle").value||"工事写真台帳";
@@ -842,7 +930,10 @@ $("#btnCsv").addEventListener("click",()=>{const list=ledgerList();const q=v=>`"
 /* ---------- 案件 ---------- */
 let editPid=null;
 $("#projPick").addEventListener("change",e=>selectProject(e.target.value));
-async function selectProject(id){S.pid=id||null;ls.set("pid",S.pid);S.kind="";S.sel.clear();fillBoardFromProject();S.photos=S.pid?await DB.byProject(S.pid):[];render()}
+async function selectProject(id){S.pid=id||null;ls.set("pid",S.pid);S.kind="";S.sel.clear();S.spotId=S.pid?ls.get("spot:"+S.pid,null):null;if(!curSpot())S.spotId=null;
+  fillBoardFromProject();S.photos=S.pid?await DB.byProject(S.pid):[];
+  for(const ph of S.photos){if(ph.board?.phase==="着手前"){ph.board.phase="着工前";try{await DB.put("photos",ph)}catch(e){}}}
+  if($("#bPhase").value===""||$("#bPhase").value==="着手前")$("#bPhase").value="施工中";render()}
 function renderProjects(){$("#projPick").innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}" ${p.id===S.pid?"selected":""}>${esc(projHeader(p))}</option>`).join(""):'<option value="">案件を登録してください</option>';
   $("#plist").innerHTML=S.projects.length?S.projects.map(p=>`<div class="pitem ${p.id===S.pid?"on":""}"><div style="min-width:0"><div class="t">${p.receiptNo?`<span class="no" style="font-size:12px">受付No.${esc(p.receiptNo)}</span> `:""}${esc(p.name)}</div>
     <div class="s">${esc([p.building,p.client,p.place,p.term].filter(Boolean).join("・"))}</div><div class="s">工種：${esc((p.kinds||[]).join("、")||"未登録")}</div></div>
@@ -909,8 +1000,104 @@ $("#fBackup").addEventListener("change",async e=>{const f=e.target.files[0];e.ta
 async function showUsage(){try{const e=await navigator.storage.estimate();const u=e.usage||0,q=e.quota||0;
   $("#usageText").textContent=`この端末での使用量 ${(u/1048576).toFixed(0)}MB`+(q?` / 使える目安 ${(q/1073741824).toFixed(1)}GB`:"");$("#usageBar").style.width=q?Math.min(100,u/q*100)+"%":"0"}catch(e){$("#usageText").textContent=""}}
 
+/* ---------- 撮影地点 ---------- */
+const projSpots=()=>proj()?.spots||[];
+const spotLabel=s=>s?([s.building,s.room].filter(Boolean).join(" ")||(s.drawingNo?`図面No.${s.drawingNo}`:"（名称なし）")):"";
+const spotOpt=s=>[s.drawingNo?`[${s.drawingNo}]`:"",spotLabel(s)].filter(Boolean).join(" ");
+function curSpot(){const id=S.spotId;return id?projSpots().find(s=>s.id===id)||null:null}
+function fillSpotSelect(sel,val){const sp=projSpots();sel.innerHTML=`<option value="">（地点を選ばない）</option>`+sp.map(s=>`<option value="${s.id}">${esc(spotOpt(s))}</option>`).join("");sel.value=val||"";
+  sel.disabled=!sp.length;if(!sp.length)sel.options[0].textContent="（地点は「撮影地点」タブで登録できます）"}
+function fillSpotFilter(){const sel=$("#spotFilter"),v=sel.value;const sp=projSpots();sel.hidden=!sp.length;
+  sel.innerHTML=`<option value="">撮影地点：すべて</option>`+sp.map(s=>`<option value="${s.id}">${esc(spotOpt(s))}</option>`).join("")+`<option value="none">（地点なし）</option>`;sel.value=[...sel.options].some(o=>o.value===v)?v:""}
+function fillESpot(val){const sel=$("#eSpot");sel.innerHTML=`<option value="">（地点なし）</option>`+projSpots().map(s=>`<option value="${s.id}">${esc(spotOpt(s))}</option>`).join("");sel.value=val||"";sel.closest("label").hidden=!projSpots().length}
+/* 地点を黒板に反映（撮影タブとカメラ画面で共通） */
+function applySpot(id,phase){S.spotId=id||null;ls.set("spot:"+S.pid,S.spotId);const s=curSpot();
+  if(s){$("#bPoint").value=spotLabel(s);if(s.kind)$("#bKind").value=s.kind;if(s.type)$("#bType").value=s.type;$("#bNote").value=s.note||"";
+    $("#qPoint").value=$("#bPoint").value;$("#qNote").value=$("#bNote").value}
+  if(phase){$("#bPhase").value=phase;$("#qPhase").value=phase}
+  $("#bSpot").value=S.spotId||"";$("#qSpot").value=S.spotId||"";if(S.pid)ls.set("board:"+S.pid,boardVals());drawPreview();if(stream){loadGhost();drawOverlay()}}
+$("#bSpot").addEventListener("change",e=>applySpot(e.target.value));
+$("#qSpot").addEventListener("change",e=>applySpot(e.target.value));
+function spotStatus(){const m=new Map();for(const p of S.photos){if(!p.spotId)continue;let o=m.get(p.spotId);if(!o){o={before:[],after:[],other:[]};m.set(p.spotId,o)}
+    const ph=p.board?.phase;(ph===BEFORE?o.before:isAfter(ph)?o.after:o.other).push(p)}
+  for(const o of m.values())for(const k of ["before","after","other"])o[k].sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));return m}
+$("#btnNextSpot").addEventListener("click",()=>{const sp=projSpots();if(!sp.length)return;const ph=$("#qPhase").value;const st=spotStatus();
+  const need=s=>{const o=st.get(s.id);if(!o)return true;return ph===BEFORE?!o.before.length:isAfter(ph)?!o.after.length:true};
+  const i=sp.findIndex(s=>s.id===S.spotId);let next=null;
+  for(let k=1;k<=sp.length;k++){const s=sp[(i+k+sp.length)%sp.length];if(need(s)){next=s;break}}
+  if(!next){next=sp[(i+1+sp.length)%sp.length];toast("この撮影区分はすべての地点で撮影済みです")}
+  applySpot(next.id);toast(`次の地点：${spotLabel(next)}`)});
+/* 画角合わせ：同じ地点の別の撮影区分の写真を半透明で重ねる */
+S.ghost=null;S.ghostAlpha=ls.get("ghostAlpha",.4);let ghostTok=0;
+function updGhostPill(){const b=$("#camGhost");b.hidden=!S.ghost;if(S.ghost)b.textContent=S.ghostAlpha>0?`比較 ${Math.round(S.ghostAlpha*100)}%`:"比較 OFF";b.classList.toggle("on",!!S.ghost&&S.ghostAlpha>0)}
+async function loadGhost(){const tok=++ghostTok;S.ghost=null;updGhostPill();const s=curSpot();if(!s){drawOverlay();return}
+  const o=spotStatus().get(s.id);const ph=$("#qPhase").value;if(!o){drawOverlay();return}
+  const ref=(ph===BEFORE?(o.after[0]||o.other[0]):(o.before[0]||o.other.find(p=>p.board?.phase!==ph)||(isAfter(ph)?null:o.after[0])))||null;
+  if(!ref){drawOverlay();return}
+  try{const bl=await DB.blob(ref.origId||ref.imgId);const bm=await loadBitmap(bl);if(tok!==ghostTok)return;S.ghost={bmp:bm,photoId:ref.id,phase:ref.board?.phase};
+    updGhostPill();drawOverlay();if(S.ghostAlpha>0)toast(`${ref.board?.phase||"前回"}の写真を重ねています。「比較」で濃さを変えられます`)}catch(e){}}
+$("#camGhost").addEventListener("click",()=>{const L=[.3,.5,.7,0];const i=L.findIndex(v=>Math.abs(v-S.ghostAlpha)<.01);S.ghostAlpha=L[(i+1)%L.length];ls.set("ghostAlpha",S.ghostAlpha);updGhostPill();drawOverlay()});
+/* 地点一覧 */
+S.spotFilter="";
+$("#spotChips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(b){S.spotFilter=b.dataset.f;renderSpots()}});
+function renderSpots(){const sp=projSpots();const st=spotStatus();const g=$("#spotGrid");
+  const nb=sp.filter(s=>!st.get(s.id)?.before.length).length,na=sp.filter(s=>!st.get(s.id)?.after.length).length;
+  $("#spotChips").innerHTML=sp.length?[["","すべて",sp.length],["before","着工前 未撮影",nb],["after","施工後 未撮影",na]].map(([f,l,n])=>`<button class="chip" data-f="${f}" aria-pressed="${S.spotFilter===f}">${l}<b>${n}</b></button>`).join(""):"";
+  if(!S.pid){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>案件がまだありません</strong>「案件・データ」で工事を登録してください。</div>`;return}
+  if(!sp.length){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>撮影地点がまだありません</strong>「地点を追加」か「まとめて登録」で、部屋や設置場所を登録してください。登録すると、地点ごとに着工前・施工後の写真をそろえて撮れます。</div>`;return}
+  const list=sp.filter(s=>S.spotFilter==="before"?!st.get(s.id)?.before.length:S.spotFilter==="after"?!st.get(s.id)?.after.length:true);
+  if(!list.length){g.innerHTML=`<div class="empty" style="grid-column:1/-1"><strong>未撮影の地点はありません</strong>すべての地点で撮影済みです。</div>`;return}
+  const shot=(s,ph,arr)=>{const p=arr?.[0];return`<button class="shot ${p?"done":""}" data-shoot="${ph}" data-id="${s.id}"><div class="im">${p?`<img data-blob="${p.thumbId||p.imgId}" alt="">`:"未撮影"}</div>
+    <div class="lb"><span>${ph}</span><span class="st">${p?`${arr.length}枚`:"撮る"}</span></div></button>`};
+  g.innerHTML=list.map(s=>{const o=st.get(s.id);const rows=[["棟名・階数",s.building],["図面番号",s.drawingNo],["部屋名",s.room],["工種",s.kind],["種別",s.type]].filter(r=>r[1]);
+    return`<div class="spot"><table><tbody>${rows.map(([a,b])=>`<tr><td>${a}</td><td>${esc(b)}</td></tr>`).join("")||`<tr><td>地点</td><td>（名称なし）</td></tr>`}</tbody></table>
+      <div class="shots">${shot(s,BEFORE,o?.before)}${shot(s,"施工後",o?.after)}</div>
+      <div class="foot"><span>${o?.other.length?`その他 ${o.other.length}枚`:""}${s.note?esc(" "+s.note):""}</span><button class="btn" data-edit="${s.id}">編集</button></div></div>`}).join("");
+  hydrateImgs(g)}
+$("#spotGrid").addEventListener("click",e=>{const sh=e.target.closest("[data-shoot]"),ed=e.target.closest("[data-edit]");
+  if(sh){applySpot(sh.dataset.id,sh.dataset.shoot);openCam()}
+  if(ed)openSpotDlg(ed.dataset.edit)});
+/* 地点の追加・編集 */
+let editSpot=null;const SF=[["sBldg","building"],["sDraw","drawingNo"],["sRoom","room"],["sKind","kind"],["sType","type"],["sNote","note"]];
+function openSpotDlg(id){if(!proj()){toast("先に案件を登録してください");return}const s=id?projSpots().find(x=>x.id===id):null;editSpot=s;
+  SF.forEach(([i,k])=>$("#"+i).value=s?.[k]||"");$("#spotDlgTitle").textContent=s?"撮影地点を編集":"撮影地点を追加";$("#spotSave").textContent=s?"変更を保存":"追加する";
+  $("#spotDel").hidden=!s;$("#spotDel").classList.remove("armed");$("#spotDel").textContent="地点を削除";$("#spotDlg").hidden=false;setTimeout(()=>$("#sBldg").focus(),50)}
+$("#btnSpotAdd").addEventListener("click",()=>openSpotDlg(null));
+$("#spotClose").addEventListener("click",()=>$("#spotDlg").hidden=true);$("#spotDlg").addEventListener("click",e=>{if(e.target.id==="spotDlg")$("#spotDlg").hidden=true});
+async function saveSpots(spots){const p=proj();p.spots=spots;await DB.put("projects",p)}
+$("#spotForm").addEventListener("submit",async e=>{e.preventDefault();const d={};SF.forEach(([i,k])=>d[k]=$("#"+i).value.trim());
+  if(!d.building&&!d.room&&!d.drawingNo){toast("棟名・階数、図面番号、部屋名のどれかを入れてください");return}
+  const sp=[...projSpots()];if(editSpot){const i=sp.findIndex(x=>x.id===editSpot.id);sp[i]={...sp[i],...d,updatedAt:new Date().toISOString()}}
+  else sp.push({id:uid(),...d,createdAt:new Date().toISOString()});
+  await saveSpots(sp);toast(editSpot?"地点を更新しました":"地点を追加しました");
+  if(editSpot){$("#spotDlg").hidden=true}else{SF.forEach(([i,k])=>{if(k==="room"||k==="drawingNo"||k==="note")$("#"+i).value=""});$("#sRoom").focus()}
+  render()});
+$("#spotDel").addEventListener("click",async()=>{const b=$("#spotDel");const n=S.photos.filter(p=>p.spotId===editSpot.id).length;
+  if(!b.classList.contains("armed")){b.classList.add("armed");b.textContent=n?`写真${n}枚は残して地点だけ削除します。もう一度押すと削除`:"もう一度押すと削除";return}
+  await saveSpots(projSpots().filter(s=>s.id!==editSpot.id));for(const p of S.photos.filter(p=>p.spotId===editSpot.id)){p.spotId=null;const {_files,...r}=p;await DB.put("photos",r)}
+  if(S.spotId===editSpot.id)S.spotId=null;$("#spotDlg").hidden=true;toast("地点を削除しました");render()});
+/* まとめて登録 */
+let bulkRows=[];
+$("#btnSpotBulk").addEventListener("click",()=>{if(!proj()){toast("先に案件を登録してください");return}$("#bulkText").value="";$("#bulkMsg").textContent="";$("#bulkSave").disabled=true;bulkRows=[];$("#bulkDlg").hidden=false});
+$("#bulkClose").addEventListener("click",()=>$("#bulkDlg").hidden=true);$("#bulkDlg").addEventListener("click",e=>{if(e.target.id==="bulkDlg")$("#bulkDlg").hidden=true});
+function parseSpots(text){const lines=String(text).split(/\r?\n/).map(l=>l.replace(/\s+$/,"")).filter(l=>l.trim());if(!lines.length)return[];
+  const split=l=>(l.includes("\t")?l.split("\t"):l.split(/\s*,\s*|\s{2,}|　/)).map(c=>c.trim());
+  const H={building:/棟|階/,drawingNo:/図面/,room:/部屋|場所|室名|名称/,kind:/工種/,type:/種別|部位/,note:/備考/};
+  let cols=["building","drawingNo","room"];let start=0;const h=split(lines[0]);
+  if(h.some(c=>Object.values(H).some(re=>re.test(c)))&&!h.some(c=>/^\d+$/.test(c))){cols=h.map(c=>Object.keys(H).find(k=>H[k].test(c))||null);start=1}
+  const out=[];for(const l of lines.slice(start)){const c=split(l);let d={};
+    if(start===0&&c.length===1)d={room:c[0]};else if(start===0&&c.length===2)d=/^\d+$/.test(c[0])?{drawingNo:c[0],room:c[1]}:{building:c[0],room:c[1]};
+    else cols.forEach((k,i)=>{if(k&&c[i])d[k]=c[i]});
+    if(d.building||d.room||d.drawingNo)out.push(d)}
+  return out}
+$("#bulkCheck").addEventListener("click",()=>{bulkRows=parseSpots($("#bulkText").value);const m=$("#bulkMsg");
+  if(!bulkRows.length){m.textContent="地点を読み取れませんでした。Excelの範囲をそのまま貼り付けてください";$("#bulkSave").disabled=true;return}
+  m.innerHTML=`${bulkRows.length}件の地点を読み取りました。例：${bulkRows.slice(0,3).map(d=>esc(spotOpt(d))).join("、")}${bulkRows.length>3?" …":""}`;$("#bulkSave").disabled=false});
+$("#bulkSave").addEventListener("click",async()=>{if(!bulkRows.length)return;const now=new Date().toISOString();
+  await saveSpots([...projSpots(),...bulkRows.map(d=>({id:uid(),...d,createdAt:now}))]);toast(`${bulkRows.length}件の地点を登録しました`);bulkRows=[];$("#bulkDlg").hidden=true;render()});
+
 /* ---------- 描画 ---------- */
-function render(){renderProjects();if(S.tab==="photos")renderPhotos();if(S.tab==="ledger")renderLedger();if(S.tab==="projects")showUsage()}
+function render(){renderProjects();fillSpotSelect($("#bSpot"),curSpot()?.id||"");fillSpotFilter();if(S.tab==="spots")renderSpots();if(S.tab==="photos")renderPhotos();if(S.tab==="ledger")renderLedger();if(S.tab==="projects")showUsage()}
 
 /* ---------- 起動 ---------- */
 (async()=>{
@@ -921,10 +1108,12 @@ function render(){renderProjects();if(S.tab==="photos")renderPhotos();if(S.tab==
   S.projects=(await DB.all("projects")).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
   if(!S.projects.length&&!ls.get("sampleSeeded",false)){
     const sp={id:uid(),name:"【サンプル】〇〇区 街頭防犯カメラ設置工事",client:"〇〇区役所",contractor:"〇〇電設株式会社",place:"大阪市〇〇区〇〇町",term:"2026/11/1〜2027/1/31",
-      kinds:["配線工事","支柱建柱","機器取付","調整・試験"],createdAt:new Date().toISOString(),sample:true};
+      kinds:["配線工事","支柱建柱","機器取付","調整・試験"],createdAt:new Date().toISOString(),sample:true,
+      spots:[{id:uid(),building:"〇〇公園",drawingNo:"1",room:"正門 1号機",kind:"機器取付"},{id:uid(),building:"〇〇公園",drawingNo:"2",room:"東門 2号機",kind:"機器取付"},{id:uid(),building:"〇〇公園",drawingNo:"3",room:"北側駐輪場 3号機",kind:"機器取付"}]};
     try{await DB.put("projects",sp);S.projects=[sp];ls.set("sampleSeeded",true);ls.set("pid",sp.id);
       ls.set("board:"+sp.id,{name:sp.name,kind:"機器取付",type:"防犯カメラ設置",point:"正門 1号機",by:sp.contractor,phase:"施工中"});ls.set("tab","shoot")}catch(e){}}
   S.pid=ls.get("pid",null);if(!S.projects.some(p=>p.id===S.pid))S.pid=S.projects[0]?.id||null;
+  $("#lgSort").value=ls.get("lgSort","date");
   await selectProject(S.pid);setTab(S.projects.length?ls.get("tab","shoot"):"projects");fontsReady();
   if(proj()?.sample&&!$("#sysBanner").textContent)banner("サンプル案件を入れてあります。そのまま撮影を試せます。本番では「案件・データ」で自分の案件を追加し、サンプルは編集から削除してください。");
 })();
