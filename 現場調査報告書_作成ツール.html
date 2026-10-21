@@ -26,7 +26,7 @@
   /* ---- top bar ---- */
   .topbar{
     position:sticky; top:0; z-index:30; background:var(--ink); color:#fff;
-    padding:10px 14px; display:flex; align-items:center; gap:12px;
+    padding:10px 14px; display:flex; align-items:center; flex-wrap:wrap; gap:10px;
     box-shadow:0 2px 10px rgba(0,0,0,.18);
   }
   .topbar .mark{
@@ -35,7 +35,7 @@
   }
   .topbar .mark .dot{width:9px;height:9px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
   .topbar .sub{font-size:11px;color:#9fb0c0;font-weight:500;white-space:nowrap}
-  .seg{margin-left:auto; display:flex; background:#0e1822; border-radius:8px; padding:3px; gap:2px}
+  .seg{margin-left:auto; display:flex; flex-wrap:wrap; justify-content:flex-end; background:#0e1822; border-radius:8px; padding:3px; gap:2px}
   .seg button{
     border:0; background:transparent; color:#9fb0c0; font:inherit; font-size:12px; font-weight:700;
     padding:7px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;
@@ -66,6 +66,21 @@
   .help-body li b{color:var(--ink)}
   .help-body .req{color:var(--danger); font-weight:700}
   .help-note{font-size:11.5px; color:var(--ink2); background:#f6f9f8; border:1px solid var(--line2); border-radius:8px; padding:9px 11px; margin:10px 0 2px; line-height:1.7}
+  .renkei{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); margin:0 0 16px; overflow:hidden}
+  .renkei summary{list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:12px 15px; background:var(--accent); color:#fff; font-weight:800; font-size:13px}
+  .renkei summary::-webkit-details-marker{display:none}
+  .renkei summary .ht{display:flex; align-items:center; gap:8px}
+  .renkei summary .hc{margin-left:auto; font-weight:600; font-size:11px; color:rgba(255,255,255,.85)}
+  .renkei-body{padding:12px 15px 14px}
+  .renkei-note{font-size:12px; color:var(--ink2); margin:0 0 10px; line-height:1.6}
+  #renkeiText{width:100%; min-height:120px; font-family:var(--mono); font-size:12.5px; line-height:1.6; white-space:pre; resize:vertical}
+  .renkei-actions{display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-top:10px}
+  .renkei-actions button{font:inherit; font-size:13px; font-weight:800; border-radius:8px; padding:9px 15px; cursor:pointer; border:1px solid transparent; background:var(--accent); color:#fff}
+  .renkei-actions button:hover{background:var(--accent-press)}
+  .renkei-actions button.ghost{background:#fff; border-color:var(--line); color:var(--ink2)}
+  .renkei-actions button.ghost:hover{border-color:var(--accent); color:var(--accent)}
+  .renkei-msg{font-size:11.5px; color:var(--ink2); flex:1; min-width:140px}
+  .renkei-msg.ok{color:var(--accent)} .renkei-msg.warn{color:var(--warn)}
   section.card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     box-shadow:var(--shadow); margin:0 0 14px; overflow:hidden;
@@ -164,26 +179,41 @@
   <div class="seg" id="seg">
     <button data-t="general" class="on">現調報告書</button>
     <button data-t="camera">防犯カメラ</button>
+    <button data-t="drain">排水管清掃</button>
+    <button data-t="grass">除草剪定</button>
   </div>
 </div>
 
 <div class="wrap">
-  <p class="lead">フォームに入力すると、元テンプレートと同じ体裁の <b>Excel(.xlsx)</b> を書き出します。会社名・担当者・機器仕様などは元と同じ<b>プルダウン</b>付き（一覧外も自由入力可）。写真は撮影/選択するだけで自動縮小して貼り付けます。</p>
+  <p class="lead">フォームに入力すると、元テンプレートと同じ体裁の <b>Excel(.xlsx)</b> を書き出します。会社名・担当者・機器仕様などは元と同じ<b>プルダウン</b>付き（一覧外も自由入力可）。写真は撮影/選択するだけで「縮小専用。」相当（640px以内・鮮鋭化・JPEG92）に自動縮小して貼り付けます。</p>
   <div class="databar">
     <button id="backupBtn" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>バックアップ保存</button>
     <button id="importBtn" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>読み込み</button>
-    <input type="file" id="importFile" accept="application/json,.json" hidden>
-    <span class="dnote">入力内容と写真を1ファイルにまとめて保存／復元（両報告書ぶん）</span>
+    <input type="file" id="importFile" accept="application/json,.json,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+    <span class="dnote">バックアップ(.json)に加え、出力した<b>Excel(.xlsx)</b>からも読み込めます</span>
   </div>
+  <details class="renkei" open>
+    <summary><span class="ht"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3"/><path d="M9 12h6M9 16h4"/></svg>連携シートから自動入力</span><span class="hc">タップで開閉</span></summary>
+    <div class="renkei-body">
+      <p class="renkei-note">連携シート（「受付No指定」などのラベル＋値）をそのままコピーして貼り付け、「抽出して反映」を押すと、該当する項目へ自動入力します。</p>
+      <textarea id="renkeiText" placeholder="例）&#10;受付No指定&#9;KJ0469&#10;受付日&#9;2026/10/8&#10;請負会社&#9;アイベリー&#10;営業担当者&#9;五味&#10;物件名&#9;市営高見住宅51号館&#10;物件住所&#9;大阪市此花区高見1丁目4-51&#10;工事名&#9;除草低木剪定"></textarea>
+      <div class="renkei-actions">
+        <button id="renkeiApply" type="button">抽出して反映</button>
+        <button id="renkeiClearBtn" type="button" class="ghost">貼り付け欄をクリア</button>
+        <span id="renkeiMsg" class="renkei-msg"></span>
+      </div>
+    </div>
+  </details>
   <details class="help" open>
     <summary><span class="ht"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>使い方</span><span class="hc">タップで開閉</span></summary>
     <div class="help-body">
       <ol>
-        <li><b>報告書の種類</b>：画面上部のタブで「現調報告書 / 防犯カメラ」を切り替えます。それぞれ別々に入力でき、両方まとめて保存されます。</li>
+        <li><b>報告書の種類</b>：画面上部のタブで「現調報告書 / 防犯カメラ / 排水管清掃 / 除草剪定」を切り替えます。それぞれ別々に入力でき、まとめて保存されます。</li>
         <li><b>入力</b>：各項目を記入します。「<span class="req">＊</span>」は必須の目安。プルダウン付きの欄は、右の▼で一覧から選んでも、そのまま直接入力してもOK（一覧に無い担当者・項目も入れられます）。</li>
         <li><b>写真</b>：写真枠をタップして撮影または選択すると、自動で縮小して貼り付きます。防犯カメラは「＋カメラを追加」で最大7台まで。各写真に予備写真も付けられます。</li>
         <li><b>Excel出力</b>：下部の「<b>Excelを出力</b>」で、元テンプレートと同じ体裁の .xlsx をダウンロード。現調基準期日（受付日＋3日）は自動計算されます。ファイル名は受付NO・物件名から付きます。</li>
         <li><b>保存と再開</b>：「<b>バックアップ保存</b>」で写真ごと1ファイル（.json）に保存、「<b>読み込み</b>」で復元します。途中保存して別端末で続ける・後日再編集する・控えを残す、といった使い方に。</li>
+        <li><b>Excelから読み込み</b>：「<b>読み込み</b>」ボタンは、このツールで出力した<b>Excel(.xlsx)</b>も選べます。項目も写真も読み戻して再編集できます（Excel上で直接編集した内容も反映されます）。</li>
         <li><b>クリア</b>：表示中の報告書の入力を消去します（もう一方の報告書は残ります）。</li>
       </ol>
       <p class="help-note">※ ブラウザを閉じても自動保存はされません。続きをする場合は必ず「バックアップ保存」をしてください。<br>※ 写真はExcelのセル枠に合わせて配置するため、元の縦横比と多少変わる場合があります（出力後にExcel上で微調整できます）。</p>
@@ -222,10 +252,32 @@ const M = {
     service:['防犯カメラサービス','除草剪定サービス','LED省エネサービス','排水管清掃サービス'],
   }
 };
+// 排水管清掃・除草剪定の選択肢（各テンプレートの選択シートより）
+const TEAM=['戎野','三島','五味','野本','片田','石井','古西'];
+const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const SERVICE4=['防犯カメラサービス','除草剪定サービス','LED省エネサービス','排水管清掃サービス'];
+M.drain = {
+  company:['株式会社アイベリー','株式会社アイデアル'],
+  business:['公営住宅事業'],
+  sales:TEAM, survey:TEAM,
+  doukou:['サニー','大喜工業'],
+  genjo:['現行他社施工','現行自社施工（他施工取引済み）','現行自社施工（排水管清掃拡張）','現行自社施工（他施工取引済み＋排水管清掃拡張）'],
+  service:SERVICE4, month:MONTHS,
+  freq:['1年ごと','2年ごと','3年ごと'],
+};
+M.grass = {
+  company:['株式会社アイベリー','株式会社アイデアル'],
+  business:['公営住宅事業'],
+  sales:TEAM, survey:TEAM,
+  work:['除草・剪定','除草','剪定'],
+  genjo:['現行自治会施工','現行他社施工','現行自社施工（他施工あり）','現行自社施工（除草剪定あり）','現行自社施工（他施工・除草剪定あり）'],
+  doukou:['サトウ造園','MRG','清水電設','井本造園','山陣'],
+  service:SERVICE4, month:MONTHS,
+};
 
 /* ============================ 状態 ============================ */
 let type = 'general';
-const state = { general:blankGeneral(), camera:blankCamera() };
+const state = { general:blankGeneral(), camera:blankCamera(), drain:blankDrain(), grass:blankGrass() };
 
 function blankGeneral(){
   return {
@@ -250,6 +302,31 @@ function blankCamera(){
 function newCam(idx){
   return {no:'カ-0100'+idx, date:'',place:'',spec:'',zoom:'',camtype:'',mount:'',
           dist:'',cable:'',memo:'',img:null,spare:null};
+}
+// 排水管清掃
+function blankDrain(){
+  return {
+    company:'株式会社アイベリー', business:'公営住宅事業', uketsukeNo:'', uketsukeDate:'',
+    sales:'', kyaku:'', work:'', bukken:'', address:'',
+    hearing:'', hosoku:'', genko:'', service:'',
+    kouMonth:'', tou:'', floor:'', totalKodate:'', perKodate:'', yokobiki:'', yokokan:'',
+    survey:'', surveyDate:'', doukou:'', renraku:'', renraku2:'',
+  };
+}
+// 除草剪定
+function blankGrass(){
+  return {
+    company:'株式会社アイベリー', business:'公営住宅事業', uketsukeNo:'', uketsukeDate:'',
+    sales:'', kyaku:'', work:'', bukken:'', address:'',
+    hearing:'', hosoku:'', genjo:'', service:'', kouMonth:'',
+    survey:'', surveyDate:'', doukou:'', renraku:'',
+    aerial:null,                                   // 航空写真
+    kukaku:Array.from({length:10},()=>({area:'',hearing:''})),   // 区画①〜⑩
+    kuPhotos:[ newKuPhoto(1) ],                     // 区画別写真 区-1〜5
+  };
+}
+function newKuPhoto(idx){
+  return {no:'区-'+idx, date:'', kukaku:'', method:'', img:null, spare:null};
 }
 
 /* ============================ UI ヘルパー ============================ */
@@ -296,22 +373,42 @@ function photoField(get,set,label='写真を選択 / 撮影'){
   drop.addEventListener('click',()=>fileInput.click());
   fileInput.addEventListener('change',async()=>{
     const f=fileInput.files[0]; if(!f)return;
-    const dataUrl=await resizeImage(f); set({dataUrl,name:f.name}); paint(); fileInput.value='';
+    const r=await resizeImage(f); if(r)set({dataUrl:r.dataUrl,w:r.w,h:r.h,name:f.name}); paint(); fileInput.value='';
   });
   box.append(drop,fileInput,cap); paint(); return box;
 }
 
-/* 画像を自動縮小（長辺1280px / JPEG 0.72）—「縮専」相当 */
+/* 「縮小専用。」相当の設定：640×640に収める・鮮鋭化(くっきり)・JPEG品質92 */
+const SHUKUSEN={max:640, quality:0.92, sharpen:0.4};
+// 3x3 畳み込みによる鮮鋭化（縮専の「画像くっきり」相当）
+function sharpenCanvas(ctx,w,h,amt){
+  if(!amt)return;
+  let src; try{src=ctx.getImageData(0,0,w,h);}catch(e){return;}
+  const s=src.data, out=ctx.createImageData(w,h), d=out.data, k=amt, cen=1+4*k;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=(y*w+x)*4;
+    const xl=(y*w+(x>0?x-1:x))*4, xr=(y*w+(x<w-1?x+1:x))*4;
+    const yt=((y>0?y-1:y)*w+x)*4, yb=((y<h-1?y+1:y)*w+x)*4;
+    for(let c=0;c<3;c++){
+      let v=s[i+c]*cen - k*s[xl+c] - k*s[xr+c] - k*s[yt+c] - k*s[yb+c];
+      d[i+c]=v<0?0:v>255?255:v;
+    }
+    d[i+3]=s[i+3];
+  }
+  ctx.putImageData(out,0,0);
+}
 function resizeImage(file){
   return new Promise(res=>{
     const img=new Image(); const url=URL.createObjectURL(file);
     img.onload=()=>{
-      const max=1280; let{width:w,height:h}=img;
+      const max=SHUKUSEN.max; let{width:w,height:h}=img;
       if(Math.max(w,h)>max){const r=max/Math.max(w,h);w=Math.round(w*r);h=Math.round(h*r);}
       const c=document.createElement('canvas');c.width=w;c.height=h;
-      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      const ctx=c.getContext('2d');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+      ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(img,0,0,w,h);
+      sharpenCanvas(ctx,w,h,SHUKUSEN.sharpen);
       URL.revokeObjectURL(url);
-      res(c.toDataURL('image/jpeg',0.72));
+      res({dataUrl:c.toDataURL('image/jpeg',SHUKUSEN.quality),w,h});
     };
     img.onerror=()=>{URL.revokeObjectURL(url);res(null);};
     img.src=url;
@@ -322,7 +419,10 @@ function resizeImage(file){
 const formRoot=document.getElementById('form');
 function render(){
   formRoot.innerHTML='';
-  if(type==='general')renderGeneral(); else renderCamera();
+  if(type==='general')renderGeneral();
+  else if(type==='camera')renderCamera();
+  else if(type==='drain')renderDrain();
+  else if(type==='grass')renderGrass();
   updateInfo();
 }
 function card(numLabel,title,hint){
@@ -497,6 +597,124 @@ function renderCamera(){
   }
 }
 
+function renderDrain(){
+  const d=state.drain, m=M.drain;
+  let b=card('1','受付情報','営業担当記入欄');
+  let g=el('div',{class:'grid'});
+  g.append(
+    field('会社名',selectBox(m.company,()=>d.company,v=>{d.company=v;},{allowEmpty:false}),{req:true}),
+    field('事業種別',selectBox(m.business,()=>d.business,v=>{d.business=v;}),{req:true}),
+    field('受付NO',inputText(()=>d.uketsukeNo,v=>{d.uketsukeNo=v;updateInfo();},'00000xx'),{req:true}),
+    field('受付日',inputDate(()=>d.uketsukeDate,v=>{d.uketsukeDate=v;})),
+    field('営業担当者',selectBox(m.sales,()=>d.sales,v=>{d.sales=v;})),
+    field('顧客担当者名',inputText(()=>d.kyaku,v=>{d.kyaku=v;})),
+    field('物件名',inputText(()=>d.bukken,v=>{d.bukken=v;updateInfo();}),{req:true}),
+    field('物件住所',inputText(()=>d.address,v=>{d.address=v;})),
+    field('工事内容',inputText(()=>d.work,v=>{d.work=v;}),{full:true}),
+    field('ヒアリング内容',textarea(()=>d.hearing,v=>{d.hearing=v;},'お客様からの要望事項、現在の状況やお困り事項など'),{full:true}),
+    field('現状補足事項',textarea(()=>d.hosoku,v=>{d.hosoku=v;}),{full:true}),
+    field('現行施工会社',inputText(()=>d.genko,v=>{d.genko=v;})),
+    field('既存自社施工サービス',selectBox(m.service,()=>d.service,v=>{d.service=v;})),
+  );
+  b.append(g);
+  b=card('','施工対象情報','営業担当記入欄');
+  g=el('div',{class:'grid'});
+  g.append(
+    field('施工月',selectBox(m.month,()=>d.kouMonth,v=>{d.kouMonth=v;})),
+    field('棟数',inputText(()=>d.tou,v=>{d.tou=v;})),
+    field('フロア数（階数）',inputText(()=>d.floor,v=>{d.floor=v;})),
+    field('総住戸数',inputText(()=>d.totalKodate,v=>{d.totalKodate=v;})),
+    field('１棟あたりの対象住戸数',inputText(()=>d.perKodate,v=>{d.perKodate=v;})),
+    field('横引管長さ（m）',inputNum(()=>d.yokobiki,v=>{d.yokobiki=v;})),
+    field('横主幹長さ（m）',inputNum(()=>d.yokokan,v=>{d.yokokan=v;})),
+  );
+  b.append(g);
+  b=card('2','現場調査情報','現調担当記入欄');
+  g=el('div',{class:'grid'});
+  g.append(
+    field('現調担当者',selectBox(m.survey,()=>d.survey,v=>{d.survey=v;})),
+    field('現調日',inputDate(()=>d.surveyDate,v=>{d.surveyDate=v;})),
+    field('同行協力会社',selectBox(m.doukou,()=>d.doukou,v=>{d.doukou=v;})),
+    field('連絡事項（現調→営業・施工）',textarea(()=>d.renraku,v=>{d.renraku=v;}),{full:true}),
+    field('連絡事項（営業⇔施工）',textarea(()=>d.renraku2,v=>{d.renraku2=v;}),{full:true}),
+  );
+  b.append(el('p',{class:'smallnote'},'※ 現調基準期日は受付日＋3日として出力Excelで自動計算されます。'),g);
+}
+
+function renderGrass(){
+  const d=state.grass, m=M.grass;
+  let b=card('1','受付情報','営業担当記入欄');
+  let g=el('div',{class:'grid'});
+  g.append(
+    field('会社名',selectBox(m.company,()=>d.company,v=>{d.company=v;},{allowEmpty:false}),{req:true}),
+    field('事業種別',selectBox(m.business,()=>d.business,v=>{d.business=v;}),{req:true}),
+    field('受付NO',inputText(()=>d.uketsukeNo,v=>{d.uketsukeNo=v;updateInfo();},'00000xx'),{req:true}),
+    field('受付日',inputDate(()=>d.uketsukeDate,v=>{d.uketsukeDate=v;})),
+    field('営業担当者',selectBox(m.sales,()=>d.sales,v=>{d.sales=v;})),
+    field('顧客担当者名',inputText(()=>d.kyaku,v=>{d.kyaku=v;})),
+    field('物件名',inputText(()=>d.bukken,v=>{d.bukken=v;updateInfo();}),{req:true}),
+    field('物件住所',inputText(()=>d.address,v=>{d.address=v;})),
+    field('工事内容（工事種別）',selectBox(m.work,()=>d.work,v=>{d.work=v;}),{full:true}),
+    field('ヒアリング内容',textarea(()=>d.hearing,v=>{d.hearing=v;},'お客様からの要望事項など ※区画別の詳細は区画別調査へ'),{full:true}),
+    field('現状補足事項',textarea(()=>d.hosoku,v=>{d.hosoku=v;}),{full:true}),
+    field('現行施工会社（現状種別）',selectBox(m.genjo,()=>d.genjo,v=>{d.genjo=v;})),
+    field('既存自社施工サービス',selectBox(m.service,()=>d.service,v=>{d.service=v;})),
+    field('施工月',selectBox(m.month,()=>d.kouMonth,v=>{d.kouMonth=v;})),
+  );
+  b.append(g);
+  b=card('2','現場調査情報','現調担当記入欄');
+  g=el('div',{class:'grid'});
+  g.append(
+    field('現調担当者',selectBox(m.survey,()=>d.survey,v=>{d.survey=v;})),
+    field('現調日',inputDate(()=>d.surveyDate,v=>{d.surveyDate=v;})),
+    field('同行協力会社',selectBox(m.doukou,()=>d.doukou,v=>{d.doukou=v;})),
+    field('連絡事項（現調→営業・施工）',textarea(()=>d.renraku,v=>{d.renraku=v;}),{full:true}),
+  );
+  b.append(el('p',{class:'smallnote'},'※ 現調基準期日は受付日＋3日として出力Excelで自動計算されます。'),g);
+  // 区画別現場調査
+  b=card('','区画別現場調査','航空写真＋区画①〜⑩');
+  b.append(field('航空写真（Googleマップ等）',photoField(()=>d.aerial,v=>d.aerial=v),{full:true}));
+  d.kukaku.forEach((k,i)=>{
+    const blk=el('div',{class:'block'});
+    blk.append(el('div',{class:'bh'},el('span',{class:'tag'},'区'+(i+1)),'区画'+'①②③④⑤⑥⑦⑧⑨⑩'[i]));
+    const bb=el('div',{class:'bb'}); const gg=el('div',{class:'grid'});
+    gg.append(field('区画面積（㎡）縦×横(m)',inputText(()=>k.area,v=>k.area=v)),
+              field('ヒアリング内容',inputText(()=>k.hearing,v=>k.hearing=v)));
+    bb.append(gg); blk.append(bb); b.append(blk);
+  });
+  // 区画別写真
+  b=card('','区画別写真','区-1〜（最大5）');
+  const list=el('div',{id:'kulist'});
+  d.kuPhotos.forEach((kp,i)=>list.append(kuBlock(kp,i)));
+  b.append(list);
+  const add=el('button',{class:'addbtn',onclick:()=>{
+    if(d.kuPhotos.length>=5)return;
+    d.kuPhotos.push(newKuPhoto(d.kuPhotos.length+1)); render();
+    window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+  }},'＋ 区画写真を追加（'+d.kuPhotos.length+'/5）');
+  if(d.kuPhotos.length>=5)add.disabled=true;
+  b.append(add);
+
+  function kuBlock(kp,i){
+    const blk=el('div',{class:'block'});
+    const bh=el('div',{class:'bh'},el('span',{class:'tag'},'区'),'区画写真 '+(i+1));
+    if(d.kuPhotos.length>1)bh.append(el('button',{class:'del',onclick:()=>{d.kuPhotos.splice(i,1);render();}},'削除'));
+    blk.append(bh);
+    const bb=el('div',{class:'bb'}); const gg=el('div',{class:'grid'});
+    gg.append(
+      field('写真番号',inputText(()=>kp.no,v=>kp.no=v,'区-1')),
+      field('撮影日',inputDate(()=>kp.date,v=>kp.date=v)),
+      field('撮影区画',inputText(()=>kp.kukaku,v=>kp.kukaku=v),{full:true}),
+      field('除草剪定方法',textarea(()=>kp.method,v=>kp.method=v),{full:true}),
+    );
+    bb.append(gg);
+    const tp=el('div',{class:'twophoto',style:'margin-top:10px'});
+    tp.append(el('div',{},field('写真',photoField(()=>kp.img,v=>kp.img=v),{full:true})),
+              el('div',{},field('予備写真',photoField(()=>kp.spare,v=>kp.spare=v),{full:true})));
+    bb.append(tp); blk.append(bb); return blk;
+  }
+}
+
 /* ============================ Excel 出力 ============================ */
 const FONT={name:'Meiryo',size:10};
 const TITLEFONT={name:'Meiryo',size:13,bold:true};
@@ -527,11 +745,47 @@ function label(ws,addr,val){return C(ws,addr,val,{fill:LABELFILL,font:{name:'Mei
 function section(ws,addr,val){return C(ws,addr,val,{fill:SECFILL,font:{name:'Meiryo',size:10,bold:true}});}
 function dval(cell,sheet,col,n){cell.dataValidation={type:'list',allowBlank:true,showErrorMessage:false,formulae:["'選択シート'!$"+col+"$3:$"+col+"$"+(2+n)]};}
 function borderRange(ws,r1,c1,r2,c2){for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){const cell=ws.getCell(r,c);if(!cell.border)cell.border=ALLBORDER;if(!cell.font)cell.font=FONT;cell.alignment=Object.assign({vertical:'middle',wrapText:true},cell.alignment);}}
-function toDate(s){if(!s)return null;const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function toDate(s){if(!s)return null;const p=s.split('-');return new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));}
 
-function placeImg(wb,ws,dataUrl,range){
-  if(!dataUrl)return;
-  const id=wb.addImage({base64:dataUrl,extension:'jpeg'});
+/* 列幅(文字単位)→px / 行高(pt)→px の概算 */
+function colToPx(w){return Math.round((w==null?8.43:w)*7+5);}
+function rowToPx(h){return Math.round((h==null?15:h)*4/3);}
+function colLetterToNum(s){let n=0;for(const ch of s)n=n*26+(ch.charCodeAt(0)-64);return n;}
+function rangePx(ws,range){
+  const m=range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/); if(!m)return null;
+  const c1=colLetterToNum(m[1]),c2=colLetterToNum(m[3]),r1=+m[2],r2=+m[4];
+  let W=0;for(let c=c1;c<=c2;c++)W+=colToPx(ws.getColumn(c).width);
+  let H=0;for(let r=r1;r<=r2;r++)H+=rowToPx(ws.getRow(r).height);
+  return {W:Math.max(1,W),H:Math.max(1,H)};
+}
+/* 対象セル範囲と同じ縦横比のキャンバスに、写真を比率維持で収めて（余白は白）描画し直す。
+   これを範囲貼り付けすれば、引き伸ばされても写真自体は歪まない。 */
+function fitDataUrl(dataUrl,cellW,cellH){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{
+      const aspect=cellW/cellH;
+      let H=Math.max(img.naturalHeight,Math.round(img.naturalWidth/aspect));
+      let W=Math.round(H*aspect);
+      const cap=1400; if(Math.max(W,H)>cap){const k=cap/Math.max(W,H);W=Math.max(1,Math.round(W*k));H=Math.max(1,Math.round(H*k));}
+      const c=document.createElement('canvas');c.width=W;c.height=H;
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
+      const pad=Math.round(Math.min(W,H)*0.02);
+      const k=Math.min((W-pad*2)/img.naturalWidth,(H-pad*2)/img.naturalHeight);
+      const dw=img.naturalWidth*k,dh=img.naturalHeight*k;
+      ctx.drawImage(img,(W-dw)/2,(H-dh)/2,dw,dh);
+      res(c.toDataURL('image/jpeg',SHUKUSEN.quality));
+    };
+    img.onerror=()=>res(dataUrl);
+    img.src=dataUrl;
+  });
+}
+/* 写真を比率を保ったままセル範囲に配置（枠内に白余白、歪みなし） */
+async function placeImg(wb,ws,photo,range){
+  if(!photo||!photo.dataUrl)return;
+  const px=rangePx(ws,range);
+  const url=px?await fitDataUrl(photo.dataUrl,px.W,px.H):photo.dataUrl;
+  const id=wb.addImage({base64:url,extension:'jpeg'});
   ws.addImage(id,range);
 }
 
@@ -587,7 +841,7 @@ async function exportGeneral(){
   label(p,'B6','撮影場所'); C(p,'C6','全景',{}); label(p,'D6','撮影場所'); C(p,'E6','全景',{});
   p.getRow(7).height=160;
   p.mergeCells('B7:C7'); C(p,'B7','',{}); p.mergeCells('D7:E7'); C(p,'D7','',{});
-  placeImg(wb,p,d.zenkei[0]?.dataUrl,'B7:C7'); placeImg(wb,p,d.zenkei[1]?.dataUrl,'D7:E7');
+  await placeImg(wb,p,d.zenkei[0],'B7:C7'); await placeImg(wb,p,d.zenkei[1],'D7:E7');
   p.getRow(8).height=8;
   // 写真1-10（2列×5段）：row9開始
   let r=9;
@@ -597,8 +851,8 @@ async function exportGeneral(){
     label(p,'B'+(r+1),'撮影場所'); C(p,'C'+(r+1),left?.place,{align:{horizontal:'left'}}); label(p,'D'+(r+1),'撮影場所'); C(p,'E'+(r+1),right?.place,{align:{horizontal:'left'}});
     p.getRow(r+2).height=160;
     p.mergeCells('B'+(r+2)+':C'+(r+2)); C(p,'B'+(r+2),'',{}); p.mergeCells('D'+(r+2)+':E'+(r+2)); C(p,'D'+(r+2),'',{});
-    placeImg(wb,p,left?.img?.dataUrl,'B'+(r+2)+':C'+(r+2));
-    placeImg(wb,p,right?.img?.dataUrl,'D'+(r+2)+':E'+(r+2));
+    await placeImg(wb,p,left?.img,'B'+(r+2)+':C'+(r+2));
+    await placeImg(wb,p,right?.img,'D'+(r+2)+':E'+(r+2));
     p.getRow(r+3).height=8;
     r+=4;
   }
@@ -660,12 +914,12 @@ async function exportCamera(){
   for(let rr=5;rr<=9;rr++)p.getRow(rr).height=24;
   p.mergeCells('D5:D9'); p.mergeCells('E5:E9');
   C(p,'D5','',{}); C(p,'E5','',{});
-  placeImg(wb,p,d.recorder.img?.dataUrl,'D5:D9'); placeImg(wb,p,d.recorder.spare?.dataUrl,'E5:E9');
+  await placeImg(wb,p,d.recorder.img,'D5:D9'); await placeImg(wb,p,d.recorder.spare,'E5:E9');
   // その他
   let r=11;
   section(p,'B'+r,'◆その他（点検口・防火壁・防火扉など）'); C(p,'C'+r,'',{}); C(p,'D'+r,'',{}); C(p,'E'+r,'',{}); r++;
-  d.others.forEach((o,i)=>{
-    const top=r;
+  for(let i=0;i<d.others.length;i++){
+    const o=d.others[i]; const top=r;
     label(p,'B'+r,'写真番号'); C(p,'C'+r,'他-'+(i+1),{}); r++;
     label(p,'B'+r,'撮影日'); C(p,'C'+r,toDate(o.date),{numFmt:'yyyy/m/d'}); r++;
     label(p,'B'+r,'撮影場所'); C(p,'C'+r,o.place,{align:{horizontal:'left'}}); r++;
@@ -673,9 +927,9 @@ async function exportCamera(){
     for(let rr=top;rr<=r;rr++)p.getRow(rr).height=24;
     p.mergeCells('D'+top+':D'+r); p.mergeCells('E'+top+':E'+r);
     C(p,'D'+top,'',{}); C(p,'E'+top,'',{});
-    placeImg(wb,p,o.img?.dataUrl,'D'+top+':D'+r); placeImg(wb,p,o.spare?.dataUrl,'E'+top+':E'+r);
+    await placeImg(wb,p,o.img,'D'+top+':D'+r); await placeImg(wb,p,o.spare,'E'+top+':E'+r);
     r+=2; // gap row
-  });
+  }
   pageSetup(p,'B1:E'+(r-1));
 
   // ③ 現場写真（カメラ）
@@ -687,7 +941,7 @@ async function exportCamera(){
   section(cs,'B4','◆カメラ設置'); C(cs,'C4','※写真番号:カメラ(カ)-フロア(00)順番(000)',{font:{name:'Meiryo',size:9},align:{horizontal:'left'}});
   C(cs,'D4','＜設置場所写真＞',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}}); C(cs,'E4','予備写真',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}});
   let cr=5;
-  d.cams.forEach((cam)=>{
+  for(const cam of d.cams){
     const top=cr;
     label(cs,'B'+cr,'写真番号'); C(cs,'C'+cr,cam.no,{}); cr++;
     label(cs,'B'+cr,'撮影日'); C(cs,'C'+cr,toDate(cam.date),{numFmt:'yyyy/m/d'}); cr++;
@@ -702,9 +956,9 @@ async function exportCamera(){
     for(let rr=top;rr<=cr;rr++)cs.getRow(rr).height=22;
     cs.mergeCells('D'+top+':D'+cr); cs.mergeCells('E'+top+':E'+cr);
     C(cs,'D'+top,'',{}); C(cs,'E'+top,'',{});
-    placeImg(wb,cs,cam.img?.dataUrl,'D'+top+':D'+cr); placeImg(wb,cs,cam.spare?.dataUrl,'E'+top+':E'+cr);
+    await placeImg(wb,cs,cam.img,'D'+top+':D'+cr); await placeImg(wb,cs,cam.spare,'E'+top+':E'+cr);
     cr+=2; // gap row
-  });
+  }
   pageSetup(cs,'B1:E'+(cr-1));
   // 配置図面
   const z=wb.addWorksheet('配置図面'); z.getCell('A1').value='※配置図面を貼り付け（別紙添付可）'; z.getCell('A1').font=FONT;
@@ -719,19 +973,136 @@ async function exportCamera(){
   return wb;
 }
 
+async function exportDrain(){
+  const d=state.drain,m=M.drain;
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('①調査報告');
+  setW(ws,{A:4.7,B:15,C:30.9,D:15.6,E:33.6,F:3.6,G:8.8});
+  setH(ws,{1:28.2,2:21.6,3:28.2,4:27,5:27,6:27,7:21,8:120,9:20.4,10:25.8,11:25.8,12:20.4,13:33,14:18.6,15:18.6,16:21.6,17:21,18:23.4,19:23.4,20:19.9,21:60,22:8,23:8,24:19.9,25:40,26:22,27:22});
+  ws.mergeCells('B1:G1'); C(ws,'B1','排水管清掃　現場調査報告書（兼　お客様確認書・工事作業指示書）',{font:TITLEFONT,align:{horizontal:'center'},border:false});
+  section(ws,'B2','◆営業担当記入欄'); C(ws,'C2','',{}); label(ws,'D2','会社名'); dval(C(ws,'E2',d.company,{}),ws,'A',m.company.length);
+  section(ws,'B3','①受付情報'); C(ws,'C3','',{}); label(ws,'D3','事業種別'); dval(C(ws,'E3',d.business,{}),ws,'B',m.business.length);
+  label(ws,'B4','受付NO'); C(ws,'C4',d.uketsukeNo,{}); label(ws,'D4','受付日'); C(ws,'E4',toDate(d.uketsukeDate),{numFmt:'yyyy/m/d'});
+  label(ws,'B5','営業担当者'); dval(C(ws,'C5',d.sales,{}),ws,'F',m.sales.length); label(ws,'D5','顧客担当者名'); C(ws,'E5',d.kyaku,{});
+  label(ws,'B6','工事内容'); ws.mergeCells('C6:E6'); C(ws,'C6',d.work,{align:{horizontal:'left'}});
+  label(ws,'B7','ヒアリング内容'); ws.mergeCells('C7:E7'); C(ws,'C7','＜営業担当→現調担当＞お客様からの要望事項、現在の状況やお困り事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B8:E8'); C(ws,'B8',d.hearing,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B9','＜現状補足事項＞'); C(ws,'C9',d.hosoku,{align:{horizontal:'left'}}); C(ws,'D9','',{}); C(ws,'E9','',{});
+  label(ws,'B10','現行施工会社'); C(ws,'C10',d.genko,{}); ws.mergeCells('D10:D11'); label(ws,'D10','既存自社施工サービス'); ws.mergeCells('E10:E11'); dval(C(ws,'E10',d.service,{}),ws,'L',m.service.length);
+  label(ws,'B11','施工月'); dval(C(ws,'C11',d.kouMonth,{}),ws,'K',m.month.length);
+  label(ws,'B12','棟数'); C(ws,'C12',d.tou,{}); label(ws,'D12','フロア数（階数）'); C(ws,'E12',d.floor,{});
+  label(ws,'B13','総住戸数'); C(ws,'C13',d.totalKodate,{}); label(ws,'D13','１棟あたりの対象住戸数'); C(ws,'E13',d.perKodate,{});
+  label(ws,'B14','横引管長さ(m)'); C(ws,'C14',d.yokobiki?Number(d.yokobiki):'',{}); label(ws,'D14','横主幹長さ(m)'); C(ws,'E14',d.yokokan?Number(d.yokokan):'',{});
+  C(ws,'B15','',{}); C(ws,'C15','',{}); C(ws,'D15','',{}); C(ws,'E15','',{});
+  section(ws,'B16','◆現調担当記入欄'); C(ws,'C16','',{}); C(ws,'D16','',{}); C(ws,'E16','',{});
+  section(ws,'B17','②現場調査情報'); C(ws,'C17','',{}); label(ws,'D17','現調基準期日'); C(ws,'E17',{formula:'IF(E4="","",E4+3)'},{numFmt:'yyyy/m/d'});
+  label(ws,'B18','現調担当者'); dval(C(ws,'C18',d.survey,{}),ws,'G',m.survey.length); label(ws,'D18','現調日'); C(ws,'E18',toDate(d.surveyDate),{numFmt:'yyyy/m/d'});
+  C(ws,'B19','',{}); C(ws,'C19','',{}); label(ws,'D19','同行協力会社'); dval(C(ws,'E19',d.doukou,{}),ws,'H',m.doukou.length);
+  label(ws,'B20','連絡事項'); ws.mergeCells('C20:E20'); C(ws,'C20','＜現調担当→営業担当・施工担当＞伝達事項、工事着手時の注意事項や安全対策事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B21:E23'); C(ws,'B21',d.renraku,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B24','連絡事項'); ws.mergeCells('C24:E24'); C(ws,'C24','※営業担当⇔施工担当間の伝達事項、成約後工事着手に際する注意事項や安全対策事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B25:E25'); C(ws,'B25',d.renraku2,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B26','物件名'); ws.mergeCells('C26:E26'); C(ws,'C26',d.bukken,{align:{horizontal:'left'}});
+  label(ws,'B27','物件住所'); ws.mergeCells('C27:E27'); C(ws,'C27',d.address,{align:{horizontal:'left'}});
+  pageSetup(ws,'B1:G27');
+  buildSelectSheet(wb,m,[
+    {col:'A',head:'会社名',arr:m.company},{col:'B',head:'事業種別',arr:m.business},
+    {col:'F',head:'営業担当者',arr:m.sales},{col:'G',head:'現調担当者',arr:m.survey},
+    {col:'H',head:'協力会社',arr:m.doukou},{col:'K',head:'施工月',arr:m.month},
+    {col:'L',head:'施工サービス',arr:m.service},
+  ]);
+  return wb;
+}
+
+async function exportGrass(){
+  const d=state.grass,m=M.grass;
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('①調査報告');
+  setW(ws,{A:4.7,B:15,C:30.9,D:15.6,E:33.6,F:3.5,G:8.8});
+  setH(ws,{1:28.2,2:21.6,3:28.2,4:27,5:27,6:27,7:21,8:120,9:20.4,10:25.8,11:25.8,12:18.6,13:21.6,14:21,15:23.4,16:23.4,17:19.9,18:60,19:8,20:8,21:22,22:22});
+  ws.mergeCells('B1:G1'); C(ws,'B1','除草剪定　現場調査報告書（兼　お客様確認書・工事作業指示書）',{font:TITLEFONT,align:{horizontal:'center'},border:false});
+  section(ws,'B2','◆営業担当記入欄'); C(ws,'C2','',{}); label(ws,'D2','会社名'); dval(C(ws,'E2',d.company,{}),ws,'A',m.company.length);
+  section(ws,'B3','①受付情報'); C(ws,'C3','',{}); label(ws,'D3','事業種別'); dval(C(ws,'E3',d.business,{}),ws,'B',m.business.length);
+  label(ws,'B4','受付NO'); C(ws,'C4',d.uketsukeNo,{}); label(ws,'D4','受付日'); C(ws,'E4',toDate(d.uketsukeDate),{numFmt:'yyyy/m/d'});
+  label(ws,'B5','営業担当者'); dval(C(ws,'C5',d.sales,{}),ws,'G',m.sales.length); label(ws,'D5','顧客担当者名'); C(ws,'E5',d.kyaku,{});
+  label(ws,'B6','工事内容'); ws.mergeCells('C6:E6'); dval(C(ws,'C6',d.work,{align:{horizontal:'left'}}),ws,'D',m.work.length);
+  label(ws,'B7','ヒアリング内容'); ws.mergeCells('C7:E7'); C(ws,'C7','＜営業担当→現調担当＞お客様からの要望事項など ※区画別の詳細は「②区画別現場調査」にて記入',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B8:E8'); C(ws,'B8',d.hearing,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B9','＜現状補足事項＞'); C(ws,'C9',d.hosoku,{align:{horizontal:'left'}}); C(ws,'D9','',{}); C(ws,'E9','',{});
+  label(ws,'B10','現行施工会社'); dval(C(ws,'C10',d.genjo,{}),ws,'E',m.genjo.length); ws.mergeCells('D10:D11'); label(ws,'D10','既存自社施工サービス'); dval(C(ws,'E10',d.service,{}),ws,'L',m.service.length); C(ws,'E11','',{});
+  label(ws,'B11','施工月'); dval(C(ws,'C11',d.kouMonth,{}),ws,'K',m.month.length);
+  C(ws,'B12','',{}); C(ws,'C12','',{}); C(ws,'D12','',{}); C(ws,'E12','',{});
+  section(ws,'B13','◆現調担当記入欄'); C(ws,'C13','',{}); C(ws,'D13','',{}); C(ws,'E13','',{});
+  section(ws,'B14','②現場調査情報'); C(ws,'C14','',{}); label(ws,'D14','現調基準期日'); C(ws,'E14',{formula:'IF(E4="","",E4+3)'},{numFmt:'yyyy/m/d'});
+  label(ws,'B15','現調担当者'); dval(C(ws,'C15',d.survey,{}),ws,'H',m.survey.length); label(ws,'D15','現調日'); C(ws,'E15',toDate(d.surveyDate),{numFmt:'yyyy/m/d'});
+  C(ws,'B16','',{}); C(ws,'C16','',{}); label(ws,'D16','同行協力会社'); dval(C(ws,'E16',d.doukou,{}),ws,'I',m.doukou.length);
+  label(ws,'B17','連絡事項'); ws.mergeCells('C17:E17'); C(ws,'C17','＜現調担当→営業担当・施工担当＞伝達事項、工事着手時の注意事項や安全対策事項など',{font:{name:'Meiryo',size:9,color:{argb:'FF7A7A7A'}},align:{horizontal:'left'}});
+  ws.mergeCells('B18:E20'); C(ws,'B18',d.renraku,{align:{horizontal:'left',vertical:'top'}});
+  label(ws,'B21','物件名'); ws.mergeCells('C21:E21'); C(ws,'C21',d.bukken,{align:{horizontal:'left'}});
+  label(ws,'B22','物件住所'); ws.mergeCells('C22:E22'); C(ws,'C22',d.address,{align:{horizontal:'left'}});
+  pageSetup(ws,'B1:G22');
+
+  // ② 区画別現場調査
+  const kc=wb.addWorksheet('②区画別現場調査');
+  setW(kc,{A:4,B:13,C:26,D:56.5,E:8.8});
+  setH(kc,{1:31.2,2:19.9,3:19.9,4:34.2,5:20,6:160,7:26.4});
+  kc.mergeCells('B1:D1'); C(kc,'B1','除草剪定　区画別現場調査',{font:TITLEFONT,align:{horizontal:'center'},border:false});
+  kc.mergeCells('B2:C2'); label(kc,'B2','受付NO'); C(kc,'D2',[d.uketsukeNo,d.bukken].filter(Boolean).join('　'),{align:{horizontal:'left'}});
+  kc.mergeCells('B3:C3'); label(kc,'B3','物件住所'); C(kc,'D3',d.address,{align:{horizontal:'left'}});
+  section(kc,'B4','◆全体区画'); C(kc,'C4','※Googleマップの航空地図より除草剪定する区画を分ける',{font:{name:'Meiryo',size:9},align:{horizontal:'left'}}); C(kc,'D4','',{});
+  kc.mergeCells('B5:D5'); C(kc,'B5','＜航空写真＞',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true},align:{horizontal:'left',vertical:'top'}});
+  kc.mergeCells('B6:D6'); C(kc,'B6','',{});
+  await placeImg(wb,kc,d.aerial,'B6:D6');
+  label(kc,'B7','区画'); label(kc,'C7','区画面積（㎡）縦×横(m)'); label(kc,'D7','ヒアリング内容');
+  const circ='①②③④⑤⑥⑦⑧⑨⑩';
+  d.kukaku.forEach((k,i)=>{const r=8+i; kc.getRow(r).height=43;
+    label(kc,'B'+r,'区画'+circ[i]); C(kc,'C'+r,k.area,{align:{horizontal:'left'}}); C(kc,'D'+r,k.hearing,{align:{horizontal:'left',vertical:'top'}});
+  });
+  pageSetup(kc,'B1:D17');
+
+  // ② 現調写真
+  const p=wb.addWorksheet('②現調写真');
+  setW(p,{A:4,B:17.4,C:35.6,D:60.4,E:49.2,F:8.8});
+  p.mergeCells('B1:E1'); C(p,'B1','除草剪定　現場写真（区画別）',{font:TITLEFONT,align:{horizontal:'center'},border:false}); p.getRow(1).height=31.2;
+  p.mergeCells('B2:C2'); label(p,'B2','受付NO・物件名'); p.mergeCells('D2:E2'); C(p,'D2',[d.uketsukeNo,d.bukken].filter(Boolean).join('　'),{align:{horizontal:'left'}});
+  p.mergeCells('B3:C3'); label(p,'B3','物件住所'); p.mergeCells('D3:E3'); C(p,'D3',d.address,{align:{horizontal:'left'}});
+  section(p,'B4','◆区画別写真'); C(p,'C4','※事前に全体写真にて区画分けし写真を振り分け',{font:{name:'Meiryo',size:9},align:{horizontal:'left'}}); C(p,'D4','＜写真＞',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}}); C(p,'E4','予備写真',{fill:LABELFILL,font:{name:'Meiryo',size:9,bold:true}});
+  for(let k=0;k<d.kuPhotos.length;k++){
+    const kp=d.kuPhotos[k], top=5+k*5;
+    label(p,'B'+top,'写真番号'); C(p,'C'+top,kp.no,{});
+    label(p,'B'+(top+1),'撮影日'); C(p,'C'+(top+1),toDate(kp.date),{numFmt:'yyyy/m/d'});
+    label(p,'B'+(top+2),'撮影区画'); C(p,'C'+(top+2),kp.kukaku,{align:{horizontal:'left'}});
+    p.mergeCells('B'+(top+3)+':C'+(top+3)); label(p,'B'+(top+3),'〈除草剪定方法〉');
+    p.mergeCells('B'+(top+4)+':C'+(top+4)); C(p,'B'+(top+4),kp.method,{align:{horizontal:'left',vertical:'top'}});
+    for(let rr=top;rr<=top+2;rr++)p.getRow(rr).height=30;
+    p.getRow(top+3).height=18; p.getRow(top+4).height=60;
+    p.mergeCells('D'+top+':D'+(top+4)); p.mergeCells('E'+top+':E'+(top+4)); C(p,'D'+top,'',{}); C(p,'E'+top,'',{});
+    await placeImg(wb,p,kp.img,'D'+top+':D'+(top+4)); await placeImg(wb,p,kp.spare,'E'+top+':E'+(top+4));
+  }
+  pageSetup(p,'B1:E'+(5+d.kuPhotos.length*5-1));
+
+  buildSelectSheet(wb,m,[
+    {col:'A',head:'会社名',arr:m.company},{col:'B',head:'事業種別',arr:m.business},
+    {col:'D',head:'工事種別',arr:m.work},{col:'E',head:'現状種別',arr:m.genjo},
+    {col:'G',head:'営業担当者',arr:m.sales},{col:'H',head:'現調担当者',arr:m.survey},
+    {col:'I',head:'協力会社',arr:m.doukou},{col:'K',head:'施工月',arr:m.month},
+    {col:'L',head:'施工サービス',arr:m.service},
+  ]);
+  return wb;
+}
+
 async function doExport(){
   const btn=document.getElementById('exportBtn');
   if(typeof ExcelJS==='undefined'){toast('Excelライブラリの読込中です。数秒後に再度お試しください。',true);return;}
   const d=state[type];
-  if(!d.uketsukeNo&&!(type==='general'?d.bukken:true)){/* soft */}
   btn.disabled=true; const old=btn.textContent; btn.textContent='出力中…';
   try{
-    const wb = type==='general' ? await exportGeneral() : await exportCamera();
+    const wb = await TYPES[type].exportFn();
     const buf= await wb.xlsx.writeBuffer();
     const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
     const no=(d.uketsukeNo||'00000xx');
-    const name=(type==='general'?d.bukken:'')||'物件名';
-    const fname=`${no}_${name}_${type==='general'?'現調報告書':'防犯カメラ現調報告書'}.xlsx`;
+    const name=(d.bukken||'')||'物件名';
+    const fname=`${no}_${name}_${TYPES[type].suffix}.xlsx`;
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),3000);
@@ -743,9 +1114,9 @@ async function doExport(){
 /* ============================ 補助 ============================ */
 function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(err?' err':'');setTimeout(()=>t.className='toast'+(err?' err':''),3200);}
 function updateInfo(){
-  const d=state[type]; const tn=type==='general'?'現調報告書':'防犯カメラ現調報告書';
+  const d=state[type]; const tn=TYPES[type].name;
   const no=d.uketsukeNo||'（受付NO未入力）';
-  const bk=type==='general'?(d.bukken||''):'';
+  const bk=d.bukken||'';
   document.getElementById('finfo').innerHTML=`<b>${tn}</b> ／ ${no}${bk?' ／ '+bk:''}`;
 }
 document.getElementById('seg').addEventListener('click',e=>{
@@ -757,8 +1128,16 @@ document.getElementById('seg').addEventListener('click',e=>{
 document.getElementById('exportBtn').addEventListener('click',doExport);
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(!confirm('入力内容をクリアします。よろしいですか？'))return;
-  state[type]= type==='general'?blankGeneral():blankCamera(); render();
+  state[type]= TYPES[type].blank(); render();
 });
+
+/* 報告書タイプ共通設定 */
+const TYPES={
+  general:{name:'現調報告書', suffix:'現調報告書', blank:blankGeneral, exportFn:exportGeneral},
+  camera :{name:'防犯カメラ現調報告書', suffix:'防犯カメラ現調報告書', blank:blankCamera, exportFn:exportCamera},
+  drain  :{name:'排水管清掃現調報告書', suffix:'排水管清掃現調報告書', blank:blankDrain, exportFn:exportDrain},
+  grass  :{name:'除草剪定現調報告書', suffix:'除草剪定現調報告書', blank:blankGrass, exportFn:exportGrass},
+};
 
 /* ---- バックアップ／インポート ---- */
 function syncSeg(){[...document.querySelectorAll('#seg button')].forEach(x=>x.classList.toggle('on',x.dataset.t===type));}
@@ -786,7 +1165,7 @@ function doBackup(){
     const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
     const d=state[type];
     const no=d.uketsukeNo||'00000xx';
-    const nm=((type==='general'?d.bukken:'')||'物件名').slice(0,30);
+    const nm=((d.bukken||'')||'物件名').slice(0,30);
     const t=new Date(),z=n=>String(n).padStart(2,'0');
     const stamp=`${t.getFullYear()}${z(t.getMonth()+1)}${z(t.getDate())}_${z(t.getHours())}${z(t.getMinutes())}`;
     const fname=`現調バックアップ_${no}_${nm}_${stamp}.json`;
@@ -802,10 +1181,9 @@ function doImport(file){
     try{
       const obj=JSON.parse(fr.result);
       const src=obj&&(obj.state||obj);
-      if(!src||(!src.general&&!src.camera))throw new Error('対応していないファイルです');
-      if(src.general)state.general=mergeObj(blankGeneral(),src.general);
-      if(src.camera) state.camera =mergeObj(blankCamera(), src.camera);
-      if(obj.active==='general'||obj.active==='camera'){type=obj.active;syncSeg();}
+      if(!src||!Object.keys(TYPES).some(k=>src[k]))throw new Error('対応していないファイルです');
+      Object.keys(TYPES).forEach(k=>{ if(src[k])state[k]=mergeObj(TYPES[k].blank(),src[k]); });
+      if(TYPES[obj.active]){type=obj.active;syncSeg();}
       render();
       toast('読み込みました'+(obj.savedAt?'（保存日時 '+new Date(obj.savedAt).toLocaleString('ja-JP')+'）':''));
     }catch(e){console.error(e);toast('読み込み失敗：'+(e.message||e),true);}
@@ -813,11 +1191,189 @@ function doImport(file){
   fr.onerror=()=>toast('ファイルを読めませんでした',true);
   fr.readAsText(file);
 }
+/* ---- Excel(.xlsx)からの読み込み ---- */
+function cellStr(ws,a){const v=ws.getCell(a).value;if(v==null)return'';if(typeof v==='object'){if(v instanceof Date)return'';if(v.text!=null)return v.text;if(v.result!=null)return String(v.result);if(Array.isArray(v.richText))return v.richText.map(t=>t.text).join('');if(v.formula!=null)return v.result!=null?String(v.result):'';return'';}return String(v);}
+function cellDate(ws,a){const v=ws.getCell(a).value;const z=n=>String(n).padStart(2,'0');if(v instanceof Date)return v.getUTCFullYear()+'-'+z(v.getUTCMonth()+1)+'-'+z(v.getUTCDate());if(typeof v==='number'){const dt=new Date(Date.UTC(1899,11,30)+Math.round(v)*86400000);return dt.getUTCFullYear()+'-'+z(dt.getUTCMonth()+1)+'-'+z(dt.getUTCDate());}return'';}
+function bufToB64(buf){const b=buf instanceof Uint8Array?buf:new Uint8Array(buf);let s='';const CH=0x8000;for(let i=0;i<b.length;i+=CH)s+=String.fromCharCode.apply(null,b.subarray(i,i+CH));return btoa(s);}
+function extractImages(wb,ws){const out=[];const imgs=ws.getImages?ws.getImages():[];for(const im of imgs){const md=wb.getImage(Number(im.imageId));if(!md||!md.buffer)continue;const ext=(md.extension||'jpeg').replace('jpg','jpeg');out.push({row:im.range.tl.nativeRow,col:im.range.tl.nativeCol,dataUrl:'data:image/'+ext+';base64,'+bufToB64(md.buffer)});}return out;}
+function findImg(imgs,col,row){let best=null,bd=1e9;for(const im of imgs){if(im.col===col){const d=Math.abs(im.row-row);if(d<=3&&d<bd){bd=d;best=im;}}}return best?{dataUrl:best.dataUrl,name:'取込画像'}:null;}
+function importGeneralXlsx(wb){
+  const g=blankGeneral(),ws=wb.getWorksheet('①調査報告');
+  g.company=cellStr(ws,'E2')||g.company; g.business=cellStr(ws,'E3'); g.uketsukeNo=cellStr(ws,'C4'); g.uketsukeDate=cellDate(ws,'E4');
+  g.sales=cellStr(ws,'C5'); g.customer=cellStr(ws,'E5'); g.bukken=cellStr(ws,'C6'); g.address=cellStr(ws,'E6'); g.kyaku=cellStr(ws,'C7'); g.work=cellStr(ws,'C8');
+  g.hearing=cellStr(ws,'B11'); g.hosoku=cellStr(ws,'C12'); g.genko=cellStr(ws,'C13'); g.kako=cellStr(ws,'E13');
+  g.survey=cellStr(ws,'C15'); g.surveyDate=cellDate(ws,'E15'); g.doukou=cellStr(ws,'E16'); g.renraku=cellStr(ws,'B19');
+  const p=wb.getWorksheet('②現場写真');
+  if(p){const imgs=extractImages(wb,p);
+    g.zenkei[0]=findImg(imgs,1,6); g.zenkei[1]=findImg(imgs,3,6);
+    for(let i=0;i<10;i+=2){const r=9+(i/2)*4;
+      g.photos[i].place=cellStr(p,'C'+(r+1)); g.photos[i].img=findImg(imgs,1,r+1);
+      g.photos[i+1].place=cellStr(p,'E'+(r+1)); g.photos[i+1].img=findImg(imgs,3,r+1);
+    }}
+  state.general=g; type='general'; syncSeg();
+}
+function importCameraXlsx(wb){
+  const c=blankCamera(),ws=wb.getWorksheet('①調査報告');
+  c.company=cellStr(ws,'E2')||c.company; c.business=cellStr(ws,'E3'); c.uketsukeNo=cellStr(ws,'C4'); c.uketsukeDate=cellDate(ws,'E4');
+  c.sales=cellStr(ws,'C5'); c.kyaku=cellStr(ws,'E5'); c.work=cellStr(ws,'C6'); c.hearing=cellStr(ws,'B8'); c.hosoku=cellStr(ws,'C9');
+  c.genko=cellStr(ws,'C10'); c.kako=cellStr(ws,'E10'); c.kisetuYM=cellStr(ws,'C13'); c.leaseEnd=cellStr(ws,'E13');
+  c.recModel=cellStr(ws,'D14'); c.camModel=cellStr(ws,'D15'); c.power=cellStr(ws,'C17'); c.nextpower=cellStr(ws,'E17');
+  c.survey=cellStr(ws,'C21'); c.surveyDate=cellDate(ws,'E21'); c.freeName=cellStr(ws,'C22'); c.renraku=cellStr(ws,'B24');
+  const p=wb.getWorksheet('②現場写真');
+  if(p){const imgs=extractImages(wb,p);
+    c.recorder.date=cellDate(p,'C6'); c.recorder.place=cellStr(p,'C7'); c.recorder.setup=cellStr(p,'C8'); c.recorder.memo=cellStr(p,'C9');
+    c.recorder.img=findImg(imgs,3,4); c.recorder.spare=findImg(imgs,4,4);
+    for(let i=0;i<4;i++){const top=12+i*5;
+      c.others[i].date=cellDate(p,'C'+(top+1)); c.others[i].place=cellStr(p,'C'+(top+2)); c.others[i].memo=cellStr(p,'C'+(top+3));
+      c.others[i].img=findImg(imgs,3,top-1); c.others[i].spare=findImg(imgs,4,top-1);
+    }}
+  const cs=wb.getWorksheet('③現場写真(カメラ)');
+  if(cs){const imgs=extractImages(wb,cs),cams=[];
+    for(let k=0;k<7;k++){const top=5+k*11; if(cellStr(cs,'B'+top)!=='写真番号')break;
+      const cam=newCam(k+1);
+      cam.no=cellStr(cs,'C'+top); cam.date=cellDate(cs,'C'+(top+1)); cam.place=cellStr(cs,'C'+(top+2)); cam.spec=cellStr(cs,'C'+(top+3));
+      cam.zoom=cellStr(cs,'C'+(top+4)); cam.camtype=cellStr(cs,'C'+(top+5)); cam.mount=cellStr(cs,'C'+(top+6));
+      cam.dist=cellStr(cs,'C'+(top+7)); cam.cable=cellStr(cs,'C'+(top+8)); cam.memo=cellStr(cs,'C'+(top+9));
+      cam.img=findImg(imgs,3,top-1); cam.spare=findImg(imgs,4,top-1);
+      cams.push(cam);
+    }
+    if(cams.length)c.cams=cams;}
+  state.camera=c; type='camera'; syncSeg();
+}
+function importDrainXlsx(wb){
+  const d=blankDrain(), ws=wb.getWorksheet('①調査報告');
+  d.company=cellStr(ws,'E2')||d.company; d.business=cellStr(ws,'E3');
+  d.uketsukeNo=cellStr(ws,'C4'); d.uketsukeDate=cellDate(ws,'E4');
+  d.sales=cellStr(ws,'C5'); d.kyaku=cellStr(ws,'E5'); d.work=cellStr(ws,'C6');
+  d.hearing=cellStr(ws,'B8'); d.hosoku=cellStr(ws,'C9');
+  d.genko=cellStr(ws,'C10'); d.service=cellStr(ws,'E10'); d.kouMonth=cellStr(ws,'C11');
+  d.tou=cellStr(ws,'C12'); d.floor=cellStr(ws,'E12'); d.totalKodate=cellStr(ws,'C13'); d.perKodate=cellStr(ws,'E13');
+  d.yokobiki=cellStr(ws,'C14'); d.yokokan=cellStr(ws,'E14');
+  d.survey=cellStr(ws,'C18'); d.surveyDate=cellDate(ws,'E18'); d.doukou=cellStr(ws,'E19');
+  d.renraku=cellStr(ws,'B21'); d.renraku2=cellStr(ws,'B25');
+  d.bukken=cellStr(ws,'C26'); d.address=cellStr(ws,'C27');
+  state.drain=d; type='drain'; syncSeg();
+}
+function importGrassXlsx(wb){
+  const d=blankGrass(), ws=wb.getWorksheet('①調査報告');
+  d.company=cellStr(ws,'E2')||d.company; d.business=cellStr(ws,'E3');
+  d.uketsukeNo=cellStr(ws,'C4'); d.uketsukeDate=cellDate(ws,'E4');
+  d.sales=cellStr(ws,'C5'); d.kyaku=cellStr(ws,'E5'); d.work=cellStr(ws,'C6');
+  d.hearing=cellStr(ws,'B8'); d.hosoku=cellStr(ws,'C9');
+  d.genjo=cellStr(ws,'C10'); d.service=cellStr(ws,'E10'); d.kouMonth=cellStr(ws,'C11');
+  d.survey=cellStr(ws,'C15'); d.surveyDate=cellDate(ws,'E15'); d.doukou=cellStr(ws,'E16');
+  d.renraku=cellStr(ws,'B18');
+  d.bukken=cellStr(ws,'C21'); d.address=cellStr(ws,'C22');
+  const kc=wb.getWorksheet('②区画別現場調査');
+  if(kc){const imgs=extractImages(wb,kc);
+    d.aerial=findImg(imgs,1,5);
+    for(let i=0;i<10;i++){const r=8+i; d.kukaku[i].area=cellStr(kc,'C'+r); d.kukaku[i].hearing=cellStr(kc,'D'+r);}
+  }
+  const p=wb.getWorksheet('②現調写真');
+  if(p){const imgs=extractImages(wb,p),arr=[];
+    for(let k=0;k<5;k++){const top=5+k*5; if(cellStr(p,'B'+top)!=='写真番号')break;
+      const kp=newKuPhoto(k+1);
+      kp.no=cellStr(p,'C'+top); kp.date=cellDate(p,'C'+(top+1)); kp.kukaku=cellStr(p,'C'+(top+2)); kp.method=cellStr(p,'B'+(top+4));
+      kp.img=findImg(imgs,3,top-1); kp.spare=findImg(imgs,4,top-1); arr.push(kp);
+    }
+    if(arr.length)d.kuPhotos=arr;
+  }
+  state.grass=d; type='grass'; syncSeg();
+}
+async function importExcel(file){
+  if(typeof ExcelJS==='undefined'){toast('Excelライブラリの読込中です。数秒後に再度お試しください。',true);return;}
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=new ExcelJS.Workbook(); await wb.xlsx.load(buf);
+    const ws=wb.getWorksheet('①調査報告');
+    if(!ws)throw new Error('このツールで出力したExcelではないようです（「①調査報告」シートが見つかりません）');
+    const title=cellStr(ws,'B1');
+    let det='general';
+    if(!!wb.getWorksheet('③現場写真(カメラ)')||/防犯カメラ/.test(title))det='camera';
+    else if(/排水管/.test(title))det='drain';
+    else if(!!wb.getWorksheet('②区画別現場調査')||/除草|剪定/.test(title))det='grass';
+    if(det==='camera')importCameraXlsx(wb);
+    else if(det==='drain')importDrainXlsx(wb);
+    else if(det==='grass')importGrassXlsx(wb);
+    else importGeneralXlsx(wb);
+    render();
+    const SHORT={general:'現調報告書',camera:'防犯カメラ',drain:'排水管清掃',grass:'除草剪定'};
+    toast('Excelから読み込みました（'+SHORT[det]+'）');
+  }catch(e){console.error(e);toast('Excel読み込み失敗：'+(e.message||e),true);}
+}
+/* ---- 連携シートから自動入力 ---- */
+// ラベル→フィールド。両報告書に共通するフィールドのみ対象。
+const RENKEI_MAP={
+  '受付no指定':'uketsukeNo','受付no':'uketsukeNo','受付番号':'uketsukeNo','受付№':'uketsukeNo',
+  '受付日':'uketsukeDate',
+  '請負会社':'company','会社名':'company','請負業者':'company','請負':'company',
+  '営業担当者':'sales','営業担当':'sales','営業':'sales',
+  '物件名':'bukken',
+  '物件住所':'address','住所':'address',
+  '工事名':'work','工事内容':'work',
+  '顧客担当者名':'kyaku','お客様担当者名':'kyaku','顧客担当者':'kyaku','お客様担当者':'kyaku',
+};
+const RENKEI_LABELJP={uketsukeNo:'受付NO',uketsukeDate:'受付日',company:'会社名',sales:'営業担当者',bukken:'物件名',address:'物件住所',work:'工事内容',kyaku:'お客様担当者名'};
+// 対応欄が無く、意図的に反映しないラベル（未対応の警告には出さない）
+const RENKEI_IGNORE=new Set(['顧客名','お客様名','案件分類','工事担当','工事担当者','工事担当者名']);
+function normCompany(v){if(/アイベリー/.test(v))return'株式会社アイベリー';if(/アイデアル/.test(v))return'株式会社アイデアル';return v;}
+function normRenkeiDate(v){const m=v.match(/(\d{4})\s*[\/\-\.年]\s*(\d{1,2})\s*[\/\-\.月]\s*(\d{1,2})/);if(!m)return'';const z=n=>String(n).padStart(2,'0');return m[1]+'-'+z(m[2])+'-'+z(m[3]);}
+function parseRenkei(text){
+  const kv=[];
+  (text||'').split(/\r?\n/).forEach(line=>{
+    if(/^[\s　]*■/.test(line))return;               // 見出し行は無視
+    let parts=line.split(/\t+/);
+    if(parts.length<2)parts=line.split(/[ 　]{2,}/);  // タブが無ければ2つ以上の空白区切り
+    if(parts.length<2)return;
+    const label=parts[0].replace(/[\s　]+$/,'').replace(/^[\s　]+/,'');
+    const value=parts.slice(1).join(' ').replace(/[\s　]+$/,'').replace(/^[\s　]+/,'');
+    if(!label||!value)return;
+    kv.push([label,value]);
+  });
+  return kv;
+}
+function applyRenkei(){
+  const text=document.getElementById('renkeiText').value;
+  const kv=parseRenkei(text);
+  const msg=document.getElementById('renkeiMsg');
+  if(!kv.length){msg.textContent='貼り付け内容を読み取れませんでした。ラベルと値がタブ区切りか確認してください。';msg.className='renkei-msg warn';return;}
+  // 報告書種別の判定（内容のキーワードから推定）
+  const joined=kv.map(x=>x[1]).join(' ');
+  let det='general';
+  if(/カメラ|防犯/.test(joined))det='camera';
+  else if(/排水管|排水/.test(joined))det='drain';
+  else if(/除草|剪定/.test(joined))det='grass';
+  type=det; syncSeg();
+  const SHORT={general:'現調報告書',camera:'防犯カメラ',drain:'排水管清掃',grass:'除草剪定'};
+  const d=state[type];
+  const filled=[],skipped=[];
+  kv.forEach(([label,value])=>{
+    const key=label.replace(/[\s　]/g,'').toLowerCase();
+    const field=RENKEI_MAP[key];
+    if(!field){if(!RENKEI_IGNORE.has(key))skipped.push(label);return;}
+    let v=value;
+    if(field==='company')v=normCompany(v);
+    else if(field==='uketsukeDate')v=normRenkeiDate(v)||v;
+    d[field]=v; filled.push(RENKEI_LABELJP[field]||field);
+  });
+  render();
+  const uniq=a=>[...new Set(a)];
+  let t='［'+SHORT[det]+'］ '+uniq(filled).length+'項目を反映';
+  if(skipped.length)t+='／未対応: '+uniq(skipped).join('、');
+  msg.textContent=t; msg.className='renkei-msg '+(skipped.length?'warn':'ok');
+  toast('連携シートから'+uniq(filled).length+'項目を反映しました');
+}
+document.getElementById('renkeiApply').addEventListener('click',applyRenkei);
+document.getElementById('renkeiClearBtn').addEventListener('click',()=>{document.getElementById('renkeiText').value='';document.getElementById('renkeiMsg').textContent='';});
+
 document.getElementById('backupBtn').addEventListener('click',doBackup);
 document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change',e=>{
   const f=e.target.files[0]; if(!f)return;
-  if(confirm('現在の入力内容を、読み込むデータで置き換えます。よろしいですか？'))doImport(f);
+  const isXlsx=/\.xlsx$/i.test(f.name)||f.type.indexOf('spreadsheet')>=0;
+  if(confirm('現在の入力内容を、読み込むデータで置き換えます。よろしいですか？')){
+    if(isXlsx)importExcel(f); else doImport(f);
+  }
   e.target.value='';
 });
 render();

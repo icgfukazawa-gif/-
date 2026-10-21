@@ -190,6 +190,16 @@
   .help-body li{font-size:13px;line-height:1.6;color:var(--ink)}
   .help-body li b{font-weight:700}
   .help-foot{display:flex;align-items:center;padding-top:4px}
+  .paste-card{margin-bottom:14px;padding-bottom:14px;border-left:3px solid var(--accent)}
+  .paste-head{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+  .paste-head b{font-size:14px}
+  .paste-head span{font-size:12.5px;color:var(--ink-soft)}
+  .paste-card textarea{min-height:84px;font-size:13px}
+  .paste-foot{display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap}
+  .paste-foot .sp{flex:1}
+  .paste-msg{font-size:12.5px;color:var(--ink-soft)}
+  .paste-msg.ok{color:var(--after)} .paste-msg.err{color:var(--accent-d)}
+  .fld input.filled,.fld select.filled{background:#FFF4F0;border-color:var(--accent)}
   .help-foot .sp{flex:1}
 
   /* ===== backup / import modal ===== */
@@ -281,6 +291,19 @@
       <h2>表紙</h2>
       <span class="hint">完了報告書の表紙に入る情報</span>
     </div>
+    <div class="card pad paste-card">
+      <div class="paste-head">
+        <b>連携シートから入力</b>
+        <span>「■現調・完了図書作成アプリ用 連携シート」をそのまま貼り付けて「表紙に反映」を押すと、該当する項目に自動で入ります。</span>
+      </div>
+      <textarea id="pasteSrc" rows="4" placeholder="受付No指定	503&#10;受付日	2025/5/15&#10;請負会社	アイベリー&#10;営業担当者	五味&#10;…"></textarea>
+      <div class="paste-foot">
+        <span class="paste-msg" id="pasteMsg"></span>
+        <div class="sp"></div>
+        <button class="btn small alt" id="pasteClear" type="button">貼り付け欄を消去</button>
+        <button class="btn small" id="pasteApply" type="button">表紙に反映</button>
+      </div>
+    </div>
     <div class="card pad">
       <div class="grid">
         <div class="fld col-6">
@@ -339,7 +362,7 @@
       <button class="add-loc" id="addPair"><span class="plus">＋</span> 前後ペアを追加（施工前・施工後）</button>
       <button class="add-loc sub" id="addOne">＋ 1枚だけ追加</button>
     </div>
-    <p class="note">写真は長辺1000pxに自動縮小して保存します（ファイルサイズ削減のため）。アスペクト比は保持され、枠内に中央配置されます。区分で「自由入力」を選ぶと、見出し（施工前などの欄）を任意の文言にできます。</p>
+    <p class="note">写真は「縮小専用」と同じ設定（640×640以内・画像くっきり・JPEG品質92%）で自動縮小して保存します。アスペクト比は保持され、枠内に中央配置されます。区分で「自由入力」を選ぶと、見出し（施工前などの欄）を任意の文言にできます。</p>
   </section>
 </div>
 
@@ -365,6 +388,7 @@
       <div class="help-sec">
         <div class="help-h">2. 表紙</div>
         <ul>
+          <li><b>連携シートから入力</b>：「■現調・完了図書作成アプリ用 連携シート」を貼り付けて「表紙に反映」を押すと、顧客名→ご契約者様、物件名→現場名、物件住所→住所、案件分類→分類、工事名→工事内容、営業担当者→営業担当者、工事担当→施工管理責任者、請負会社→自社 に入ります（反映した欄はオレンジ色で表示）。</li>
           <li><b>日付の自動連動</b>：着工日を入れると、完工日・施工前撮影日・施工後撮影日に同じ日付が自動で入ります。完工日を変えると施工後撮影日も追従します（各日付は個別修正可）。</li>
           <li><b>使用部材</b>：1行に1品目。左右2列に「件数で半分ずつ」振り分けます（最大6件）。</li>
         </ul>
@@ -374,7 +398,7 @@
         <div class="help-h">3. 現場写真</div>
         <ul>
           <li><b>追加</b>：「前後ペアを追加」で施工前＋施工後の2枚、「1枚だけ追加」で1枚を追加。</li>
-          <li><b>写真</b>：枠をクリックまたはドラッグ&ドロップで登録。長辺1000pxに自動縮小されます。</li>
+          <li><b>写真</b>：枠をクリックまたはドラッグ&ドロップで登録。640×640以内に自動縮小・鮮鋭化されます（縮小専用と同じ設定。事前の縮小は不要です）。</li>
           <li><b>区分</b>：施工前／施工中／施工後／自由入力から選択。Excelの見出しに反映されます。</li>
           <li><b>場所</b>：空欄のときは「場所：」の表記も出ません。</li>
           <li><b>コメント</b>：写真ごとに入力可。写真は一律サイズのまま、コメント欄が内容に応じて伸縮し、左右で高さが揃います。</li>
@@ -406,7 +430,7 @@
       <div class="help-sec">
         <div class="help-h">6. 出力について</div>
         <ul>
-          <li><b>Excel</b>：PDFと同じ見た目のExcel。表紙はセルの表で<b>文字を編集できます</b>。写真ページはPDFと同一の画像を各シートに貼り付けます（どのPCで開いてもA4に収まります）。初回のみ通信が必要です。</li>
+          <li><b>Excel</b>：PDFと同じ見た目のExcel。表紙はセルの表で<b>文字を編集できます</b>。写真ページもセルで作成しているので、見出し・場所・コメントをExcelで直接編集できます（写真は枠に合わせて貼り付け）。</li>
           <li><b>PDF</b>：同じ内容をA4（表紙＋写真6枚/ページ）で書き出します。初回のみ通信が必要です。</li>
           <li>図はアプリ内で写真へ焼き込みます。出力後にExcel上で図を動かすことはできません（位置調整はアプリの「✎ 図」で）。</li>
         </ul>
@@ -540,6 +564,14 @@ function fmtDate(v){ // "2026-04-01" -> "2026/4/1"
   return `${parseInt(p[0],10)}/${parseInt(p[1],10)}/${parseInt(p[2],10)}`;
 }
 
+// 写真の取り込み：「縮小専用」と同じ設定（640×640以内・画像くっきり・JPEG品質92%）
+const IMG_MAX=640, IMG_Q=0.92, IMG_SHARPEN=0.35;
+function sharpenCanvas(ctx,w,h,amt){
+  const src=ctx.getImageData(0,0,w,h), d=src.data, o=new Uint8ClampedArray(d), c=1+4*amt;
+  for(let y=1;y<h-1;y++){ for(let x=1;x<w-1;x++){ const i=(y*w+x)*4;
+    for(let k=0;k<3;k++){ const v=c*d[i+k]-amt*(d[i+k-4]+d[i+k+4]+d[i+k-w*4]+d[i+k+w*4]); o[i+k]=v; } } }
+  src.data.set(o); ctx.putImageData(src,0,0);
+}
 function processImage(file){
   return new Promise((res,rej)=>{
     const img=new Image();
@@ -547,15 +579,22 @@ function processImage(file){
     fr.onload=()=>{img.src=fr.result};
     fr.onerror=()=>rej(new Error('読み込み失敗'));
     img.onload=()=>{
-      const MAX=1000;
-      let {width:w,height:h}=img;
-      const s=Math.min(1, MAX/Math.max(w,h));
-      w=Math.round(w*s); h=Math.round(h*s);
-      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
-      const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);
-      ctx.drawImage(img,0,0,w,h);
-      const url=cv.toDataURL('image/jpeg',0.8);
-      res({b64:url.split(',')[1], ext:'jpeg', w, h, url});
+      let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+      const s=Math.min(1, IMG_MAX/w, IMG_MAX/h);
+      const tw=Math.max(1,Math.round(w*s)), th=Math.max(1,Math.round(h*s));
+      // 段階的に縮小して画質を保つ
+      let srcCv=img, cw=w, ch=h;
+      while(cw/2>=tw*1.5 && ch/2>=th*1.5){
+        const t=document.createElement('canvas'); t.width=Math.round(cw/2); t.height=Math.round(ch/2);
+        const tc=t.getContext('2d'); tc.imageSmoothingQuality='high'; tc.drawImage(srcCv,0,0,t.width,t.height);
+        srcCv=t; cw=t.width; ch=t.height;
+      }
+      const cv=document.createElement('canvas'); cv.width=tw; cv.height=th;
+      const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,tw,th);
+      ctx.imageSmoothingQuality='high'; ctx.drawImage(srcCv,0,0,tw,th);
+      if(s<1) sharpenCanvas(ctx,tw,th,IMG_SHARPEN);   // 画像くっきり（鮮鋭化）
+      const url=cv.toDataURL('image/jpeg',IMG_Q);
+      res({b64:url.split(',')[1], ext:'jpeg', w:tw, h:th, url});
     };
     img.onerror=()=>rej(new Error('画像を解釈できません'));
     fr.readAsDataURL(file);
@@ -749,7 +788,7 @@ function applyAnno(){
     const cv=document.createElement('canvas'); cv.width=base.w; cv.height=base.h;
     const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,base.w,base.h); ctx.drawImage(an.img,0,0,base.w,base.h);
     an.list.forEach(a=>drawAnno(ctx,a,1));
-    const url=cv.toDataURL('image/jpeg',0.85);
+    const url=cv.toDataURL('image/jpeg',IMG_Q);
     p.img={ b64:url.split(',')[1], ext:'jpeg', w:base.w, h:base.h, url };
   } else { p.img=base; }
   p.annos=an.list;
@@ -1059,6 +1098,55 @@ async function importFromFile(file){
   fr.readAsText(file);
 }
 
+// ---------- 連携シートの貼り付け → 表紙へ反映 ----------
+const PASTE_MAP=[
+  {keys:['顧客名','契約者','ご契約者様'],          id:'cv_client'},
+  {keys:['物件名','現場名'],                      id:'cv_site'},
+  {keys:['物件住所','現場住所','住所'],            id:'cv_addr'},
+  {keys:['案件分類','分類'],                      id:'cv_class'},
+  {keys:['工事名','工事内容'],                    id:'cv_work'},
+  {keys:['営業担当者','営業担当'],                id:'cv_sales'},
+  {keys:['工事担当者','工事担当','施工管理責任者'], id:'cv_mgr'},
+  {keys:['請負会社','自社'],                      id:'cv_company', company:true},
+];
+function normKey(k){ return k.replace(/[\s　:：■]/g,'').trim(); }
+function parsePasteSheet(text){
+  const out={};
+  text.split(/\r?\n/).forEach(line=>{
+    if(!line.trim()) return;
+    let key, val;
+    if(line.includes('\t')){ const i=line.indexOf('\t'); key=line.slice(0,i); val=line.slice(i+1); }
+    else { const m=line.match(/^([^:：]+)[:：](.*)$/); if(!m) return; key=m[1]; val=m[2]; }
+    key=normKey(key);
+    val=val.replace(/\t+/g,' ').replace(/^[\s　]+|[\s　]+$/g,'');
+    if(key) out[key]=val;
+  });
+  return out;
+}
+function applyPasteSheet(){
+  const text=$('pasteSrc').value;
+  const msg=$('pasteMsg');
+  if(!text.trim()){ msg.textContent='貼り付け欄が空です'; msg.className='paste-msg err'; return; }
+  const data=parsePasteSheet(text);
+  document.querySelectorAll('.fld .filled').forEach(e=>e.classList.remove('filled'));
+  const done=[], unknownCo=[];
+  PASTE_MAP.forEach(m=>{
+    const k=m.keys.find(k=>k in data); if(!k) return;
+    const v=data[k]; if(!v) return;
+    const el=$(m.id);
+    if(m.company){
+      const key = /アイデアル/.test(v)?'ideal' : /アイベリー/.test(v)?'ivory' : null;
+      if(!key){ unknownCo.push(v); return; }
+      el.value=key;
+    } else el.value=v;
+    el.classList.add('filled'); done.push(k);
+  });
+  scheduleAutosave();
+  if(!done.length){ msg.textContent='反映できる項目が見つかりませんでした（「項目名［タブ］値」の形式で貼り付けてください）'; msg.className='paste-msg err'; return; }
+  msg.textContent=done.length+'項目を反映しました'+(unknownCo.length?'（請負会社「'+unknownCo[0]+'」は登録がないため未選択）':'');
+  msg.className='paste-msg ok';
+}
+
 // ---------- defaults / init ----------
 (function init(){
   const t=new Date();
@@ -1098,6 +1186,9 @@ async function importFromFile(file){
   openDB().then(db=>{ db.close&&db.close(); }).catch(()=>{ idbOK=false; });
   // cover edits trigger autosave
   COVER_IDS.forEach(id=>$(id).addEventListener('input',scheduleAutosave));
+  $('pasteApply').addEventListener('click',applyPasteSheet);
+  $('pasteClear').addEventListener('click',()=>{ $('pasteSrc').value=''; $('pasteMsg').textContent=''; });
+  COVER_IDS.forEach(id=>$(id).addEventListener('input',e=>e.target.classList.remove('filled')));
   // 日付の自動連動
   $('cv_start').addEventListener('change',e=>{ const v=e.target.value; if(!v) return;
     $('cv_end').value=v; $('cv_pbefore').value=v; $('cv_pafter').value=v; scheduleAutosave(); });
@@ -1209,54 +1300,78 @@ function buildCoverX(wb){
   ws.pageSetup.printArea=`A1:L${last}`;
 }
 
-function xDrawCard(wb,ws,p,g,c1,c2,hr,ir1,ir2,infor,cr1,cr2,cardWpx,boxHpx,colWpx,rowHpx,colIdx){
+// 写真を枠と同じ縦横比の白地に中央配置した画像にする（どの環境でも枠いっぱいに貼れて崩れない）
+function letterbox(img,W,H){
+  return new Promise((res)=>{
+    const im=new Image();
+    im.onload=()=>{
+      const S=2, cv=document.createElement('canvas'); cv.width=W*S; cv.height=H*S;
+      const ctx=cv.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height);
+      const pad=4*S, aw=cv.width-pad*2, ah=cv.height-pad*2;
+      const k=Math.min(aw/im.naturalWidth, ah/im.naturalHeight);
+      const dw=im.naturalWidth*k, dh=im.naturalHeight*k;
+      ctx.drawImage(im,(cv.width-dw)/2,(cv.height-dh)/2,dw,dh);
+      res(cv.toDataURL('image/jpeg',0.9).split(',')[1]);
+    };
+    im.onerror=()=>res(null);
+    im.src=img.url;
+  });
+}
+
+function xDrawCard(wb,ws,p,no,c1,c2,hr,ir1,ir2,infor,cr1,cr2,colIdx,boxB64){
   ws.mergeCells(hr,c1,hr,c2);
   const hc=ws.getCell(hr,c1); hc.value=kindHeader(p)||(colIdx?'施工後':'施工前'); hc.font={name:XF,size:11,bold:true}; hc.alignment={horizontal:'center',vertical:'middle'}; hc.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFEEF1F4'}};
-  ws.mergeCells(ir1,c1,ir2,c2);
+  // 写真枠は結合しない（罫線を全セルに引けるようにするため）
   // 情報行：No.バッジ（濃紺）＋ 場所
   ws.mergeCells(infor,c1,infor,c1+1);
-  const nb=ws.getCell(infor,c1); nb.value='No.'+(g+1); nb.font={name:XF,size:10,bold:true,color:{argb:'FFFFFFFF'}}; nb.alignment={horizontal:'center',vertical:'middle'}; nb.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1B2A41'}};
+  const nb=ws.getCell(infor,c1); nb.value='No.'+no; nb.font={name:XF,size:10,bold:true,color:{argb:'FFFFFFFF'}}; nb.alignment={horizontal:'center',vertical:'middle'}; nb.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1B2A41'}};
   ws.mergeCells(infor,c1+2,infor,c2);
-  const pc=ws.getCell(infor,c1+2); pc.value=(p.place&&p.place.trim())?('　場所：'+p.place.trim()):''; pc.font={name:XF,size:10}; pc.alignment={vertical:'middle'};
+  const pc=ws.getCell(infor,c1+2); pc.value=(p.place&&p.place.trim())?('場所：'+p.place.trim()):''; pc.font={name:XF,size:10}; pc.alignment={vertical:'middle',indent:1};
   const hasCmt = cr2>=cr1;
   if(hasCmt){ ws.mergeCells(cr1,c1,cr2,c2); const cc=ws.getCell(cr1,c1); cc.value=(p.cmt&&p.cmt.trim())?p.cmt.trim():''; cc.font={name:XF,size:10}; cc.alignment={vertical:'top',wrapText:true}; }
   const bottom=hasCmt?cr2:infor;
-  xBox(ws,hr,c1,bottom,c2,'medium');
+  xBox(ws,hr,c1,bottom,c2,'thin');
   for(let c=c1;c<=c2;c++){ xBd(ws.getRow(hr).getCell(c),'bottom','thin'); xBd(ws.getRow(infor).getCell(c),'top','thin'); if(hasCmt) xBd(ws.getRow(cr1).getCell(c),'top','thin'); }
-  if(p.img){ const f=fitBox(p.img,cardWpx-4,boxHpx-4); const id=wb.addImage({base64:p.img.b64,extension:p.img.ext||'jpeg'});
-    const a=xAnchor(c1-1,ir1-1,Math.round((cardWpx-f.w)/2),Math.round((boxHpx-f.h)/2),colWpx,rowHpx);
-    ws.addImage(id,{ tl:a, ext:{width:f.w,height:f.h}, editAs:'oneCell' }); }
+  // 写真は写真枠のセル範囲にぴったり貼る（twoCell）→ フォントや列幅が変わっても枠からはみ出さない
+  if(boxB64){ const id=wb.addImage({base64:boxB64,extension:'jpeg'});
+    const E=9525, cw=Math.round(xColPx(6.6)), rh=Math.round(xRowPx(16));
+    ws.addImage(id,{ tl:{nativeCol:c1-1,nativeColOff:3*E,nativeRow:ir1-1,nativeRowOff:2*E}, br:{nativeCol:c2-1,nativeColOff:(cw-3)*E,nativeRow:ir2-1,nativeRowOff:(rh-2)*E}, editAs:'twoCell' }); }
 }
 
-function buildPhotoSheetX(wb,used,pg,pages){
-  const start=pg*6+1;
-  const ws=wb.addWorksheet('写真'+start+'～'+(start+5));
-  ws.pageSetup={orientation:'portrait',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:1,margins:{left:0.4,right:0.4,top:0.4,bottom:0.4,header:0.2,footer:0.2}};
-  const CCW=6.6, CARD=7, IMG_RH=16, IMG_ROWS=12, HDR_H=20, INFO_H=18, CMT_RH=15, GAP_H=7;
+async function buildPhotoSheetX(wb,pagePhotos,startIdx,pageNo,totalPages){
+  const name='写真'+(startIdx+1)+'～'+(startIdx+pagePhotos.length);
+  const ws=wb.addWorksheet(name);
+  ws.pageSetup={orientation:'portrait',paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:1,horizontalCentered:true,margins:{left:0.4,right:0.4,top:0.4,bottom:0.4,header:0.2,footer:0.2}};
+  ws.views=[{showGridLines:false}];
+  const CCW=6.6, IMG_RH=16, IMG_ROWS=12, HDR_H=22, INFO_H=20, CMT_RH=15, GAP_H=10;
   ws.getColumn(1).width=1.6;
   for(let c=2;c<=8;c++) ws.getColumn(c).width=CCW;
   ws.getColumn(9).width=2.2;
   for(let c=10;c<=16;c++) ws.getColumn(c).width=CCW;
   ws.getColumn(17).width=1.6;
-  const colWpx=xColPx(CCW), rowHpx=xRowPx(IMG_RH), cardWpx=CARD*colWpx, boxHpx=IMG_ROWS*rowHpx;
+  const boxW=xColPx(CCW)*7, boxH=xRowPx(IMG_RH)*IMG_ROWS;   // 写真枠の想定サイズ(px)
   // title
-  ws.getRow(1).height=22; ws.mergeCells(1,2,1,16);
-  const tc=ws.getCell(1,2); tc.value='現場写真　　'+(pg+1)+' / '+pages+' ページ'; tc.font={name:XF,size:13,bold:true}; tc.alignment={vertical:'middle'};
+  ws.getRow(1).height=26; ws.mergeCells(1,2,1,12); ws.mergeCells(1,13,1,16);
+  const tc=ws.getCell(1,2); tc.value='現場写真'; tc.font={name:XF,size:14,bold:true}; tc.alignment={vertical:'middle'};
+  const pc=ws.getCell(1,13); pc.value=pageNo+' / '+totalPages+' ページ'; pc.font={name:XF,size:10,color:{argb:'FF5B6B7B'}}; pc.alignment={horizontal:'right',vertical:'middle'};
   for(let c=2;c<=16;c++) xBd(ws.getRow(1).getCell(c),'bottom','medium');
+  ws.getRow(2).height=10;
   let r=3;
   for(let rp=0; rp<3; rp++){
-    const gL=pg*6+rp*2, gR=gL+1, hasL=gL<used.length, hasR=gR<used.length;
+    const lL=rp*2, lR=lL+1, hasL=lL<pagePhotos.length, hasR=lR<pagePhotos.length;
     if(!hasL&&!hasR) break;
-    const cLines=Math.max(hasL?commentLineCount(used[gL].cmt):0, hasR?commentLineCount(used[gR].cmt):0);
-    const crows=cLines>0?Math.max(1,cLines):0;
+    const cLines=Math.max(hasL?commentLineCount(pagePhotos[lL].cmt):0, hasR?commentLineCount(pagePhotos[lR].cmt):0);
+    const crows=cLines>0?cLines:0;
     const hr=r, ir1=r+1, ir2=r+IMG_ROWS, infor=ir2+1, cr1=infor+1, cr2=infor+crows;
     ws.getRow(hr).height=HDR_H; for(let k=ir1;k<=ir2;k++) ws.getRow(k).height=IMG_RH; ws.getRow(infor).height=INFO_H; for(let k=cr1;k<=cr2;k++) ws.getRow(k).height=CMT_RH;
-    if(hasL) xDrawCard(wb,ws,used[gL],gL,2,8,hr,ir1,ir2,infor,cr1,cr2,cardWpx,boxHpx,colWpx,rowHpx,0);
-    if(hasR) xDrawCard(wb,ws,used[gR],gR,10,16,hr,ir1,ir2,infor,cr1,cr2,cardWpx,boxHpx,colWpx,rowHpx,1);
+    const bL=hasL&&pagePhotos[lL].img?await letterbox(pagePhotos[lL].img,boxW,boxH):null;
+    const bR=hasR&&pagePhotos[lR].img?await letterbox(pagePhotos[lR].img,boxW,boxH):null;
+    if(hasL) xDrawCard(wb,ws,pagePhotos[lL],startIdx+lL+1,2,8,hr,ir1,ir2,infor,cr1,cr2,0,bL);
+    if(hasR) xDrawCard(wb,ws,pagePhotos[lR],startIdx+lR+1,10,16,hr,ir1,ir2,infor,cr1,cr2,1,bR);
     r = (crows>0?cr2:infor)+1;
     ws.getRow(r).height=GAP_H; r++;
   }
-  ws.pageSetup.printArea=`A1:Q${r}`;
+  ws.pageSetup.printArea=`A1:Q${r-1}`;
 }
 
 async function xPageSheet(wb,name,pageEl){
@@ -1282,7 +1397,6 @@ async function xPageSheet(wb,name,pageEl){
 async function generateExcelPdf(){
   const used=usedPhotos();
   if(used.length===0){ setStatus('写真または場所を1件以上入力してください','err'); return; }
-  if(typeof html2canvas==='undefined'){ setStatus('画像化ライブラリを読み込めませんでした（初回はネット接続が必要です）','err'); return; }
   $('genXpdf').disabled=true; $('genPdf').disabled=true; setStatus('Excelを作成中…');
   const root=$('pdfRoot');
   try{
@@ -1293,7 +1407,7 @@ async function generateExcelPdf(){
     for(let pi=0; pi<pgs.length; pi++){
       setStatus(`Excelを作成中…（写真 ${pi+1} / ${pgs.length}）`);
       const cnt=pgs[pi].length;
-      await xPageSheet(wb,'写真'+(startIdx+1)+'～'+(startIdx+cnt),buildPhotoPage(pgs[pi],startIdx,pi+1,pgs.length));
+      await buildPhotoSheetX(wb,pgs[pi],startIdx,pi+1,pgs.length);   // 写真ページもセルで作成（編集可）
       startIdx+=cnt;
     }
     const buf=await wb.xlsx.writeBuffer();
