@@ -1328,12 +1328,17 @@ function applyRenkei(){
   const kv=parseRenkei(text);
   const msg=document.getElementById('renkeiMsg');
   if(!kv.length){msg.textContent='貼り付け内容を読み取れませんでした。ラベルと値がタブ区切りか確認してください。';msg.className='renkei-msg warn';return;}
-  // 報告書種別の判定（内容のキーワードから推定）
-  const joined=kv.map(x=>x[1]).join(' ');
+  // 報告書種別の判定：工事名・案件分類などの「区分系」項目の値だけで判定する
+  // （「既存自社施工サービス＝防犯カメラサービス」等のサービス名に含まれる語での誤判定を防ぐ）
+  const CAT_KEYS=new Set(['案件分類','工事名','工事内容','工事種別','作業内容','業務内容','サービス内容','件名','種別']);
+  let cat='';
+  kv.forEach(([label,value])=>{const k=label.replace(/[\s　]/g,'').toLowerCase(); if(CAT_KEYS.has(k))cat+=' '+value;});
+  // 区分系項目が無ければ全文から判定（ただしサービス名は除外して誤判定を防ぐ）
+  if(!cat.trim())cat=kv.map(x=>x[1]).join(' ').replace(/防犯カメラサービス|除草剪定サービス|排水管清掃サービス|ＬＥＤ省エネサービス|LED省エネサービス/gi,'');
   let det='general';
-  if(/カメラ|防犯/.test(joined))det='camera';
-  else if(/排水管|排水/.test(joined))det='drain';
-  else if(/除草|剪定/.test(joined))det='grass';
+  if(/除草|剪定|伐採|草刈/.test(cat))det='grass';
+  else if(/排水管|排水|高圧洗浄|管内洗浄/.test(cat))det='drain';
+  else if(/防犯|カメラ|監視/.test(cat))det='camera';
   type=det; syncSeg();
   const SHORT={general:'現調報告書',camera:'防犯カメラ',drain:'排水管清掃',grass:'除草剪定'};
   const d=state[type];
