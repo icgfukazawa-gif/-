@@ -758,35 +758,26 @@ function rangePx(ws,range){
   let H=0;for(let r=r1;r<=r2;r++)H+=rowToPx(ws.getRow(r).height);
   return {W:Math.max(1,W),H:Math.max(1,H)};
 }
-/* 対象セル範囲と同じ縦横比のキャンバスに、写真を比率維持で収めて（余白は白）描画し直す。
-   これを範囲貼り付けすれば、引き伸ばされても写真自体は歪まない。 */
-function fitDataUrl(dataUrl,cellW,cellH){
-  return new Promise(res=>{
-    const img=new Image();
-    img.onload=()=>{
-      const aspect=cellW/cellH;
-      let H=Math.max(img.naturalHeight,Math.round(img.naturalWidth/aspect));
-      let W=Math.round(H*aspect);
-      const cap=1400; if(Math.max(W,H)>cap){const k=cap/Math.max(W,H);W=Math.max(1,Math.round(W*k));H=Math.max(1,Math.round(H*k));}
-      const c=document.createElement('canvas');c.width=W;c.height=H;
-      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);
-      const pad=Math.round(Math.min(W,H)*0.02);
-      const k=Math.min((W-pad*2)/img.naturalWidth,(H-pad*2)/img.naturalHeight);
-      const dw=img.naturalWidth*k,dh=img.naturalHeight*k;
-      ctx.drawImage(img,(W-dw)/2,(H-dh)/2,dw,dh);
-      res(c.toDataURL('image/jpeg',SHUKUSEN.quality));
-    };
-    img.onerror=()=>res(dataUrl);
-    img.src=dataUrl;
-  });
-}
-/* 写真を比率を保ったままセル範囲に配置（枠内に白余白、歪みなし） */
+/* 画像の実寸(px)を取得 */
+function imgDims(dataUrl){return new Promise(r=>{const im=new Image();im.onload=()=>r({w:im.naturalWidth,h:im.naturalHeight});im.onerror=()=>r(null);im.src=dataUrl;});}
+/* 写真を「元の縦横比のまま」セル範囲内に収めて中央配置（oneCellアンカー＋実寸指定）。
+   セル範囲へ引き伸ばさないので、写真の比率は一切変わらない。 */
 async function placeImg(wb,ws,photo,range){
   if(!photo||!photo.dataUrl)return;
+  const id=wb.addImage({base64:photo.dataUrl,extension:'jpeg'});
+  const m=range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/);
   const px=rangePx(ws,range);
-  const url=px?await fitDataUrl(photo.dataUrl,px.W,px.H):photo.dataUrl;
-  const id=wb.addImage({base64:url,extension:'jpeg'});
-  ws.addImage(id,range);
+  const dim=(photo.w&&photo.h)?{w:photo.w,h:photo.h}:await imgDims(photo.dataUrl);
+  if(!m||!px||!dim){ ws.addImage(id,range); return; }   // 寸法不明時は従来どおり
+  const EMU=9525, pad=3;
+  const c1=colLetterToNum(m[1]), r1=+m[2];
+  const availW=Math.max(1,px.W-pad*2), availH=Math.max(1,px.H-pad*2);
+  const scale=Math.min(availW/dim.w, availH/dim.h);     // contain（拡大しすぎない）
+  let dw,dh;
+  if(availW/dim.w < availH/dim.h){ dw=Math.max(1,Math.round(dim.w*scale)); dh=Math.max(1,Math.round(dw*dim.h/dim.w)); }
+  else { dh=Math.max(1,Math.round(dim.h*scale)); dw=Math.max(1,Math.round(dh*dim.w/dim.h)); }
+  const offX=Math.max(0,Math.round((px.W-dw)/2)), offY=Math.max(0,Math.round((px.H-dh)/2));
+  ws.addImage(id,{tl:{nativeCol:c1-1,nativeColOff:offX*EMU,nativeRow:r1-1,nativeRowOff:offY*EMU},ext:{width:dw,height:dh},editAs:'oneCell'});
 }
 
 function buildSelectSheet(wb,masters,cols){
