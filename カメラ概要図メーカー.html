@@ -457,7 +457,7 @@ function bbox(o) {
     case 'photo': return { x: o.x, y: o.y, w: o.w, h: o.h + (o.caption ? o.cfs * 1.9 + 6 : 0) };
     case 'callout': { const x = Math.min(o.x, o.tx), y = Math.min(o.y, o.ty); return { x, y, w: Math.max(o.x + o.w, o.tx) - x, h: Math.max(o.y + o.h, o.ty) - y }; }
     case 'text': { const b = textBox(o); return o.box !== 'none' ? { x: b.x - 6, y: b.y - 5, w: b.w + 12, h: b.h + 10 } : b; }
-    case 'legend': { const n = legendItems().length; return { x: o.x, y: o.y, w: 190, h: 30 + Math.max(1, n) * 24 + 6 }; }
+    case 'legend': { const its = legendItems(), n = its.length, tw = Math.max(0, ...its.map(i => textW(i.name, 13))); return { x: o.x, y: o.y, w: Math.max(170, Math.ceil(88 + tw * 1.12 + 16)), h: 30 + Math.max(1, n) * 24 + 6 }; }
     default: return { x: o.x, y: o.y, w: o.w, h: o.h };
   }
 }
