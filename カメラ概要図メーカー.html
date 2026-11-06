@@ -1,0 +1,2057 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>カメラ概要図メーカー</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap">
+<style>
+/* Layout: drafting-table tool — left tool rail, A3 sheet on a cool slate desk, right property panel, status strip */
+:root{
+  --desk:#e6eaef; --panel:#ffffff; --panel-2:#f4f6f9; --ink:#17202b; --ink-2:#526070; --line:#d3d9e1;
+  --accent:#0a7891; --accent-ink:#ffffff; --accent-soft:#d9eef3; --danger:#c2262d; --shadow:0 1px 2px rgba(20,30,45,.08),0 6px 24px rgba(20,30,45,.10);
+  --f-ui:"BIZ UDPGothic","Meiryo","Yu Gothic","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  --f-num:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --desk:#0f141a; --panel:#182029; --panel-2:#1e2731; --ink:#e3e9f0; --ink-2:#9aa8b8; --line:#2c3642;
+  --accent:#3bb5d1; --accent-ink:#06222a; --accent-soft:#163541; --danger:#f0646a; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --desk:#0f141a; --panel:#182029; --panel-2:#1e2731; --ink:#e3e9f0; --ink-2:#9aa8b8; --line:#2c3642;
+  --accent:#3bb5d1; --accent-ink:#06222a; --accent-soft:#163541; --danger:#f0646a; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 28px rgba(0,0,0,.35); color-scheme:dark}
+html,body{height:100%}
+body{background:var(--desk);color:var(--ink);font-family:var(--f-ui);font-size:13px;overflow:hidden}
+.app{height:100%;display:grid;grid-template-rows:auto 1fr auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px;gap:10px;box-sizing:border-box}
+button,select,input,textarea{font:inherit;color:inherit}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;letter-spacing:.02em;margin-right:6px}
+.brand svg{width:26px;height:26px}
+.grp{display:flex;gap:4px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px}
+.grp .lbl{font-size:11px;color:var(--ink-2);padding:0 6px;letter-spacing:.06em}
+.btn{border:0;background:transparent;padding:6px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:6px;align-items:center}
+.btn:hover{background:var(--panel-2)}
+.btn:focus-visible,.tool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.danger{color:var(--danger)}
+.btn svg{width:16px;height:16px}
+.spacer{flex:1}
+.main{display:grid;grid-template-columns:auto 1fr 300px;gap:10px;min-height:0}
+.tools{display:flex;flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px;overflow-y:auto;width:76px;box-sizing:border-box}
+.tools .sep{height:1px;background:var(--line);margin:5px 2px}
+.tools .cap{font-size:10px;color:var(--ink-2);text-align:center;letter-spacing:.08em;margin:2px 0}
+.tool{border:0;background:transparent;border-radius:7px;padding:6px 2px 5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;line-height:1.15;color:var(--ink)}
+.tool svg{width:24px;height:24px}
+.tool:hover{background:var(--panel-2)}
+.tool[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.tool kbd{font-family:var(--f-num);font-size:9px;color:var(--ink-2)}
+.stage{position:relative;border-radius:10px;overflow:hidden;background:var(--desk);border:1px solid var(--line);min-width:0;min-height:0}
+#cv{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+#cv text{user-select:none}
+#cv .locked{pointer-events:none}
+body.alt #cv .locked{pointer-events:auto}
+.stage.pan #cv{cursor:grab}
+.stage.draw #cv{cursor:crosshair}
+.zoombox{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:10px;display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px;box-shadow:var(--shadow)}
+.zoombox .btn{padding:4px 8px}
+.zoombox .z{font-family:var(--f-num);font-size:11px;min-width:44px;text-align:center;align-self:center;color:var(--ink-2)}
+.hintbar{position:absolute;left:10px;top:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--ink-2);box-shadow:var(--shadow);max-width:calc(100% - 40px)}
+.hintbar b{color:var(--ink)}
+.editbar{position:absolute;left:50%;transform:translateX(-50%);top:10px;display:flex;gap:10px;align-items:center;background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:6px 6px 6px 14px;box-shadow:var(--shadow);font-size:12.5px;max-width:calc(100% - 140px);flex-wrap:wrap}
+.editbar b{font-size:13px}
+.editbar .btn{background:var(--panel);color:var(--ink);font-weight:700}
+.stage.editing .hintbar,.stage.editing .planbar{display:none}
+.pagebar{position:absolute;left:10px;bottom:10px;right:200px;display:flex;gap:6px;align-items:center;pointer-events:none}
+.pgscroll{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:0 1 auto;padding:2px 2px 6px;scroll-behavior:smooth}
+.pgscroll::-webkit-scrollbar{display:none}
+.pagebar .pgsel{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:5px 6px;font-size:12px;box-shadow:var(--shadow);max-width:150px;flex:none}
+.pagebar .pg.add,.pagebar .pg.nav{flex:none}
+.pagebar>*{pointer-events:auto}
+.pagebar .pg{border:1px solid var(--line);background:var(--panel);color:var(--ink-2);border-radius:7px;padding:5px 11px;cursor:pointer;white-space:nowrap;box-shadow:var(--shadow);font-size:12px}
+.pagebar .pg[aria-current="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.pagebar .pg.add{font-weight:700;color:var(--accent)}
+.stage.editing .pagebar{display:none}
+.planbar{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:flex;gap:4px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px 3px 3px 10px;box-shadow:var(--shadow);font-size:12px;color:var(--ink-2)}
+.planbar .btn{padding:4px 9px;background:var(--panel-2)}
+.planbar .btn.danger{color:var(--danger)}
+.planbar .btn.primary{background:var(--accent);color:var(--accent-ink)}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;min-width:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;background:transparent;padding:10px 4px;cursor:pointer;font-weight:700;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.pane{overflow-y:auto;padding:12px 14px 18px;display:flex;flex-direction:column;gap:12px;min-height:0;flex:1}
+.pane h3{margin:0;font-size:12px;letter-spacing:.08em;color:var(--ink-2);font-weight:700}
+.pane h2{margin:0;font-size:15px;text-wrap:balance}
+.f{display:grid;gap:4px}
+.f>label,.f>.l{font-size:11.5px;color:var(--ink-2)}
+.f input[type=text],.f input[type=number],.f input[type=date],.f select,.f textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);background:var(--panel-2);border-radius:6px;padding:6px 8px}
+.f textarea{min-height:60px;resize:vertical}
+.f input:focus,.f select:focus,.f textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>.f{flex:1;min-width:90px}
+.chk{display:flex;gap:6px;align-items:center;cursor:pointer}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--panel-2);padding:6px 4px;cursor:pointer;font-size:12px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.actions{display:flex;flex-wrap:wrap;gap:4px;border-top:1px solid var(--line);padding-top:10px}
+.actions .btn{background:var(--panel-2);padding:6px 9px}
+.note{font-size:11.5px;color:var(--ink-2);line-height:1.6}
+.note kbd,.help kbd{font-family:var(--f-num);font-size:10.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--panel-2);color:var(--ink)}
+.help{margin:0;padding-left:18px;line-height:1.75;font-size:12px}
+.help li::marker{color:var(--accent);font-family:var(--f-num)}
+.calc{font-family:var(--f-num);font-variant-numeric:tabular-nums;background:var(--panel-2);border-radius:6px;padding:6px 8px;font-size:12px}
+table.sum{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+table.sum th,table.sum td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+table.sum td.n{text-align:right;font-family:var(--f-num)}
+table.sum th{font-size:11px;color:var(--ink-2);font-weight:700}
+.sw{display:inline-block;width:26px;height:0;border-top:3px solid #1d4ed8;vertical-align:middle;margin-right:6px}
+.imglist{display:grid;gap:6px}
+.imglist .it{display:flex;gap:6px;align-items:center;background:var(--panel-2);border-radius:6px;padding:5px 6px}
+.imglist .it span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status{display:flex;gap:14px;align-items:center;font-size:11.5px;color:var(--ink-2);flex-wrap:wrap}
+.status .k{font-family:var(--f-num)}
+.status label{display:flex;gap:5px;align-items:center;cursor:pointer}
+.modal-bg{position:fixed;inset:0;background:rgba(10,16,24,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);padding:18px;width:min(420px,100%);display:grid;gap:12px;border:1px solid var(--line)}
+.modal h2{margin:0;font-size:16px}
+.modal .acts{display:flex;justify-content:flex-end;gap:6px}
+.modal .acts .btn{background:var(--panel-2)}
+.modal .acts .btn.primary{background:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(46px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:9px 14px;border-radius:8px;font-size:12.5px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60;max-width:calc(100% - 40px)}
+.toast.on{opacity:1}
+.busy{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,16,24,.25);z-index:55;font-weight:700}
+.busy span{background:var(--panel);padding:12px 18px;border-radius:10px;box-shadow:var(--shadow)}
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{height:auto;min-height:100%}
+  .main{grid-template-columns:1fr;grid-template-rows:auto 62vh auto}
+  .tools{flex-direction:row;width:auto;overflow-x:auto;overflow-y:hidden}
+  .tools .sep{width:1px;height:auto;margin:2px 4px}
+  .tools .cap{display:none}
+  .tool{min-width:58px}
+  .side{max-height:none}
+  .pane{overflow:visible}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 26 26" aria-hidden="true"><rect x="1" y="1" width="24" height="24" rx="5" fill="var(--accent)"/><rect x="5" y="9" width="11" height="8" rx="1.6" fill="#fff"/><path d="M16 11l5-2.5v9L16 15z" fill="#fff"/></svg>
+      カメラ概要図メーカー
+    </div>
+    <div class="grp" role="group" aria-label="ファイル">
+      <button class="btn" id="bNew">新規</button>
+      <button class="btn" id="bOpen" title="保存した作業データ(.json)を開いて続きを編集">開く</button>
+      <button class="btn" id="bSave" title="作業データ(.json)を書き出す。全ページ・写真込みで、別のパソコンやブラウザで続きを編集できます">保存(.json)</button>
+    </div>
+    <div class="grp" role="group" aria-label="元に戻す">
+      <button class="btn" id="bUndo" title="元に戻す (Ctrl+Z)"><svg viewBox="0 0 16 16"><path d="M6 3L2 7l4 4M2 7h8a4 4 0 010 8H8" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button class="btn" id="bRedo" title="やり直し (Ctrl+Y)"><svg viewBox="0 0 16 16"><path d="M10 3l4 4-4 4M14 7H6a4 4 0 000 8h2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></button>
+    </div>
+    <div class="spacer"></div>
+    <div class="grp" role="group" aria-label="書き出し">
+      <span class="lbl">書き出し</span>
+      <select id="selPaper" title="用紙サイズ" style="border:1px solid var(--line);background:var(--panel-2);border-radius:6px;padding:4px 6px;font-weight:700">
+        <option value="A3L">A3横</option><option value="A3P">A3縦</option><option value="A4L">A4横</option><option value="A4P">A4縦</option></select>
+      <button class="btn" id="bCopyImg" title="図面を画像としてクリップボードへ（Excelに貼り付け）">画像コピー</button>
+      <button class="btn" id="bPng">PNG</button>
+      <button class="btn" id="bPdf">PDF</button>
+      <button class="btn primary" id="bXlsx">Excel</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <nav class="tools" id="tools" aria-label="ツール"></nav>
+    <div class="stage" id="stage">
+      <svg id="cv" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="gridp" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#dfe6ee" stroke-width="0.8"/></pattern>
+          <filter id="pshadow" x="-5%" y="-5%" width="110%" height="110%"><feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#0b1520" flood-opacity=".18"/></filter>
+        </defs>
+        <g id="paper"></g>
+        <g id="objs"></g>
+        <g id="fixed"></g>
+        <g id="overlay"></g>
+      </svg>
+      <div class="hintbar" id="hint"></div>
+      <div class="planbar" id="planbar" hidden></div>
+      <div class="editbar" id="editbar" hidden></div>
+      <div class="pagebar" id="pagebar" aria-label="ページ"></div>
+      <div class="zoombox">
+        <button class="btn" id="zOut" title="縮小">－</button>
+        <span class="z" id="zVal">100%</span>
+        <button class="btn" id="zIn" title="拡大">＋</button>
+        <button class="btn" id="zFit" title="用紙全体を表示">全体</button>
+      </div>
+    </div>
+    <aside class="side">
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="props" aria-selected="true">選択中</button>
+        <button role="tab" data-tab="meta" aria-selected="false">図面情報</button>
+        <button role="tab" data-tab="sum" aria-selected="false">集計</button>
+      </div>
+      <div class="pane" id="pane"></div>
+    </aside>
+  </div>
+
+  <footer class="status">
+    <span>縮尺 <b class="k" id="sScale">未設定</b></span>
+    <label><input type="checkbox" id="cGrid" checked> グリッド</label>
+    <label><input type="checkbox" id="cSnap" checked> スナップ</label>
+    <span id="sSel"></span>
+    <span class="spacer"></span>
+    <span id="sSaved"></span>
+  </footer>
+</div>
+
+<input type="file" id="fImg" accept="image/*" multiple hidden>
+<input type="file" id="fJson" accept=".json,application/json" hidden>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+"use strict";
+/* ============ constants ============ */
+let W = 1680, H = 1188;              // sheet size in units, 4 units = 1 mm
+const PAPERS = { A3L: { name: 'A3横', mm: [420, 297] }, A3P: { name: 'A3縦', mm: [297, 420] }, A4L: { name: 'A4横', mm: [297, 210] }, A4P: { name: 'A4縦', mm: [210, 297] } };
+const NS = 'http://www.w3.org/2000/svg';
+const FONT = '"BIZ UDPGothic","Meiryo","Yu Gothic","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
+const FONT_ATTR = FONT.replace(/"/g, "'");
+const BLUE = '#1d4ed8', RED = '#dc2626', CAM = '#38c3e2', CAMD = '#0d5566';
+const WIRE = {
+  exposed:   { name: '露出配線', color: BLUE, dash: '' },
+  concealed: { name: '隠蔽配線', color: BLUE, dash: '12 8' },
+  aerial:    { name: '架空配線', color: BLUE, dash: '18 6 3 6' },
+  power:     { name: '電源配線', color: RED,  dash: '' },
+};
+const DEV = {
+  recorder: { name: 'レコーダー＋モニター', label: 'レコーダー・モニター', tool: 'レコーダー+モニター' },
+  nvr:      { name: 'レコーダーのみ', label: 'レコーダー', tool: 'レコーダー' },
+  monitor:  { name: 'モニターのみ', label: 'モニター', tool: 'モニター' },
+  panel:    { name: '分電盤', label: '分電盤' },
+  box:      { name: '盤BOX', label: '' },
+  hub:      { name: 'PoEハブ', label: 'HUB' },
+  outlet:   { name: 'コンセント', label: '' },
+  pole:     { name: 'ポール', label: 'ポール', tool: 'ポール' },
+  vent:     { name: '換気口', label: '' },
+  hole:     { name: '貫通・穴あけ', label: '' },
+};
+const SYM = {
+  door1: { name: '片開きドア', tool: '片開き', m: [0.9, 0.9] },
+  door2: { name: '両開きドア', tool: '両開き', m: [1.6, 0.8] },
+  slide: { name: '引き戸', tool: '引き戸', m: [1.6, 0.25] },
+  window: { name: '窓', tool: '窓', m: [1.6, 0.2] },
+  stair: { name: '階段', tool: '階段', m: [3.0, 1.2] },
+};
+function symSize(kind) { const m = SYM[kind].m, f = doc && doc.scale ? doc.scale : 40; let w = m[0] * f, h = m[1] * f; const mn = { door1: 30, door2: 50, slide: 50, window: 50, stair: 90 }[kind]; if (w < mn) { h *= mn / w; w = mn; } if (kind === 'slide' || kind === 'window') h = Math.max(8, Math.min(h, 14)); return [Math.round(w), Math.round(h)]; }
+function symIcon(o) {
+  const w = o.w, h = o.h, X = -w / 2, Y = -h / 2, cut = o.cut !== false;
+  const L = (x1, y1, x2, y2, sw = 1.4) => `<path d="M${r1(x1)},${r1(y1)}L${r1(x2)},${r1(y2)}" stroke="#111" stroke-width="${sw}" fill="none"/>`;
+  switch (o.kind) {
+    case 'door1': return (cut ? `<path d="M${X},${-Y}H${-X}" stroke="#fff" stroke-width="8"/>` : '') + L(X, -Y, X, Y, 2.2)
+      + `<path d="M${-X},${-Y}A${w},${w} 0 0 0 ${X},${Y}" fill="none" stroke="#111" stroke-width="1"/>` + L(X, -Y - 4, X, -Y + 4, 2) + L(-X, -Y - 4, -X, -Y + 4, 2);
+    case 'door2': return (cut ? `<path d="M${X},${-Y}H${-X}" stroke="#fff" stroke-width="8"/>` : '') + L(X, -Y, X, Y, 2.2) + L(-X, -Y, -X, Y, 2.2)
+      + `<path d="M0,${-Y}A${w / 2},${w / 2} 0 0 0 ${X},${Y}M0,${-Y}A${w / 2},${w / 2} 0 0 1 ${-X},${Y}" fill="none" stroke="#111" stroke-width="1"/>` + L(X, -Y - 4, X, -Y + 4, 2) + L(-X, -Y - 4, -X, -Y + 4, 2);
+    case 'slide': { const pw = w * 0.56; return (cut ? `<rect x="${X}" y="${Y - 2}" width="${w}" height="${h + 4}" fill="#fff"/>` : '')
+      + `<rect x="${X}" y="${r1(Y)}" width="${r1(pw)}" height="${r1(h / 2)}" fill="#fff" stroke="#111" stroke-width="1.3"/><rect x="${r1(-X - pw)}" y="0" width="${r1(pw)}" height="${r1(h / 2)}" fill="#fff" stroke="#111" stroke-width="1.3"/>`
+      + L(X, Y - 3, X, -Y + 3, 2.2) + L(-X, Y - 3, -X, -Y + 3, 2.2); }
+    case 'window': return (cut ? `<rect x="${X}" y="${Y - 2}" width="${w}" height="${h + 4}" fill="#fff"/>` : '')
+      + L(X, Y, -X, Y, 1.2) + L(X, -Y, -X, -Y, 1.2) + L(X, 0, -X, 0, 1) + L(X, Y - 2, X, -Y + 2, 2.2) + L(-X, Y - 2, -X, -Y + 2, 2.2);
+    case 'stair': {
+      const n = Math.max(2, o.n || 8); let t = `<rect x="${X}" y="${Y}" width="${w}" height="${h}" fill="#fff" stroke="#111" stroke-width="1.6"/>`;
+      for (let i = 1; i < n; i++) { const x = X + w * i / n; t += L(x, Y, x, -Y, 1); }
+      if (o.dir !== 'none') { const a = -X - 8; t += L(X + 8, 0, a, 0, 1.4) + `<path d="M${r1(a + 4)},0L${r1(a - 7)},-5L${r1(a - 7)},5Z" fill="#111"/>` + `<circle cx="${X + 8}" cy="0" r="2.6" fill="#111"/>`
+        + `<text x="${r1(X + 12)}" y="${r1(Y - 5)}" font-size="12" font-weight="700" fill="#111" font-family="${FONT_ATTR}">${o.dir === 'dn' ? 'DN' : 'UP'}</text>`; }
+      return t;
+    }
+  }
+  return '';
+}
+const COLORS = { '#111111': '黒', [BLUE]: '青', [RED]: '赤', '#0d7d3a': '緑' };
+
+/* ============ helpers ============ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const uid = () => 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clone = o => JSON.parse(JSON.stringify(o));
+const r1 = v => Math.round(v * 10) / 10;
+const circ = n => (n >= 1 && n <= 20) ? String.fromCharCode(0x245F + n) : '(' + n + ')';
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+const mctx = document.createElement('canvas').getContext('2d');
+function textW(s, fs, bold) { mctx.font = (bold ? '700 ' : '400 ') + fs + 'px ' + FONT; return mctx.measureText(s).width; }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600); }
+
+/* ============ document ============ */
+let doc, blobs = {};
+let sel = new Set();
+let tool = 'select';
+let opt = { wire: 'exposed', device: 'recorder' };
+let vb = { x: 0, y: 0, w: W, h: H };
+let draft = null, drag = null, spaceDown = false;
+let gridOn = true, snapOn = true;
+let undoStack = [], redoStack = [];
+let photoTarget = null, pendingDrop = null;
+let editPhoto = null, editPrevVB = null;
+const EDIT_TOOLS = ['select', 'hand', 'line', 'wire', 'camera', 'device', 'text', 'callout', 'mark', 'arrow'];
+
+function blankDoc() {
+  return { v: 1, meta: { title: '防犯カメラ設置概要図', property: '', contractor: '', date: new Date().toISOString().slice(0, 10), floor: '', address: '' }, scale: null, objects: [], assets: {}, paper: 'A3L' };
+}
+function sampleDoc() {
+  const d = blankDoc();
+  d.meta.property = '（例）○○住宅 1号棟';
+  d.pageName = '1F';
+  d.meta.contractor = '（例）株式会社○○';
+  d.scale = 20;
+  const A = x => { x.id = uid(); d.objects.push(x); return x; };
+  const ph = (x, y, w, h, cap, ccol) => A({ type: 'photo', x, y, w, h, asset: null, caption: cap, ccol: ccol || BLUE, cfs: 13 });
+  ph(60, 50, 220, 150, '配線ルート'); ph(300, 50, 220, 150, '配線ルート'); ph(540, 50, 220, 150, '配線ルート（ケーブルラック使用）');
+  ph(780, 50, 220, 150, '配線ルート（パイラックにて固定）'); ph(1020, 50, 220, 150, '電源取得場所', RED); ph(1260, 50, 220, 150, 'レコーダー・モニター設置場所');
+  A({ type: 'text', x: 70, y: 300, text: '1F 平面図', fs: 24, color: '#111111', bold: true, box: 'none', anchor: 'start' });
+  A({ type: 'line', pts: [[260, 600], [1000, 600]], w: 2.5, dash: false, color: '#111111' });
+  A({ type: 'line', pts: [[260, 800], [1000, 800]], w: 2.5, dash: false, color: '#111111' });
+  A({ type: 'rect', x: 520, y: 600, w: 180, h: 200, label: '駐輪場', fs: 18, sw: 2, fill: 'none', dash: false });
+  A({ type: 'rect', x: 700, y: 600, w: 200, h: 200, label: '駐輪場', fs: 18, sw: 2, fill: 'none', dash: false });
+  A({ type: 'rect', x: 1000, y: 560, w: 510, h: 290, label: '', fs: 18, sw: 2.5, fill: 'none', dash: false });
+  A({ type: 'rect', x: 1000, y: 560, w: 180, h: 150, label: 'ホール', fs: 18, sw: 2, fill: 'none', dash: false });
+  A({ type: 'rect', x: 920, y: 600, w: 60, h: 80, label: 'EV', fs: 14, sw: 2, fill: 'none', dash: false });
+  A({ type: 'sym', kind: 'stair', x: 1060, y: 790, w: 100, h: 44, rot: 0, flip: false, cut: true, n: 10, dir: 'up' });
+  A({ type: 'sym', kind: 'door2', x: 1090, y: 722.5, w: 50, h: 25, rot: 180, flip: false, cut: true });
+  A({ type: 'sym', kind: 'door1', x: 1350, y: 425, w: 30, h: 30, rot: 180, flip: false, cut: true });
+  A({ type: 'rect', x: 1250, y: 300, w: 200, h: 110, label: 'ゴミ庫', fs: 18, sw: 2, fill: 'none', dash: false });
+  A({ type: 'wire', pts: [[1110, 650], [1060, 600], [995, 572]], style: 'concealed', smooth: true, showLen: true, lenMode: 'auto', lenText: '', lx: 0, ly: -14 });
+  A({ type: 'wire', pts: [[995, 572], [930, 572], [930, 612]], style: 'exposed', smooth: false, showLen: true, lenMode: 'auto', lenText: '', lx: 0, ly: -14 });
+  A({ type: 'wire', pts: [[930, 612], [900, 700], [860, 790]], style: 'concealed', smooth: true, showLen: true, lenMode: 'auto', lenText: '', lx: 30, ly: 0 });
+  A({ type: 'wire', pts: [[930, 612], [800, 680], [760, 800]], style: 'concealed', smooth: true, showLen: true, lenMode: 'manual', lenText: '約13m', lx: -30, ly: -10 });
+  A({ type: 'wire', pts: [[760, 800], [650, 816], [560, 790]], style: 'exposed', smooth: false, showLen: true, lenMode: 'auto', lenText: '', lx: 0, ly: -16 });
+  A({ type: 'wire', pts: [[1180, 560], [1180, 520], [1470, 520], [1470, 440]], style: 'aerial', smooth: false, showLen: true, lenMode: 'auto', lenText: '', lx: 90, ly: -14 });
+  A({ type: 'wire', pts: [[1470, 440], [1470, 400], [1430, 340]], style: 'exposed', smooth: false, showLen: false, lenMode: 'auto', lenText: '', lx: 26, ly: 0 });
+  A({ type: 'device', kind: 'recorder', x: 1110, y: 650, label: 'レコーダー', lx: 0, ly: 36 });
+  A({ type: 'device', kind: 'panel', x: 1230, y: 640, label: '分電盤', lx: 0, ly: 34 });
+  A({ type: 'device', kind: 'hole', x: 995, y: 572, label: '', lx: 0, ly: 22 });
+  A({ type: 'device', kind: 'vent', x: 930, y: 612, label: '', lx: 0, ly: 22 });
+  A({ type: 'device', kind: 'vent', x: 760, y: 800, label: '', lx: 0, ly: 22 });
+  A({ type: 'camera', x: 1430, y: 335, ang: 150, num: 1, name: '', kind: 'bullet', cone: true, coneLen: 120, coneAng: 70, lx: -50, ly: -16 });
+  A({ type: 'camera', x: 860, y: 790, ang: -60, num: 2, name: '', kind: 'bullet', cone: true, coneLen: 130, coneAng: 70, lx: 36, ly: 30 });
+  A({ type: 'camera', x: 560, y: 790, ang: -120, num: 3, name: '', kind: 'bullet', cone: true, coneLen: 130, coneAng: 70, lx: -30, ly: 32 });
+  A({ type: 'dim', p1: [1000, 885], p2: [1510, 885], lenMode: 'auto', lenText: '', lx: 0, ly: 0 });
+  A({ type: 'callout', x: 700, y: 512, w: 120, h: 34, text: '換気口使用', fs: 14, tx: 925, ty: 606 });
+  A({ type: 'callout', x: 600, y: 852, w: 120, h: 34, text: '換気口使用', fs: 14, tx: 757, ty: 806 });
+  A({ type: 'callout', x: 1290, y: 448, w: 110, h: 34, text: '架空配線', fs: 14, tx: 1330, ty: 520 });
+  A({ type: 'text', x: 1196, y: 760, text: '電源取得場所\n分電盤コンセントブレーカーより分岐', fs: 13, color: '#111111', bold: false, box: RED, anchor: 'start' });
+  ph(60, 905, 210, 140, 'カメラ③設置場所'); ph(290, 905, 210, 140, 'カメラ③撮影方向'); ph(520, 905, 210, 140, 'カメラ②設置場所'); ph(750, 905, 210, 140, 'カメラ②撮影方向');
+  A({ type: 'legend', x: 1000, y: 905 });
+  return d;
+}
+const byId = id => doc.objects.find(o => o.id === id);
+const attached = o => !!(o.parent && byId(o.parent));
+function photoAt(x, y) { return doc.objects.slice().reverse().find(o => o.type === 'photo' && !o.hide && x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h) || null; }
+function photoContaining(o) {
+  const pts = o.pts ? o.pts : ('x' in o ? [[o.x, o.y]] : null); if (!pts) return null;
+  return doc.objects.slice().reverse().find(ph => ph.type === 'photo' && ph !== o && pts.every(p => p[0] >= ph.x - 2 && p[0] <= ph.x + ph.w + 2 && p[1] >= ph.y - 2 && p[1] <= ph.y + ph.h + 2)) || null;
+}
+const COUNTED = ['camera', 'wire', 'device'];
+function onPhoto(o) { return attached(o) || (COUNTED.includes(o.type) && !!photoContaining(o)); }
+function adoptPhotoKids() { let n = 0; for (const o of doc.objects) { if (!COUNTED.includes(o.type) && !['line', 'text', 'callout', 'mark', 'arrow'].includes(o.type)) continue; if (attached(o)) continue; const ph = photoContaining(o); if (ph) { o.parent = ph.id; n++; } } if (n) fixKidOrder(); return n; }
+function kidsOf(id) { return doc.objects.filter(o => o.parent === id); }
+function withKids(ids) { const s2 = new Set(ids); for (const id of ids) { const o = byId(id); if (o && o.type === 'photo') kidsOf(id).forEach(c => s2.add(c.id)); } return s2; }
+function mapChild(c, src, O, N) {
+  const sx = N.w / O.w, sy = N.h / O.h, f = (x, y) => [r1(N.x + (x - O.x) * sx), r1(N.y + (y - O.y) * sy)];
+  if ('x' in src) { [c.x, c.y] = f(src.x, src.y); if ('w' in src) { c.w = r1(src.w * sx); c.h = r1(src.h * sy); } }
+  if (src.pts) c.pts = src.pts.map(p => f(p[0], p[1]));
+  if (src.p1) { c.p1 = f(...src.p1); c.p2 = f(...src.p2); }
+  if ('tx' in src) [c.tx, c.ty] = f(src.tx, src.ty);
+}
+function fixKidOrder() { for (const c of doc.objects.filter(attached)) { const pi = doc.objects.findIndex(o => o.id === c.parent), ci = doc.objects.indexOf(c); if (ci < pi) { doc.objects.splice(ci, 1); doc.objects.splice(doc.objects.findIndex(o => o.id === c.parent) + 1, 0, c); } } }
+let kidToastShown = false;
+function attachTo(o, ph) {
+  o.parent = ph.id;
+  if (!kidToastShown) { kidToastShown = true; toast('写真に描き込みました。写真と一緒に移動・拡大縮小します'); }
+}
+/* pages: doc.objects / doc.scale always point at the current page */
+function syncPage() { const pg = doc.pages && doc.pages[doc.cur]; if (pg) { pg.objects = doc.objects; pg.scale = doc.scale; } }
+function usePage(i) { const pg = doc.pages[i]; doc.cur = i; doc.objects = pg.objects; doc.scale = pg.scale; }
+function forEachPage(fn) { syncPage(); const c = doc.cur; doc.pages.forEach((pg, i) => { usePage(i); fn(pg, i); syncPage(); }); usePage(c); }
+const snapshot = () => { syncPage(); return JSON.stringify({ meta: doc.meta, paper: doc.paper, cur: doc.cur, pages: doc.pages }); };
+function pushUndo(s) { undoStack.push(s || snapshot()); if (undoStack.length > 150) undoStack.shift(); redoStack = []; }
+function restore(s) { const d = JSON.parse(s); doc.meta = d.meta; doc.pages = d.pages; usePage(Math.min(d.cur || 0, d.pages.length - 1)); if (editPhoto && !byId(editPhoto)) exitPhotoEdit(); renderPages(); if ((d.paper || 'A3L') !== doc.paper) { doc.paper = d.paper || 'A3L'; applyPaper(); } for (const id of [...sel]) if (!byId(id)) sel.delete(id); render(); refreshPane(); save(); }
+function undo() { if (!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); }
+function redo() { if (!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); }
+
+/* ============ geometry ============ */
+function smoothPath(pts) {
+  if (pts.length < 3) return 'M' + pts.map(p => p.join(',')).join('L');
+  let d = 'M' + pts[0].join(',');
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += `C${r1(c1[0])},${r1(c1[1])} ${r1(c2[0])},${r1(c2[1])} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+function sampleSmooth(pts) {
+  if (pts.length < 3) return pts;
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    for (let t = 0; t < 1; t += 0.05) {
+      const u = 1 - t;
+      out.push([u*u*u*p1[0] + 3*u*u*t*c1[0] + 3*u*t*t*c2[0] + t*t*t*p2[0], u*u*u*p1[1] + 3*u*u*t*c1[1] + 3*u*t*t*c2[1] + t*t*t*p2[1]]);
+    }
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+function polyLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i - 1], pts[i]); return L; }
+function pointAt(pts, frac) {
+  const L = polyLen(pts) * frac; let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const s = dist(pts[i - 1], pts[i]);
+    if (acc + s >= L && s > 0) { const t = (L - acc) / s; return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t]; }
+    acc += s;
+  }
+  return pts[pts.length - 1] || [0, 0];
+}
+const wirePts = o => o.smooth ? sampleSmooth(o.pts) : o.pts;
+function meters(units) { return doc.scale ? units / doc.scale : null; }
+function lenLabel(o) {
+  if (o.lenMode === 'manual') return o.lenText || '';
+  const L = o.type === 'dim' ? dist(o.p1, o.p2) : polyLen(wirePts(o));
+  const m = meters(L);
+  return m == null ? '' : '約' + Math.max(1, Math.ceil(m - 0.05)) + 'm';
+}
+function lenValue(o) {
+  if (o.lenMode === 'manual') { const m = String(o.lenText || '').replace(/[０-９．]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).match(/[\d.]+/); return m ? parseFloat(m[0]) : null; }
+  const m = meters(polyLen(wirePts(o))); return m == null ? null : Math.max(1, Math.ceil(m - 0.05));
+}
+function camLabel(o) { return o.name || ('カメラ' + circ(o.num)); }
+function textBox(o) {
+  const lines = String(o.text || '').split('\n'); const lh = o.fs * 1.35;
+  const w = Math.max(...lines.map(l => textW(l, o.fs, o.bold)), o.fs);
+  const x0 = o.anchor === 'middle' ? o.x - w / 2 : o.x;
+  return { x: x0, y: o.y - o.fs * 1.0, w, h: lines.length * lh - (lh - o.fs) + o.fs * 0.25, lines, lh };
+}
+function legendItems() {
+  const used = new Set(doc.objects.filter(o => o.type === 'wire').map(o => o.style));
+  const items = Object.keys(WIRE).filter(k => used.has(k)).map(k => ({ k, name: WIRE[k].name }));
+  const cams = doc.objects.filter(o => o.type === 'camera'), plan = cams.filter(o => !onPhoto(o)), src = plan.length ? plan : cams;
+  const kinds = [...new Set(src.map(o => o.kind === 'dome' ? 'dome' : 'bullet'))].sort();
+  items.unshift(...kinds.map(kd => ({ k: 'cam', kind: kd, name: kinds.length > 1 ? (kd === 'dome' ? 'ドームカメラ' : 'バレットカメラ') : (kd === 'dome' ? '防犯カメラ（ドーム）' : '防犯カメラ') })));
+  return items;
+}
+function bbox(o) {
+  switch (o.type) {
+    case 'sym': { const a = (o.rot || 0) * Math.PI / 180, c = Math.abs(Math.cos(a)), sn2 = Math.abs(Math.sin(a)); const bw = o.w * c + o.h * sn2, bh = o.w * sn2 + o.h * c; return { x: o.x - bw / 2, y: o.y - bh / 2, w: bw, h: bh }; }
+    case 'north': { const r = 40 * (o.sz || 1); return { x: o.x - r, y: o.y - r, w: 2 * r, h: 2 * r }; }
+    case 'line': case 'wire': case 'poly': {
+      const xs = o.pts.map(p => p[0]), ys = o.pts.map(p => p[1]);
+      return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    }
+    case 'arrow': return { x: Math.min(o.p1[0], o.p2[0]) - 4, y: Math.min(o.p1[1], o.p2[1]) - 4, w: Math.abs(o.p1[0] - o.p2[0]) + 8, h: Math.abs(o.p1[1] - o.p2[1]) + 8 };
+    case 'dim': return { x: Math.min(o.p1[0], o.p2[0]), y: Math.min(o.p1[1], o.p2[1]) - 10, w: Math.abs(o.p1[0] - o.p2[0]), h: Math.abs(o.p1[1] - o.p2[1]) + 20 };
+    case 'camera': { const r = 22 * (o.sz || 1); return { x: o.x - r, y: o.y - r, w: 2 * r, h: 2 * r }; }
+    case 'device': return { x: o.x - 22, y: o.y - 22, w: 44, h: 44 };
+    case 'photo': return { x: o.x, y: o.y, w: o.w, h: o.h + (o.caption ? o.cfs * 1.9 + 6 : 0) };
+    case 'callout': { const x = Math.min(o.x, o.tx), y = Math.min(o.y, o.ty); return { x, y, w: Math.max(o.x + o.w, o.tx) - x, h: Math.max(o.y + o.h, o.ty) - y }; }
+    case 'text': { const b = textBox(o); return o.box !== 'none' ? { x: b.x - 6, y: b.y - 5, w: b.w + 12, h: b.h + 10 } : b; }
+    case 'legend': { const n = legendItems().length; return { x: o.x, y: o.y, w: 190, h: 30 + Math.max(1, n) * 24 + 6 }; }
+    default: return { x: o.x, y: o.y, w: o.w, h: o.h };
+  }
+}
+
+/* ============ rendering ============ */
+const assetHref = (a, exp) => exp ? doc.assets[a] : (blobs[a] || doc.assets[a]);
+function camIcon(o) {
+  let s = '';
+  if (o.cone) {
+    const a = (o.coneAng || 60) * Math.PI / 360, L = o.coneLen || 110;
+    s += `<path d="M0,0L${r1(L * Math.cos(-a))},${r1(L * Math.sin(-a))}A${L},${L} 0 0 1 ${r1(L * Math.cos(a))},${r1(L * Math.sin(a))}Z" fill="${CAM}" fill-opacity=".2" stroke="${CAM}" stroke-opacity=".55" stroke-width="1"/>`;
+  }
+  if (o.kind === 'dome') {
+    s += `<circle r="13" fill="#e8f8fc" stroke="${CAMD}" stroke-width="1.6"/><circle r="7" fill="${CAM}" stroke="${CAMD}" stroke-width="1.2"/><circle cx="4" r="2.4" fill="${CAMD}"/>`;
+  } else {
+    s += `<rect x="-26" y="-5" width="5" height="10" fill="#94a3b8" stroke="${CAMD}" stroke-width="1"/><path d="M-21,0H-15" stroke="${CAMD}" stroke-width="2"/>`
+      + `<rect x="-15" y="-8.5" width="22" height="17" rx="3" fill="${CAM}" stroke="${CAMD}" stroke-width="1.6"/>`
+      + `<path d="M7,-6L15,-9.5V9.5L7,6Z" fill="${CAMD}"/>`;
+  }
+  return s;
+}
+function devIcon(kind) {
+  switch (kind) {
+    case 'recorder': return `<rect x="-17" y="-22" width="34" height="23" rx="2" fill="#1e293b" stroke="#0f172a" stroke-width="1.4"/><rect x="-14" y="-19" width="28" height="17" fill="${CAM}"/><path d="M0,1V7" stroke="#0f172a" stroke-width="2.5"/><rect x="-19" y="8" width="38" height="11" rx="1.5" fill="#334155" stroke="#0f172a" stroke-width="1.2"/><circle cx="13" cy="13.5" r="1.8" fill="#4ade80"/>`;
+    case 'nvr': return `<rect x="-20" y="-9" width="40" height="18" rx="2" fill="#334155" stroke="#0f172a" stroke-width="1.4"/><path d="M-15,-3H3M-15,2H3" stroke="#64748b" stroke-width="1.6"/><circle cx="10" cy="0" r="2" fill="#4ade80"/><circle cx="15" cy="0" r="2" fill="#fbbf24"/>`;
+    case 'monitor': return `<rect x="-19" y="-20" width="38" height="26" rx="2" fill="#1e293b" stroke="#0f172a" stroke-width="1.4"/><rect x="-16" y="-17" width="32" height="20" fill="${CAM}"/><path d="M0,6V12" stroke="#0f172a" stroke-width="2.5"/><path d="M-9,13H9" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>`;
+    case 'panel': return `<rect x="-10" y="-16" width="20" height="32" fill="${RED}" stroke="#7f1d1d" stroke-width="1.5"/><path d="M-6,-10H6M-6,-4H6" stroke="#fecaca" stroke-width="1.5"/>`;
+    case 'box': return `<rect x="-14" y="-12" width="28" height="24" fill="#f1f5f9" stroke="#334155" stroke-width="1.6"/><text y="3.5" text-anchor="middle" font-size="9" font-weight="700" fill="#334155" font-family="${FONT_ATTR}">BOX</text>`;
+    case 'hub': return `<rect x="-17" y="-8" width="34" height="16" rx="2" fill="#e2e8f0" stroke="#334155" stroke-width="1.5"/>${[-10, -4, 2, 8].map(x => `<rect x="${x}" y="-3" width="4" height="5" fill="#334155"/>`).join('')}`;
+    case 'pole': return `<circle r="11" fill="#fff" stroke="#111" stroke-width="2"/><circle r="5.5" fill="#111"/>`;
+    case 'outlet': return `<circle r="10" fill="#fff" stroke="#111" stroke-width="1.6"/><path d="M-3.5,-4V4M3.5,-4V4" stroke="#111" stroke-width="2"/>`;
+    case 'vent': return `<ellipse rx="15" ry="9" fill="#cbd5e1" stroke="#334155" stroke-width="1.5"/><path d="M-9,-3H9M-10,0H10M-9,3H9" stroke="#64748b" stroke-width="1"/>`;
+    case 'hole': return `<circle r="7.5" fill="#fff" stroke="${RED}" stroke-width="2.6"/>`;
+  }
+  return '';
+}
+function halo(x, y, txt, fs, extra = '') {
+  return `<text x="${r1(x)}" y="${r1(y)}" font-size="${fs}" text-anchor="middle" fill="#111" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="${FONT_ATTR}" ${extra}>${esc(txt)}</text>`;
+}
+function multiText(lines, x, y, fs, lh, attrs) {
+  return `<text x="${r1(x)}" y="${r1(y)}" font-size="${fs}" font-family="${FONT_ATTR}" ${attrs}>` + lines.map((l, i) => `<tspan x="${r1(x)}" dy="${i ? lh : 0}">${esc(l) || ' '}</tspan>`).join('') + '</text>';
+}
+function renderObj(o, exp) {
+  const hit = exp ? '' : ' ';
+  switch (o.type) {
+    case 'line': {
+      const pts = o.pts.map(p => p.join(',')).join(' ');
+      return `<polyline points="${pts}" fill="none" stroke="${o.color}" stroke-width="${o.w}" stroke-linecap="square" stroke-linejoin="miter" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`
+        + (exp ? '' : `<polyline points="${pts}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/>`);
+    }
+    case 'wire': {
+      const st = WIRE[o.style] || WIRE.exposed;
+      const d = o.smooth ? smoothPath(o.pts) : 'M' + o.pts.map(p => p.join(',')).join('L');
+      let s = o.parent ? `<path d="${d}" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>` : '';
+      s += `<path d="${d}" fill="none" stroke="${st.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''}/>`;
+      if (!exp) s += `<path d="${d}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/>`;
+      const lab = o.showLen ? lenLabel(o) : '';
+      if (lab) { const m = pointAt(wirePts(o), 0.5); s += halo(m[0] + (o.lx || 0), m[1] + (o.ly || 0) + 5, lab, 14, 'data-part="label"'); }
+      return s;
+    }
+    case 'rect': {
+      const fill = o.fill === 'none' ? 'none' : o.fill;
+      let s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="${fill}" stroke="#111" stroke-width="${o.sw}" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`;
+      if (!exp) s += `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="${fill === 'none' ? 'none' : 'transparent'}" stroke="transparent" stroke-width="14" pointer-events="${fill === 'none' ? 'stroke' : 'all'}"/>`;
+      if (o.label) {
+        const lines = o.label.split('\n'), lh = o.fs * 1.3;
+        s += multiText(lines, o.x + o.w / 2, o.y + o.h / 2 - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111"');
+      }
+      return s;
+    }
+    case 'text': {
+      const b = textBox(o); let s = '';
+      if (o.box !== 'none') s += `<rect x="${r1(b.x - 6)}" y="${r1(b.y - 5)}" width="${r1(b.w + 12)}" height="${r1(b.h + 10)}" fill="#fff" stroke="${o.box}" stroke-width="1.6"/>`;
+      else if (!exp) s += `<rect x="${r1(b.x)}" y="${r1(b.y)}" width="${r1(b.w)}" height="${r1(b.h)}" fill="transparent"/>`;
+      s += multiText(b.lines, o.x, o.y, o.fs, b.lh, `fill="${o.color}" font-weight="${o.bold ? 700 : 400}" text-anchor="${o.anchor}"`);
+      return s;
+    }
+    case 'camera': {
+      return `<g transform="translate(${o.x},${o.y}) rotate(${o.ang}) scale(${o.sz || 1})">${camIcon(o)}</g>`
+        + (exp ? '' : `<circle cx="${o.x}" cy="${o.y}" r="${18 * (o.sz || 1)}" fill="transparent"/>`)
+        + (o.hideLabel ? '' : halo(o.x + (o.lx || 0), o.y + (o.ly || 0) + 5, camLabel(o), 14, 'data-part="label"'));
+    }
+    case 'device': {
+      return `<g transform="translate(${o.x},${o.y})">${devIcon(o.kind)}</g>`
+        + (exp ? '' : `<circle cx="${o.x}" cy="${o.y}" r="16" fill="transparent"/>`)
+        + (o.label ? halo(o.x + (o.lx || 0), o.y + (o.ly || 0) + 5, o.label, 13, 'data-part="label"') : '');
+    }
+    case 'dim': {
+      const [x1, y1] = o.p1, [x2, y2] = o.p2, L = Math.hypot(x2 - x1, y2 - y1) || 1;
+      const ux = (x2 - x1) / L, uy = (y2 - y1) / L, nx = -uy, ny = ux, A = 11, B = 4.5;
+      const ar = (x, y, dx, dy) => `<path d="M${r1(x)},${r1(y)}L${r1(x + dx * A + nx * B)},${r1(y + dy * A + ny * B)}L${r1(x + dx * A - nx * B)},${r1(y + dy * A - ny * B)}Z" fill="#111"/>`;
+      let s = `<path d="M${x1},${y1}L${x2},${y2}" stroke="#111" stroke-width="1.3"/>`
+        + `<path d="M${r1(x1 + nx * 9)},${r1(y1 + ny * 9)}L${r1(x1 - nx * 9)},${r1(y1 - ny * 9)}M${r1(x2 + nx * 9)},${r1(y2 + ny * 9)}L${r1(x2 - nx * 9)},${r1(y2 - ny * 9)}" stroke="#111" stroke-width="1.3"/>`
+        + ar(x1, y1, ux, uy) + ar(x2, y2, -ux, -uy);
+      if (!exp) s += `<path d="M${x1},${y1}L${x2},${y2}" stroke="transparent" stroke-width="14"/>`;
+      const lab = lenLabel(o);
+      if (lab) {
+        const side = (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) ? -1 : 1;
+        const mx = (x1 + x2) / 2 + nx * side * (Math.abs(ux) > 0.7 ? 14 : 26) + (o.lx || 0), my = (y1 + y2) / 2 + ny * side * 14 + (o.ly || 0) + 5;
+        s += halo(mx, my, lab, 14, 'data-part="label"');
+      }
+      return s;
+    }
+    case 'callout': {
+      const cx = o.x + o.w / 2, cy = o.y + o.h / 2, dx = o.tx - cx, dy = o.ty - cy, L = Math.hypot(dx, dy) || 1;
+      const bw = Math.min(16, o.w / 3, o.h / 1.5), px = -dy / L * bw / 2, py = dx / L * bw / 2;
+      const tri = `M${r1(cx + px)},${r1(cy + py)}L${o.tx},${o.ty}L${r1(cx - px)},${r1(cy - py)}Z`;
+      const lines = String(o.text || '').split('\n'), lh = o.fs * 1.3;
+      return `<path d="${tri}" fill="#fff" stroke="#333" stroke-width="1.4" stroke-linejoin="round"/>`
+        + `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="9" fill="#fff" stroke="#333" stroke-width="1.4"/>`
+        + `<path d="${tri}" fill="#fff"/>`
+        + multiText(lines, cx, cy - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111"');
+    }
+    case 'photo': {
+      let s;
+      if (o.asset && doc.assets[o.asset]) {
+        s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="#eef1f4"/><image href="${assetHref(o.asset, exp)}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" preserveAspectRatio="xMidYMid slice"/><rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#8a96a3" stroke-width="1"/>`;
+      } else {
+        s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="#f1f4f7" stroke="#a3afbb" stroke-width="1" ${exp ? '' : 'stroke-dasharray="6 4"'}/>`;
+        if (!exp) {
+          const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+          s += `<g transform="translate(${cx},${cy - 12})" opacity=".55"><rect x="-16" y="-11" width="32" height="22" rx="4" fill="none" stroke="#5b6b7b" stroke-width="2"/><circle r="6" fill="none" stroke="#5b6b7b" stroke-width="2"/><rect x="-7" y="-15" width="10" height="5" rx="1.5" fill="#5b6b7b"/></g>`
+            + `<text x="${cx}" y="${cy + 26}" font-size="12" text-anchor="middle" fill="#5b6b7b" font-family="${FONT_ATTR}">ダブルクリック／ドロップで写真</text>`;
+        }
+      }
+      if (o.caption) {
+        const tw = textW(o.caption, o.cfs, false) + 14, ch = o.cfs * 1.6, cx = o.x + o.w / 2, cy = o.y + o.h + 6;
+        s += `<rect x="${r1(cx - tw / 2)}" y="${cy}" width="${r1(tw)}" height="${r1(ch)}" fill="#fff" stroke="${o.ccol}" stroke-width="1.6"/>`
+          + `<text x="${cx}" y="${r1(cy + ch / 2 + o.cfs * 0.36)}" font-size="${o.cfs}" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}">${esc(o.caption)}</text>`;
+      }
+      return s;
+    }
+    case 'image': {
+      if (!doc.assets[o.asset] || o.hide) return '';
+      if (exp && o.print === false) return '';
+      const tr = o.rot ? ` transform="rotate(${o.rot} ${o.x + o.w / 2} ${o.y + o.h / 2})"` : '';
+      return `<g${tr}><image href="${assetHref(o.asset, exp)}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" opacity="${o.opacity}" preserveAspectRatio="none"/>`
+        + (exp ? '' : `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="transparent"/>`) + '</g>';
+    }
+    case 'poly': {
+      const pts = o.pts.map(p => p.join(',')).join(' '), fill = o.fill === 'none' ? 'none' : o.fill, n = o.pts.length;
+      let s = `<polygon points="${pts}" fill="${fill}" stroke="#111" stroke-width="${o.sw}" stroke-linejoin="miter" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`;
+      if (!exp) s += `<polygon points="${pts}" fill="${fill === 'none' ? 'none' : 'transparent'}" stroke="transparent" stroke-width="14" pointer-events="${fill === 'none' ? 'stroke' : 'all'}"/>`;
+      const cx = o.pts.reduce((a, p) => a + p[0], 0) / n, cy = o.pts.reduce((a, p) => a + p[1], 0) / n;
+      if (o.showEdges && doc.scale) for (let i = 0; i < n; i++) {
+        const a = o.pts[i], b = o.pts[(i + 1) % n], L = dist(a, b); if (L < 30) continue;
+        let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        if ((mx + nx - cx) ** 2 + (my + ny - cy) ** 2 < (mx - cx) ** 2 + (my - cy) ** 2) { nx = -nx; ny = -ny; }
+        s += halo(mx + nx * 15, my + ny * 15 + 4, '約' + (L / doc.scale).toFixed(1) + 'm', 12, exp ? '' : 'pointer-events="none"');
+      }
+      if (o.label) {
+        const lines = o.label.split('\n'), lh = o.fs * 1.3;
+        s += multiText(lines, cx + (o.lx || 0), cy + (o.ly || 0) - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111" data-part="label"');
+      }
+      return s;
+    }
+    case 'sym': {
+      return `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0}) scale(${o.flip ? -1 : 1},1)">${symIcon(o)}`
+        + (exp ? '' : `<rect x="${-o.w / 2 - 4}" y="${-o.h / 2 - 4}" width="${o.w + 8}" height="${o.h + 8}" fill="transparent"/>`) + '</g>';
+    }
+    case 'arrow': {
+      const [x1, y1] = o.p1, [x2, y2] = o.p2, L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L, w = o.w || 3, A = 6 + w * 3, B = 3 + w * 1.6;
+      const bx = x2 - ux * A, by = y2 - uy * A, head = `M${x2},${y2}L${r1(bx - uy * B)},${r1(by + ux * B)}L${r1(bx + uy * B)},${r1(by - ux * B)}Z`;
+      let s = '';
+      if (o.halo !== false) s += `<path d="M${x1},${y1}L${r1(bx)},${r1(by)}" stroke="#fff" stroke-opacity=".85" stroke-width="${w + 3.5}" stroke-linecap="round"/><path d="${head}" fill="#fff" fill-opacity=".85" stroke="#fff" stroke-opacity=".85" stroke-width="3.5" stroke-linejoin="round"/>`;
+      s += `<path d="M${x1},${y1}L${r1(bx)},${r1(by)}" stroke="${o.color}" stroke-width="${w}" stroke-linecap="round" ${o.dash ? `stroke-dasharray="${w * 3} ${w * 2}"` : ''}/><path d="${head}" fill="${o.color}"/>`;
+      if (!exp) s += `<path d="M${x1},${y1}L${x2},${y2}" stroke="transparent" stroke-width="14"/>`;
+      return s;
+    }
+    case 'mark': {
+      const rx = o.w / 2, ry = o.h / 2, cx = o.x + rx, cy = o.y + ry;
+      return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="${o.color}" stroke-width="${o.sw}"/>`
+        + (exp ? '' : `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/>`);
+    }
+    case 'north': {
+      return `<g transform="translate(${o.x},${o.y}) rotate(${o.ang}) scale(${o.sz || 1})"><circle r="22" fill="#fff" stroke="#111" stroke-width="1.5"/>`
+        + `<path d="M0,-30L9,12L0,5Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M0,-30L-9,12L0,5Z" fill="#111" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/>`
+        + `<text y="-35" font-size="15" font-weight="700" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}">N</text></g>`;
+    }
+    case 'legend': {
+      const items = legendItems(), b = bbox(o);
+      let s = `<rect x="${o.x}" y="${o.y}" width="${b.w}" height="${b.h}" fill="#fff" stroke="#111" stroke-width="1.4"/>`
+        + `<path d="M${o.x},${o.y + 28}H${o.x + b.w}" stroke="#111" stroke-width="1"/>`
+        + `<text x="${o.x + b.w / 2}" y="${o.y + 19}" font-size="14" font-weight="700" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}">凡　例</text>`;
+      if (!items.length) s += `<text x="${o.x + 14}" y="${o.y + 50}" font-size="12" fill="#667" font-family="${FONT_ATTR}">（配線を引くと自動表示）</text>`;
+      items.forEach((it, i) => {
+        const y = o.y + 30 + i * 24 + 12;
+        if (it.k === 'cam') s += `<g transform="translate(${o.x + 44},${y}) scale(${it.kind === 'dome' ? .7 : .75})">${camIcon({ kind: it.kind })}</g>`;
+        else { const st = WIRE[it.k]; s += `<path d="M${o.x + 14},${y}H${o.x + 74}" stroke="${st.color}" stroke-width="3" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''}/>`; }
+        s += `<text x="${o.x + 88}" y="${y + 5}" font-size="13" fill="#111" font-family="${FONT_ATTR}">${esc(it.name)}</text>`;
+      });
+      return s;
+    }
+  }
+  return '';
+}
+function fmtDate(v) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v || ''); return m ? `${+m[1]}年${+m[2]}月${+m[3]}日` : (v || ''); }
+function titleBlock() {
+  const m = doc.meta, w = 400, x = W - 40 - w, rh = 34, lw = 110, rows = [['物件名', m.property], ['施工業者', m.contractor], ['作成日', fmtDate(m.date)]];
+  if (doc.pages && doc.pages.length > 1) rows.push(['図面', `${doc.pages[doc.cur].name}（${doc.cur + 1}/${doc.pages.length}）`]);
+  const y = H - 40 - rh * (rows.length + 1);
+  let s = `<rect x="${x}" y="${y}" width="${w}" height="${rh * (rows.length + 1)}" fill="#fff" stroke="#111" stroke-width="1.6"/>`
+    + `<text x="${x + w / 2}" y="${y + rh / 2 + 6}" font-size="16" font-weight="700" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}" letter-spacing="2">${esc(m.title)}</text>`;
+  rows.forEach((r, i) => {
+    const yy = y + rh * (i + 1);
+    s += `<path d="M${x},${yy}H${x + w}" stroke="#111" stroke-width="1"/>`
+      + `<text x="${x + lw / 2}" y="${yy + rh / 2 + 5}" font-size="13" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}">${esc(r[0])}</text>`
+      + `<text x="${x + lw + (w - lw) / 2}" y="${yy + rh / 2 + 5}" font-size="14" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}">${esc(r[1])}</text>`;
+  });
+  s += `<path d="M${x + lw},${y + rh}V${y + rh * (rows.length + 1)}" stroke="#111" stroke-width="1"/>`;
+  return s;
+}
+function frame() { return `<rect x="24" y="24" width="${W - 48}" height="${H - 48}" fill="none" stroke="#111" stroke-width="2"/>`; }
+
+const nodeMap = new Map(), strMap = new Map();
+let lastPaper = '', lastFixed = '';
+function render() {
+  const paper = `<rect x="0" y="0" width="${W}" height="${H}" fill="#fff" filter="url(#pshadow)"/>` + (gridOn ? `<rect x="24" y="24" width="${W - 48}" height="${H - 48}" fill="url(#gridp)"/>` : '') + frame();
+  if (paper !== lastPaper) { $('#paper').innerHTML = paper; lastPaper = paper; }
+  const g0 = $('#objs'), seen = new Set(); let prev = null;
+  for (const o of doc.objects) {
+    const s = renderObj(o, false);
+    let g = nodeMap.get(o.id);
+    if (!g) { g = document.createElementNS(NS, 'g'); g.dataset.id = o.id; nodeMap.set(o.id, g); }
+    if (strMap.get(o.id) !== s) { g.innerHTML = s; strMap.set(o.id, s); }
+    g.classList.toggle('locked', !!o.locked);
+    const want = prev ? prev.nextSibling : g0.firstChild;
+    if (want !== g) g0.insertBefore(g, want);
+    prev = g; seen.add(o.id);
+  }
+  for (const [id, g] of nodeMap) if (!seen.has(id)) { g.remove(); nodeMap.delete(id); strMap.delete(id); }
+  const fx = `<g data-id="__title" style="cursor:pointer">${titleBlock()}</g>`;
+  if (fx !== lastFixed) { $('#fixed').innerHTML = fx; lastFixed = fx; }
+  if (editPhoto && !byId(editPhoto)) exitPhotoEdit();
+  renderOverlay(); updateStatus(); renderPlanbar();
+}
+let lastPB = '';
+function renderPlanbar() {
+  const imgs = doc.objects.filter(o => o.type === 'image'), pb = $('#planbar');
+  const h = imgs.length ? `<span>${imgs.some(o => o.isMap) ? '地図' : '下絵'}の画像</span>`
+    + (imgs.every(o => o.locked) ? `<button class="btn" data-pb="unlock" title="固定を外して拡大縮小・移動できるようにする">固定を解除</button>` : `<button class="btn primary" data-pb="lock" title="位置と大きさを固定する">固定する</button>`)
+    + `<button class="btn" data-pb="toggle">${imgs.every(o => o.hide) ? '表示する' : '隠す'}</button>`
+    + `<button class="btn danger" data-pb="delete">削除</button>` : '';
+  if (h !== lastPB) { pb.innerHTML = h; lastPB = h; pb.hidden = !imgs.length; }
+}
+$('#planbar').addEventListener('click', e => {
+  const b = e.target.closest('[data-pb]'); if (!b) return;
+  const imgs = doc.objects.filter(o => o.type === 'image'); if (!imgs.length) return;
+  const a = b.dataset.pb;
+  if (a === 'toggle') { pushUndo(); const show = imgs.every(o => o.hide); imgs.forEach(o => o.hide = !show); render(); save(); toast(show ? '画像を表示しました' : '画像を隠しました（書き出しにも出ません）'); }
+  if (a === 'lock') lockImages(imgs);
+  if (a === 'unlock') { pushUndo(); imgs.forEach(o => { o.locked = false; o.hide = false; }); select(imgs.map(o => o.id)); save(); toast('固定を解除しました。四隅で拡大縮小、中をドラッグで移動できます'); }
+  if (a === 'delete') confirmModal('画像を削除', `貼り付けた${imgs.some(o => o.isMap) ? '地図' : '下絵'}の画像を削除します。なぞった建物や線は残ります。（元に戻すで戻せます）`, '削除する').then(ok => { if (ok) { pushUndo(); const ids = new Set(imgs.map(o => o.id)); doc.objects = doc.objects.filter(o => !ids.has(o.id)); for (const id of ids) sel.delete(id); render(); refreshPane(); save(); toast('画像を削除しました'); } });
+});
+function lockImages(imgs) {
+  pushUndo(); imgs.forEach(o => o.locked = true); select([]); save();
+  if (imgs.some(o => o.isMap) && !doc.scale) { setTool('scale'); toast('固定しました。続けて地図の縮尺バーの両端をクリックしてください'); }
+  else toast('固定しました。クリックしても動きません（右上の「固定を解除」で戻せます）');
+}
+function k() { const r = svg.getBoundingClientRect(); return vb.w / (r.width || 1); }
+function renderOverlay() {
+  const K = k(), hs = 9 * K, sw = 1.4 * K; let s = '';
+  const H_ = (x, y, code, shape) => shape === 'c'
+    ? `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(hs * 0.62)}" fill="#fff" stroke="#0a7891" stroke-width="${sw}" data-h="${code}" style="cursor:pointer"/>`
+    : `<rect x="${r1(x - hs / 2)}" y="${r1(y - hs / 2)}" width="${r1(hs)}" height="${r1(hs)}" fill="#fff" stroke="#0a7891" stroke-width="${sw}" data-h="${code}" style="cursor:${shape || 'move'}"/>`;
+  for (const id of sel) {
+    const o = byId(id); if (!o) continue; const b = bbox(o), p = 5 * K;
+    s += `<rect x="${r1(b.x - p)}" y="${r1(b.y - p)}" width="${r1(b.w + 2 * p)}" height="${r1(b.h + 2 * p)}" fill="none" stroke="#0a7891" stroke-width="${sw}" stroke-dasharray="${r1(5 * K)} ${r1(4 * K)}" pointer-events="none"/>`;
+  }
+  if (sel.size === 1) {
+    const o = byId([...sel][0]);
+    if (o && !o.locked) {
+      if (o.type === 'line' || o.type === 'wire' || o.type === 'poly') {
+        o.pts.forEach((p, i) => { s += H_(p[0], p[1], 'v:' + i); });
+        for (let i = 0; i < o.pts.length - (o.type === 'poly' ? 0 : 1); i++) { const a = o.pts[i], b = o.pts[(i + 1) % o.pts.length]; s += H_((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 'm:' + i, 'c'); }
+      } else if (o.type === 'dim' || o.type === 'arrow') { s += H_(o.p1[0], o.p1[1], 'p1') + H_(o.p2[0], o.p2[1], 'p2'); }
+      else if (['rect', 'photo', 'image', 'callout', 'mark'].includes(o.type)) {
+        s += H_(o.x, o.y, 'c:nw', 'nwse-resize') + H_(o.x + o.w, o.y, 'c:ne', 'nesw-resize') + H_(o.x, o.y + o.h, 'c:sw', 'nesw-resize') + H_(o.x + o.w, o.y + o.h, 'c:se', 'nwse-resize');
+        if (o.type === 'callout') s += H_(o.tx, o.ty, 't', 'c');
+      } else if (o.type === 'sym') {
+        const a = (o.rot || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), W2 = o.w / 2, H2 = o.h / 2;
+        const cx = o.x + W2 * ca - H2 * sa, cy = o.y + W2 * sa + H2 * ca;
+        const rl = H2 + 30 * K, rx = o.x + rl * sa, ry = o.y - rl * ca;
+        s += `<path d="M${o.x},${o.y}L${r1(rx)},${r1(ry)}" stroke="#0a7891" stroke-width="${sw}" pointer-events="none"/>` + H_(rx, ry, 'rot', 'c') + H_(cx, cy, 'ss', 'nwse-resize');
+      } else if (o.type === 'camera' || o.type === 'north') {
+        const a = (o.ang - (o.type === 'north' ? 90 : 0)) * Math.PI / 180, L = o.type === 'north' ? 52 * (o.sz || 1) : 46;
+        const hx = o.x + Math.cos(a) * L, hy = o.y + Math.sin(a) * L;
+        s += `<path d="M${o.x},${o.y}L${r1(hx)},${r1(hy)}" stroke="#0a7891" stroke-width="${sw}" pointer-events="none"/>` + H_(hx, hy, 'rot', 'c');
+      }
+    }
+  }
+  if (drag && drag.kind === 'marquee') {
+    const x = Math.min(drag.p0.x, drag.p1.x), y = Math.min(drag.p0.y, drag.p1.y);
+    s += `<rect x="${x}" y="${y}" width="${Math.abs(drag.p1.x - drag.p0.x)}" height="${Math.abs(drag.p1.y - drag.p0.y)}" fill="rgba(10,120,145,.08)" stroke="#0a7891" stroke-width="${sw}" pointer-events="none"/>`;
+  }
+  if (drag && (drag.kind === 'mk-rect' || drag.kind === 'mk-dim')) {
+    const a = drag.p0, b = drag.p1;
+    if (drag.kind === 'mk-rect' && drag.otype === 'mark') s += `<ellipse cx="${(a.x + b.x) / 2}" cy="${(a.y + b.y) / 2}" rx="${Math.abs(b.x - a.x) / 2}" ry="${Math.abs(b.y - a.y) / 2}" fill="none" stroke="${RED}" stroke-width="3" pointer-events="none"/>`;
+    else if (drag.kind === 'mk-rect') s += `<rect x="${Math.min(a.x, b.x)}" y="${Math.min(a.y, b.y)}" width="${Math.abs(b.x - a.x)}" height="${Math.abs(b.y - a.y)}" fill="none" stroke="#111" stroke-width="2" pointer-events="none"/>`;
+    else if (drag.otype === 'arrow') s += `<path d="M${a.x},${a.y}L${b.x},${b.y}" stroke="${drag.parent ? CAM : BLUE}" stroke-width="3" pointer-events="none"/>`;
+    else s += `<path d="M${a.x},${a.y}L${b.x},${b.y}" stroke="#111" stroke-width="1.3" pointer-events="none"/>` + (doc.scale ? halo((a.x + b.x) / 2, (a.y + b.y) / 2 - 10, '約' + Math.max(1, Math.ceil(dist([a.x, a.y], [b.x, b.y]) / doc.scale - 0.05)) + 'm', 14, 'pointer-events="none"') : '');
+  }
+  if (draft) {
+    const pts = draft.cur ? [...draft.pts, draft.cur] : draft.pts;
+    let stroke = '#111', dash = '', w = 2.5;
+    if (draft.type === 'wire') { const st = WIRE[opt.wire]; stroke = st.color; dash = st.dash; w = 3; }
+    if (draft.type === 'scale') { stroke = '#e11d48'; dash = '6 4'; w = 2; }
+    s += `<${draft.type === 'poly' ? 'polygon' : 'polyline'} points="${pts.map(p => p.join(',')).join(' ')}" fill="${draft.type === 'poly' ? 'rgba(10,120,145,.06)' : 'none'}" stroke="${stroke}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ''} pointer-events="none"/>`;
+    if (draft.type === 'poly' && draft.pts.length >= 3 && draft.cur && dist(draft.cur, draft.pts[0]) < 12 * K) s += `<circle cx="${draft.pts[0][0]}" cy="${draft.pts[0][1]}" r="${r1(9 * K)}" fill="none" stroke="#16a34a" stroke-width="${2 * K}" pointer-events="none"/>`;
+    if ((draft.type === 'poly' || draft.type === 'line') && doc.scale && draft.cur && draft.pts.length) { const a = draft.pts[draft.pts.length - 1], c = draft.cur; s += halo(c[0] + 14 * K, c[1] - 12 * K, (dist(a, c) / doc.scale).toFixed(1) + 'm', 13, 'text-anchor="start" pointer-events="none"'); }
+    draft.pts.forEach(p => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="${r1(3.5 * K)}" fill="${stroke}" pointer-events="none"/>`; });
+    if (draft.type === 'wire' && doc.scale && pts.length > 1) { const c = pts[pts.length - 1]; s += halo(c[0] + 14 * K, c[1] - 12 * K, '計 約' + Math.ceil(polyLen(pts) / doc.scale) + 'm', 13, 'text-anchor="start" pointer-events="none"'); }
+  }
+  if (draft && draft.snapHit) s += `<circle cx="${draft.snapHit[0]}" cy="${draft.snapHit[1]}" r="${r1(11 * K)}" fill="none" stroke="#16a34a" stroke-width="${2 * K}" pointer-events="none"/>`;
+  if (editPhoto) { const ph = byId(editPhoto); if (ph) { const big = 1e5; s = `<path d="M${-big},${-big}H${big}V${big}H${-big}Z M${ph.x},${ph.y}V${ph.y + ph.h}H${ph.x + ph.w}V${ph.y}Z" fill="#0d141c" fill-opacity=".72" fill-rule="evenodd" pointer-events="none"/><rect x="${ph.x}" y="${ph.y}" width="${ph.w}" height="${ph.h}" fill="none" stroke="#38c3e2" stroke-width="${r1(2 * K)}" pointer-events="none"/>` + s; } }
+  $('#overlay').innerHTML = s;
+}
+
+/* ============ pages ============ */
+function renderPages() {
+  const pb = $('#pagebar'); if (!pb || !doc.pages) return;
+  const n = doc.pages.length;
+  pb.innerHTML = `<button class="pg add" data-pg="add" title="ページを追加">＋ 追加</button>`
+    + (n > 1 ? `<select class="pgsel" id="pgsel" aria-label="ページを選ぶ">${doc.pages.map((pg, i) => `<option value="${i}" ${i === doc.cur ? 'selected' : ''}>${i + 1}/${n}　${esc(pg.name)}</option>`).join('')}</select>` : '')
+    + `<div class="pgscroll" id="pgscroll">${doc.pages.map((pg, i) => `<button class="pg" data-pg="${i}" aria-current="${i === doc.cur}" title="ダブルクリックで名前を変更">${esc(pg.name)}</button>`).join('')}</div>`;
+  const act = pb.querySelector('.pgscroll [aria-current="true"]'); if (act) { const sc = $('#pgscroll'); const l = act.offsetLeft - sc.offsetLeft, r2 = l + act.offsetWidth; if (l < sc.scrollLeft || r2 > sc.scrollLeft + sc.clientWidth) sc.scrollLeft = l - sc.clientWidth / 2 + act.offsetWidth / 2; }
+}
+function switchPage(i) {
+  if (i === doc.cur || !doc.pages[i]) return;
+  if (editPhoto) exitPhotoEdit();
+  if (draft) finishDraft(true);
+  syncPage(); usePage(i); adoptPhotoKids(); sel = new Set();
+  render(); refreshPane(); renderPages(); save();
+}
+function remapIds(objs) {
+  const map = {}; const out = objs.map(o => { const c = clone(o); map[o.id] = c.id = uid(); return c; });
+  for (const c of out) if (c.parent) c.parent = map[c.parent] || c.parent;
+  return out;
+}
+async function addPage() {
+  const mode = await modal('ページを追加', `<label class="chk"><input type="radio" name="am" value="blank" checked> 白紙のページ（凡例のみ）</label>
+    <label class="chk"><input type="radio" name="am" value="dup"> このページを複製（別の階・別の棟を似た形で描くとき）</label>
+    <div class="f"><label for="mPgName">ページ名</label><input type="text" id="mPgName" value="${doc.pages.length + 1}枚目"></div>`, '追加する',
+    f => ({ m: f.querySelector('input[name=am]:checked').value, name: f.querySelector('#mPgName').value.trim() || (doc.pages.length + 1) + '枚目' }));
+  if (!mode) return;
+  pushUndo(); syncPage();
+  const cur = doc.pages[doc.cur];
+  const pg = mode.m === 'dup' ? { id: uid(), name: mode.name, objects: remapIds(cur.objects), scale: cur.scale }
+    : { id: uid(), name: mode.name, objects: [{ id: uid(), type: 'legend', x: Math.max(30, W - 440 - 206), y: H - 40 - 160 }], scale: null };
+  doc.pages.splice(doc.cur + 1, 0, pg);
+  doc.cur = -1; switchPage(doc.pages.indexOf(pg));
+  toast(`「${pg.name}」を追加しました`);
+}
+async function renamePage(i) {
+  const v = await modal('ページ名を変更', `<div class="f"><label for="mRen">ページ名（例：1F、2F、外構、駐輪場）</label><input type="text" id="mRen" value="${esc(doc.pages[i].name)}"></div>`, '変更する', f => f.querySelector('#mRen').value.trim() || false);
+  if (!v) return; pushUndo(); doc.pages[i].name = v; renderPages(); render(); refreshPane(); save();
+}
+async function deletePage(i) {
+  if (doc.pages.length < 2) { toast('最後の1ページは削除できません'); return; }
+  const ok = await confirmModal('ページを削除', `「${esc(doc.pages[i].name)}」を削除しますか？（元に戻すで戻せます）`, '削除する'); if (!ok) return;
+  pushUndo(); syncPage(); if (editPhoto) exitPhotoEdit();
+  doc.pages.splice(i, 1); usePage(Math.min(i, doc.pages.length - 1)); sel = new Set();
+  render(); refreshPane(); renderPages(); save(); toast('ページを削除しました');
+}
+function movePage(i, d) {
+  const j = i + d; if (j < 0 || j >= doc.pages.length) return;
+  pushUndo(); syncPage(); const [pg] = doc.pages.splice(i, 1); doc.pages.splice(j, 0, pg); doc.cur = j;
+  renderPages(); render(); refreshPane(); save();
+}
+$('#pagebar').addEventListener('click', e => { const b = e.target.closest('[data-pg]'); if (!b) return; if (b.dataset.pg === 'add') addPage(); else switchPage(+b.dataset.pg); });
+$('#pagebar').addEventListener('change', e => { if (e.target.id === 'pgsel') switchPage(+e.target.value); });
+$('#pagebar').addEventListener('wheel', e => { const sc = e.target.closest('#pgscroll'); if (sc && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { sc.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
+$('#pagebar').addEventListener('dblclick', e => { const b = e.target.closest('[data-pg]'); if (b && b.dataset.pg !== 'add') renamePage(+b.dataset.pg); });
+
+/* ============ photo edit mode ============ */
+function enterPhotoEdit(id) {
+  const ph = byId(id); if (!ph || !ph.asset) return;
+  if (draft) finishDraft(true);
+  editPrevVB = { ...vb }; editPhoto = id; adoptPhotoKids();
+  stage.classList.add('editing'); setTool('select'); select([]);
+  const r = svg.getBoundingClientRect(), pad = 70 * Math.max(ph.w, ph.h) / 400;
+  const s2 = Math.min(r.width / (ph.w + pad * 2), (r.height - 60) / (ph.h + pad * 2));
+  vb.w = r.width / s2; vb.h = r.height / s2; vb.x = ph.x + ph.w / 2 - vb.w / 2; vb.y = ph.y + ph.h / 2 - vb.h / 2 + 20 / s2; applyVB();
+  renderEditbar(); render();
+}
+function exitPhotoEdit() {
+  if (!editPhoto) return;
+  editPhoto = null; stage.classList.remove('editing'); $('#editbar').hidden = true;
+  if (draft) finishDraft(true);
+  setTool('select'); select([]);
+  if (editPrevVB) { vb = { ...editPrevVB }; const r = svg.getBoundingClientRect(); vb.h = vb.w * r.height / r.width; applyVB(); }
+  render();
+}
+function renderEditbar() {
+  const ph = byId(editPhoto); if (!ph) { exitPhotoEdit(); return; }
+  const eb = $('#editbar'); eb.hidden = false;
+  eb.innerHTML = `<span><b>写真を編集中</b>「${esc(ph.caption || '無題')}」　左の配線・カメラ・機器・矢印・囲み・文字で描き込めます</span><button class="btn" id="ebDone">編集を終える</button>`;
+  $('#ebDone').onclick = exitPhotoEdit;
+}
+
+/* ============ paper ============ */
+function applyPaper() {
+  const m = PAPERS[doc.paper || 'A3L'].mm; W = m[0] * 4; H = m[1] * 4;
+  const sp = document.getElementById('selPaper'); if (sp) sp.value = doc.paper || 'A3L';
+  if (typeof svg !== 'undefined' && svg.getBoundingClientRect().width) fit();
+}
+function scaleAll(f, ox, oy, nx, ny) {
+  const m = (x, y) => [r1(nx + (x - ox) * f), r1(ny + (y - oy) * f)];
+  for (const o of doc.objects) {
+    if ('x' in o) [o.x, o.y] = m(o.x, o.y);
+    if ('w' in o) { o.w = r1(o.w * f); o.h = r1(o.h * f); }
+    if (o.pts) o.pts = o.pts.map(p => m(p[0], p[1]));
+    if (o.p1) { o.p1 = m(...o.p1); o.p2 = m(...o.p2); }
+    if ('tx' in o) [o.tx, o.ty] = m(o.tx, o.ty);
+    if (o.type === 'camera' && o.coneLen) o.coneLen = Math.round(o.coneLen * f);
+  }
+  if (doc.scale) doc.scale *= f;
+}
+async function changePaper(key) {
+  const sp = $('#selPaper'); sp.value = doc.paper;
+  if (!PAPERS[key] || key === doc.paper) return;
+  const oldW = W, oldH = H, nm = PAPERS[key].mm, nW = nm[0] * 4, nH = nm[1] * 4;
+  const empty = !doc.objects.some(o => o.type !== 'legend');
+  let mode = 'fit';
+  if (!empty) {
+    mode = await modal(`用紙を ${PAPERS[key].name} に変更`, `<p class="note" style="font-size:13px;color:var(--ink)">いま描いてある図をどうしますか？</p>
+      <label class="chk"><input type="radio" name="pm" value="fit" checked> 新しい用紙に合わせて図を縮小・拡大する（文字の大きさはそのまま）</label>
+      <label class="chk"><input type="radio" name="pm" value="keep"> 位置も大きさも変えない（はみ出した部分は自分で調整）</label>
+      <p class="note">縮小・拡大した場合、縮尺も自動で合わせ直します。あとから「元に戻す」で戻せます。</p>`, '変更する', f => f.querySelector('input[name=pm]:checked').value);
+    if (!mode) return;
+  }
+  pushUndo();
+  if (mode === 'fit') {
+    const f = Math.min((nW - 48) / (oldW - 48), (nH - 48) / (oldH - 48));
+    const nx = (nW - (oldW - 48) * f) / 2, ny = (nH - (oldH - 48) * f) / 2;
+    forEachPage(() => scaleAll(f, 24, 24, nx, ny));
+  }
+  doc.paper = key; applyPaper();
+  const tb = { x: W - 440, y: H - 40 - 170 };
+  syncPage(); for (const lg of doc.pages.flatMap(pg => pg.objects).filter(o => o.type === 'legend')) { const bb = bbox(lg); if (bb.x + bb.w > tb.x - 4 && bb.y + bb.h > tb.y - 4 || bb.x + bb.w > W - 24 || bb.y + bb.h > H - 24) { lg.x = Math.max(30, tb.x - bb.w - 16); lg.y = H - 40 - bb.h; } }
+  render(); refreshPane(); save();
+  toast(`用紙を ${PAPERS[key].name} にしました。書き出しもこのサイズになります`);
+}
+
+/* ============ view ============ */
+const svg = $('#cv'), stage = $('#stage');
+function applyVB() { svg.setAttribute('viewBox', `${vb.x} ${vb.y} ${vb.w} ${vb.h}`); const r = svg.getBoundingClientRect(); $('#zVal').textContent = Math.round((r.width / vb.w) / 0.945 * 100) + '%'; renderOverlay(); }
+function fit() { const r = svg.getBoundingClientRect(); if (!r.width) return; const s = Math.min((r.width - 40) / W, (r.height - 40) / H); vb.w = r.width / s; vb.h = r.height / s; vb.x = (W - vb.w) / 2; vb.y = (H - vb.h) / 2; applyVB(); }
+function zoomAt(f, cx, cy) {
+  const r = svg.getBoundingClientRect(); const nw = Math.min(W * 4, Math.max(W / 25, vb.w * f)); f = nw / vb.w;
+  if (cx == null) { cx = vb.x + vb.w / 2; cy = vb.y + vb.h / 2; }
+  vb.x = cx - (cx - vb.x) * f; vb.y = cy - (cy - vb.y) * f; vb.w = nw; vb.h = nw * r.height / r.width; applyVB();
+}
+new ResizeObserver(() => { const r = svg.getBoundingClientRect(); if (!r.width) return; if (!applyVB.done) { applyVB.done = 1; fit(); return; } vb.h = vb.w * r.height / r.width; applyVB(); }).observe(svg);
+function pt(e) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse()); return { x: q.x, y: q.y }; }
+const sn = v => snapOn ? Math.round(v / 10) * 10 : Math.round(v);
+function ortho(prev, p) {
+  const dx = p[0] - prev[0], dy = p[1] - prev[1], L = Math.hypot(dx, dy), a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+  return [Math.round(prev[0] + Math.cos(a) * L), Math.round(prev[1] + Math.sin(a) * L)];
+}
+function snapTarget(p, exceptId) {
+  let best = null, bd = 16 * Math.max(1, k());
+  for (const o of doc.objects) {
+    if (o.id === exceptId) continue;
+    const cands = (o.type === 'camera' || o.type === 'device') ? [[o.x, o.y]] : (o.type === 'wire' ? o.pts : []);
+    for (const c of cands) { const d = dist(c, p); if (d < bd) { bd = d; best = c; } }
+  }
+  return best ? [best[0], best[1]] : null;
+}
+
+/* ============ tools ============ */
+const IC = {
+  select: '<path d="M6 3l13 9-6 1.4L16 20l-2.6 1.2-3-6.6L6 18z" fill="currentColor"/>',
+  hand: '<path d="M8 12V6a1.5 1.5 0 013 0v5V4.5a1.5 1.5 0 013 0V11V5.5a1.5 1.5 0 013 0V12V8.5a1.5 1.5 0 013 0V15c0 4-3 6.5-6.5 6.5S7.5 20 5.5 17L3.8 14a1.4 1.4 0 012.3-1.6L8 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  line: '<path d="M3 19V6h18" fill="none" stroke="currentColor" stroke-width="2.6"/>',
+  rect: '<rect x="3.5" y="5.5" width="17" height="13" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 12h8" stroke="currentColor" stroke-width="1.4"/>',
+  text: '<path d="M5 6V4h14v2M12 4v16M9 20h6" fill="none" stroke="currentColor" stroke-width="2"/>',
+  camera: '<g transform="translate(13 12) rotate(-25)"><rect x="-9" y="-5" width="13" height="10" rx="2" fill="' + CAM + '" stroke="currentColor" stroke-width="1.4"/><path d="M4-3.5l5-2v11l-5-2z" fill="currentColor"/><path d="M-9 0h-3" stroke="currentColor" stroke-width="2"/></g>',
+  dome: '<circle cx="12" cy="12" r="8" fill="#e8f8fc" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="4" fill="' + CAM + '" stroke="currentColor" stroke-width="1.2"/>',
+  exposed: '<path d="M3 17C8 17 9 7 14 7s5 5 7 5" fill="none" stroke="' + BLUE + '" stroke-width="2.6"/>',
+  concealed: '<path d="M3 17C8 17 9 7 14 7s5 5 7 5" fill="none" stroke="' + BLUE + '" stroke-width="2.6" stroke-dasharray="4 3"/>',
+  aerial: '<path d="M3 17C8 17 9 7 14 7s5 5 7 5" fill="none" stroke="' + BLUE + '" stroke-width="2.4" stroke-dasharray="6 2 1.5 2"/>',
+  power: '<path d="M3 17C8 17 9 7 14 7s5 5 7 5" fill="none" stroke="' + RED + '" stroke-width="2.6"/>',
+  dim: '<path d="M3 12h18M3 8v8M21 8v8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 12l4-2.5v5zM21 12l-4-2.5v5z" fill="currentColor"/>',
+  callout: '<path d="M4 5h16a1.5 1.5 0 011.5 1.5v8A1.5 1.5 0 0120 16h-9l-5 4v-4H4a1.5 1.5 0 01-1.5-1.5v-8A1.5 1.5 0 014 5z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  photo: '<rect x="3" y="5" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 15l4-4 3 3 3-2 4 3" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="7" y="18.5" width="10" height="3" fill="none" stroke="' + BLUE + '" stroke-width="1.3"/>',
+  arrow: '<path d="M4 19L17 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M20 3l-2 8-6-6z" fill="currentColor"/>',
+  mark: '<ellipse cx="12" cy="12" rx="9" ry="6.5" fill="none" stroke="#dc2626" stroke-width="2.4"/>',
+  poly: '<path d="M4 20V9l6-5 10 4v12z" fill="#eef1f4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.4"/>',
+  map: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z" fill="#e3f1f6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="1.2"/><circle cx="12" cy="10" r="2.2" fill="#dc2626"/>',
+  north: '<circle cx="12" cy="13" r="7.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M12 3l4 13-4-3-4 3z" fill="currentColor"/><text x="12" y="23.5" font-size="0" />',
+  scale: '<rect x="2.5" y="8" width="19" height="8" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 8v3M9.5 8v4.5M13 8v3M16.5 8v4.5M20 8v3" stroke="currentColor" stroke-width="1.3"/>',
+};
+const TOOLS = [
+  { cap: '基本' },
+  { id: 'select', name: '選択', key: 'V', ic: 'select' },
+  { id: 'hand', name: '移動', key: 'H', ic: 'hand' },
+  { sep: 1 }, { cap: '平面図' },
+  { id: 'map', name: '地図から', ic: 'map' },
+  { id: 'poly', name: '建物', key: 'G', ic: 'poly' },
+  { id: 'line', name: '壁・線', key: 'L', ic: 'line' },
+  { id: 'rect', name: '部屋', key: 'R', ic: 'rect' },
+  { id: 'text', name: '文字', key: 'T', ic: 'text' },
+  { sep: 1 }, { cap: 'カメラ' },
+  { id: 'camera', name: 'カメラ', key: 'C', ic: 'camera', set: () => opt.cam = 'bullet' },
+  { id: 'camera-dome', name: 'ドーム', ic: 'dome', set: () => opt.cam = 'dome' },
+  { sep: 1 }, { cap: '配線' },
+  ...Object.keys(WIRE).map((kk, i) => ({ id: 'wire-' + kk, name: WIRE[kk].name.replace('配線', ''), key: i === 0 ? 'W' : '', ic: kk })),
+  { sep: 1 }, { cap: '機器' },
+  ...Object.keys(DEV).map(kk => ({ id: 'dev-' + kk, name: DEV[kk].tool || DEV[kk].name.replace('貫通・穴あけ', '貫通'), ic: 'dev:' + kk })),
+  { sep: 1 }, { cap: '建具' },
+  ...Object.keys(SYM).map(kk => ({ id: 'sym-' + kk, name: SYM[kk].tool, ic: 'sym:' + kk, key: kk === 'door1' ? 'D' : kk === 'stair' ? 'K' : '' })),
+  { sep: 1 }, { cap: '注記' },
+  { id: 'dim', name: '寸法', key: 'M', ic: 'dim' },
+  { id: 'callout', name: '吹き出し', key: 'B', ic: 'callout' },
+  { id: 'mark', name: '囲み', key: 'O', ic: 'mark' },
+  { id: 'arrow', name: '矢印', key: 'A', ic: 'arrow' },
+  { id: 'photo', name: '写真枠', key: 'P', ic: 'photo' },
+  { id: 'north', name: '方位', key: 'N', ic: 'north' },
+  { id: 'scale', name: '縮尺設定', key: 'S', ic: 'scale' },
+];
+function toolIcon(ic) {
+  if (ic.startsWith('sym:')) { const kk = ic.slice(4), sz = { door1: [16, 16], door2: [20, 10], slide: [20, 6], window: [20, 5], stair: [20, 11] }[kk]; return `<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="none"/><g transform="translate(12 ${kk === 'door1' ? 12 : 12})" style="color:#111">${symIcon({ kind: kk, w: sz[0], h: sz[1], n: 5, dir: 'none', cut: false }).replace(/#111/g, 'currentColor').replace(/#fff/g, 'none')}</g></svg>`; }
+  if (ic.startsWith('dev:')) { const kk = ic.slice(4); const sc = { pole: .8, nvr: .55, monitor: .6, recorder: .62, panel: .62, box: .72, hub: .62, outlet: .85, vent: .75, hole: 1 }[kk] || .7; return `<svg viewBox="0 0 24 24"><g transform="translate(12 ${kk === 'recorder' ? 13 : kk === 'monitor' ? 13.5 : 12}) scale(${sc})">${devIcon(kk)}</g></svg>`; }
+  return `<svg viewBox="0 0 24 24">${IC[ic]}</svg>`;
+}
+function buildTools() {
+  $('#tools').innerHTML = TOOLS.map(t => t.sep ? '<div class="sep"></div>' : t.cap ? `<div class="cap">${t.cap}</div>` :
+    `<button class="tool" data-tool="${t.id}" aria-pressed="false" title="${t.name}${t.key ? ' (' + t.key + ')' : ''}">${toolIcon(t.ic)}<span>${t.name}</span></button>`).join('');
+}
+function setTool(id) {
+  if (draft) finishDraft(true);
+  tool = id;
+  if (id.startsWith('wire-')) opt.wire = id.slice(5);
+  if (id.startsWith('dev-')) opt.device = id.slice(4);
+  if (id.startsWith('sym-')) opt.sym = id.slice(4);
+  opt.cam = id === 'camera-dome' ? 'dome' : 'bullet';
+  document.querySelectorAll('.tool').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === id ? 'true' : 'false'));
+  stage.classList.toggle('draw', id !== 'select' && id !== 'hand');
+  stage.classList.toggle('pan', id === 'hand');
+  updateHint();
+}
+function baseTool(t = tool) { return t.startsWith('sym-') ? 'sym' : t.startsWith('wire-') ? 'wire' : t.startsWith('dev-') ? 'device' : t.startsWith('camera') ? 'camera' : t; }
+const HINTS = {
+  select: '<b>選択</b>：クリックで選択・ドラッグで移動。空白をドラッグで範囲選択。<kbd>Space</kbd>+ドラッグ／ホイールで画面移動・拡大',
+  hand: '<b>移動</b>：ドラッグで画面をスクロール',
+  line: '<b>壁・線</b>：クリックで頂点を追加、ダブルクリックか <kbd>Enter</kbd> で確定。<kbd>Shift</kbd> で水平・垂直',
+  poly: '<b>建物</b>：角を順にクリック。最初の点をクリック（またはダブルクリック／<kbd>Enter</kbd>）で閉じる。<kbd>Shift</kbd> で45°単位。地図の下絵をなぞるのに便利',
+  sym: '<b>建具・階段</b>：クリックで配置。丸い取っ手で回転、四角い取っ手で大きさ変更。ドアは壁の線の上をクリック（直線の辺が壁に乗ります）。縮尺設定済みなら実寸に近い大きさで置きます',
+  arrow: '<b>矢印</b>：始点から終点へドラッグ。撮影方向や配線の向きを示すのに使えます（写真の上では写真に付きます）',
+  mark: '<b>囲み</b>：ドラッグで赤い丸囲みを描く（写真の上では写真に付きます）',
+  north: '<b>方位</b>：クリックで方位記号を置く。取っ手で向きを調整',
+  rect: '<b>部屋</b>：ドラッグで四角を描く。名前は右のパネルで入力',
+  text: '<b>文字</b>：クリックした位置に文字を置く',
+  camera: '<b>カメラ</b>：クリックで設置（番号は自動）。選択後、丸い取っ手を回して向きを調整',
+  wire: '<b>配線</b>：機器・カメラの近くをクリックすると吸着。ダブルクリックか <kbd>Enter</kbd> で確定。縮尺設定済みなら長さを自動計算',
+  device: '<b>機器</b>：クリックで設置',
+  dim: '<b>寸法</b>：始点から終点へドラッグ。縮尺設定済みなら「約○m」を自動表示',
+  callout: '<b>吹き出し</b>：クリックで配置。先端の丸い取っ手を指したい場所へ',
+  photo: '<b>写真枠</b>：クリックで枠を置いて写真を選択。写真ファイルを図面へ直接ドロップ、貼り付け(<kbd>Ctrl</kbd>+<kbd>V</kbd>)も可',
+  scale: '<b>縮尺設定</b>：長さが分かる2点（例：建物の端から端）をクリックし、実際の長さ(m)を入力',
+};
+function updateHint() { $('#hint').innerHTML = HINTS[baseTool()] || ''; }
+
+function finishDraft(cancel) {
+  const d = draft; draft = null;
+  if (!cancel && d && d.pts.length >= (d.type === 'poly' ? 3 : 2)) {
+    pushUndo();
+    const o = d.type === 'poly' ? { type: 'poly', pts: d.pts, label: '', fs: 18, sw: 2.5, fill: 'none', dash: false, showEdges: !!doc.scale, lx: 0, ly: 0 }
+      : d.type === 'wire'
+      ? { type: 'wire', pts: d.pts, style: opt.wire, smooth: opt.wire === 'concealed', showLen: true, lenMode: 'auto', lenText: '', lx: 0, ly: -14 }
+      : { type: 'line', pts: d.pts, w: 2.5, dash: false, color: '#111111' };
+    if (d.parent && byId(d.parent)) { attachTo(o, byId(d.parent)); if (o.type === 'wire') o.showLen = false; }
+    addObj(o); fixKidOrder(); setTool('select'); select([o.id]); if (o.type === 'poly') focusField('label');
+  }
+  render();
+}
+function addObj(o, back) { o.id = o.id || uid(); if (back) doc.objects.unshift(o); else doc.objects.push(o); save(); return o; }
+function nextCamNum() { return doc.objects.filter(o => o.type === 'camera' && !onPhoto(o)).reduce((m, o) => Math.max(m, o.num || 0), 0) + 1; }
+
+function toolDown(p, e) {
+  const bt = baseTool();
+  if (editPhoto && !EDIT_TOOLS.includes(bt)) { toast('写真の編集中はこのツールは使えません。「編集を終える」で戻ってください'); setTool('select'); return; }
+  const onPh = ['line', 'wire', 'camera', 'device', 'text', 'callout', 'mark', 'arrow'].includes(bt) ? (editPhoto ? byId(editPhoto) : draft ? (draft.parent ? byId(draft.parent) : null) : photoAt(p.x, p.y)) : null;
+  const sp = onPh ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)];
+  if (bt === 'line' || bt === 'wire' || bt === 'scale' || bt === 'poly') {
+    let q = sp;
+    if (bt === 'wire') { const t = snapTarget([p.x, p.y]); if (t) q = t; }
+    if (!draft) { draft = { type: bt, pts: [q], cur: null, parent: onPh ? onPh.id : null }; render(); return; }
+    const last = draft.pts[draft.pts.length - 1];
+    if (e.shiftKey && !(bt === 'wire' && snapTarget([p.x, p.y]))) q = ortho(last, q);
+    if (dist(q, last) < 5 * k()) { if (bt !== 'scale') finishDraft(); return; }
+    if (bt === 'poly' && draft.pts.length >= 3 && dist(q, draft.pts[0]) < 12 * k()) { finishDraft(); return; }
+    draft.pts.push(q);
+    if (bt === 'scale' && draft.pts.length === 2) { const pts = draft.pts; draft = null; render(); askScale(dist(pts[0], pts[1])); }
+    else render();
+    return;
+  }
+  if (bt === 'rect' || bt === 'dim' || bt === 'mark' || bt === 'arrow') { drag = { kind: bt === 'dim' || bt === 'arrow' ? 'mk-dim' : 'mk-rect', otype: bt, parent: onPh ? onPh.id : null, p0: { x: sp[0], y: sp[1] }, p1: { x: sp[0], y: sp[1] } }; return; }
+  pushUndo();
+  let o;
+  if (bt === 'camera') o = { type: 'camera', x: sp[0], y: sp[1], ang: 0, num: nextCamNum(), name: '', kind: opt.cam || 'bullet', cone: true, coneLen: 110, coneAng: 70, lx: 0, ly: 32 };
+  else if (bt === 'device') o = { type: 'device', kind: opt.device, x: sp[0], y: sp[1], label: DEV[opt.device].label, lx: 0, ly: { recorder: 36, monitor: 30, nvr: 26, pole: 28 }[opt.device] || 30 };
+  else if (bt === 'sym') { const [w, h] = symSize(opt.sym); o = { type: 'sym', kind: opt.sym, x: sp[0], y: sp[1] - (opt.sym.startsWith('door') ? h / 2 : 0), w, h, rot: 0, flip: false, cut: true, n: 10, dir: 'up' }; }
+  else if (bt === 'north') o = { type: 'north', x: sp[0], y: sp[1], ang: 0, sz: 1 };
+  else if (bt === 'text') o = { type: 'text', x: sp[0], y: sp[1], text: 'テキスト', fs: 16, color: '#111111', bold: false, box: 'none', anchor: 'start' };
+  else if (bt === 'callout') o = { type: 'callout', x: sp[0], y: sp[1], w: 130, h: 34, text: '注記', fs: 14, tx: sp[0] - 40, ty: sp[1] + 70 };
+  else if (bt === 'photo') o = { type: 'photo', x: sp[0] - 110, y: sp[1] - 75, w: 220, h: 150, asset: null, caption: '設置場所', ccol: BLUE, cfs: 13 };
+  if (!o) return;
+  if (o.type === 'camera' && !onPh) { const pl = doc.objects.find(d => d.type === 'device' && d.kind === 'pole' && Math.hypot(d.x - o.x, d.y - o.y) < 16); if (pl) { o.x = pl.x; o.y = pl.y; o.ly = -24; o.lx = 0; } }
+  if (onPh) {
+    attachTo(o, onPh);
+    if (o.type === 'camera') { o.cone = false; o.sz = 0.8; o.hideLabel = true; o.num = Math.max(1, nextCamNum() - 1); }
+    if (o.type === 'device') o.label = '';
+  }
+  addObj(o); fixKidOrder(); setTool('select'); select([o.id]); render();
+  if (o.type === 'text' || o.type === 'callout') focusField('text');
+  if (o.type === 'photo') pickPhoto(o.id);
+}
+function focusField(key) { setTimeout(() => { const el = document.querySelector(`#pane [data-k="${key}"]`); if (el) { el.focus(); el.select && el.select(); } }, 30); }
+
+/* ============ pointer ============ */
+function moveObj(o, src, dx, dy) {
+  if ('x' in src) { o.x = src.x + dx; o.y = src.y + dy; }
+  if (src.pts) o.pts = src.pts.map(p => [p[0] + dx, p[1] + dy]);
+  if (src.p1) { o.p1 = [src.p1[0] + dx, src.p1[1] + dy]; o.p2 = [src.p2[0] + dx, src.p2[1] + dy]; }
+  if ('tx' in src) { o.tx = src.tx + dx; o.ty = src.ty + dy; }
+}
+svg.addEventListener('pointerdown', e => {
+  if (document.querySelector('.modal-bg')) return;
+  const p = pt(e);
+  if (e.button === 1 || spaceDown || tool === 'hand' || (e.button === 0 && e.pointerType === 'touch' && e.isPrimary === false)) {
+    drag = { kind: 'pan', cx: e.clientX, cy: e.clientY, vx: vb.x, vy: vb.y }; svg.setPointerCapture(e.pointerId); e.preventDefault(); return;
+  }
+  if (e.button !== 0) return;
+  svg.setPointerCapture(e.pointerId);
+  if (tool !== 'select') { toolDown(p, e); return; }
+  const h = e.target.closest('[data-h]');
+  if (h && sel.size === 1) {
+    const o = byId([...sel][0]); const code = h.dataset.h;
+    const before = snapshot();
+    if (code.startsWith('m:')) { const i = +code.slice(2); const a = o.pts[i], b = o.pts[(i + 1) % o.pts.length]; o.pts.splice(i + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]); drag = { kind: 'handle', code: 'v:' + (i + 1), id: o.id, before, orig: clone(o), p0: p, moved: true }; }
+    else drag = { kind: 'handle', code, id: o.id, before, orig: clone(o), p0: p, moved: false, kids: o.type === 'photo' ? kidsOf(o.id).map(clone) : null };
+    return;
+  }
+  let g = e.target.closest('[data-id]');
+  if (editPhoto && g) { const go = byId(g.dataset.id); if (!go || go.parent !== editPhoto) g = null; }
+  if (g && g.dataset.id === '__title') { select([]); showTab('meta'); return; }
+  if (g) {
+    const o = byId(g.dataset.id);
+    if (o && (!o.locked || e.altKey)) {
+      if (e.shiftKey) { sel.has(o.id) ? sel.delete(o.id) : sel.add(o.id); select([...sel]); return; }
+      if (!sel.has(o.id)) select([o.id]);
+      const part = e.target.closest('[data-part]');
+      const before = snapshot();
+      if (part && part.dataset.part === 'label' && sel.size === 1) drag = { kind: 'label', id: o.id, before, orig: clone(o), p0: p, moved: false };
+      else { const orig = {}; for (const id of withKids(sel)) { const x = byId(id); if (x && !x.locked) orig[id] = clone(x); } drag = { kind: 'move', before, orig, p0: p, moved: false }; }
+      render(); return;
+    }
+  }
+  if (!e.shiftKey) select([]);
+  drag = { kind: 'marquee', p0: p, p1: p, base: new Set(sel) };
+});
+svg.addEventListener('pointermove', e => {
+  const p = pt(e);
+  if (draft) {
+    let q = draft.parent ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)]; draft.snapHit = null;
+    if (draft.type === 'wire') { const t = snapTarget([p.x, p.y]); if (t) { q = t; draft.snapHit = t; } }
+    if (e.shiftKey && draft.pts.length && !draft.snapHit) q = ortho(draft.pts[draft.pts.length - 1], q);
+    draft.cur = q; renderOverlay();
+  }
+  if (!drag) return;
+  if (drag.kind === 'pan') { const K = k(); vb.x = drag.vx - (e.clientX - drag.cx) * K; vb.y = drag.vy - (e.clientY - drag.cy) * K; applyVB(); return; }
+  let dx = p.x - drag.p0?.x, dy = p.y - drag.p0?.y;
+  if (drag.kind === 'move') {
+    if (snapOn && !Object.keys(drag.orig).every(id => attached(byId(id)))) { dx = Math.round(dx / 10) * 10; dy = Math.round(dy / 10) * 10; } else { dx = Math.round(dx); dy = Math.round(dy); }
+    if (dx || dy) drag.moved = true;
+    for (const id in drag.orig) moveObj(byId(id), drag.orig[id], dx, dy);
+    render(); return;
+  }
+  if (drag.kind === 'label') { const o = byId(drag.id); o.lx = Math.round((drag.orig.lx || 0) + dx); o.ly = Math.round((drag.orig.ly || 0) + dy); drag.moved = true; render(); return; }
+  if (drag.kind === 'marquee') {
+    drag.p1 = p; const x0 = Math.min(drag.p0.x, p.x), x1 = Math.max(drag.p0.x, p.x), y0 = Math.min(drag.p0.y, p.y), y1 = Math.max(drag.p0.y, p.y);
+    const s = new Set(drag.base);
+    if (x1 - x0 > 3 || y1 - y0 > 3) for (const o of doc.objects) { if (o.locked || (editPhoto && o.parent !== editPhoto)) continue; const b = bbox(o); if (b.x >= x0 && b.y >= y0 && b.x + b.w <= x1 && b.y + b.h <= y1) s.add(o.id); }
+    sel = s; render(); return;
+  }
+  if (drag.kind === 'mk-rect' || drag.kind === 'mk-dim') {
+    let q = drag.parent ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)];
+    if (drag.kind === 'mk-dim' && e.shiftKey) q = ortho([drag.p0.x, drag.p0.y], q);
+    drag.p1 = { x: q[0], y: q[1] }; renderOverlay(); return;
+  }
+  if (drag.kind === 'handle') {
+    const o = byId(drag.id), c = drag.code, O = drag.orig; drag.moved = true;
+    if (c.startsWith('v:')) {
+      const i = +c.slice(2); let q = [sn(p.x), sn(p.y)];
+      if (o.type === 'wire') { const t = snapTarget([p.x, p.y], o.id); if (t) q = t; }
+      if (e.shiftKey) { const nb = o.pts[i - 1] || o.pts[i + 1]; if (nb) q = ortho(nb, q); }
+      o.pts[i] = q;
+    } else if (c === 'p1' || c === 'p2') {
+      let q = [sn(p.x), sn(p.y)]; const other = c === 'p1' ? o.p2 : o.p1; if (e.shiftKey) q = ortho(other, q); o[c] = q;
+    } else if (c === 't') { o.tx = sn(p.x); o.ty = sn(p.y); }
+    else if (c === 'rot') { let a = Math.atan2(p.y - o.y, p.x - o.x) * 180 / Math.PI + (o.type === 'north' || o.type === 'sym' ? 90 : 0); if (a > 180) a -= 360; a = e.shiftKey ? Math.round(a) : Math.round(a / 15) * 15; if (a === -180) a = 180; if (o.type === 'sym') o.rot = a; else o.ang = a; }
+    else if (c === 'ss') {
+      const r = -(o.rot || 0) * Math.PI / 180, dx2 = p.x - o.x, dy2 = p.y - o.y, lx = dx2 * Math.cos(r) - dy2 * Math.sin(r), ly = dx2 * Math.sin(r) + dy2 * Math.cos(r);
+      o.w = Math.max(12, Math.round(2 * Math.abs(lx)));
+      o.h = o.kind === 'door1' ? o.w : o.kind === 'door2' ? Math.round(o.w / 2) : Math.max(6, Math.round(2 * Math.abs(ly)));
+    }
+    else if (c.startsWith('c:')) {
+      const corner = c.slice(2); let x0 = O.x, y0 = O.y, x1 = O.x + O.w, y1 = O.y + O.h; const qx = sn(p.x), qy = sn(p.y);
+      if (corner.includes('w')) x0 = Math.min(qx, x1 - 10); else x1 = Math.max(qx, x0 + 10);
+      if (corner.includes('n')) y0 = Math.min(qy, y1 - 10); else y1 = Math.max(qy, y0 + 10);
+      if ((o.type === 'image' ? !e.shiftKey : e.shiftKey) && O.w && O.h) { const ar = O.w / O.h, w = x1 - x0, h = w / ar; if (corner.includes('n')) y0 = y1 - h; else y1 = y0 + h; }
+      o.x = Math.round(x0); o.y = Math.round(y0); o.w = Math.round(x1 - x0); o.h = Math.round(y1 - y0);
+      if (drag.kids) for (const kc of drag.kids) { const c = byId(kc.id); if (c) mapChild(c, kc, O, o); }
+    }
+    render();
+  }
+});
+function endPointer(e) {
+  if (!drag) return;
+  const d = drag; drag = null;
+  if (d.kind === 'mk-rect') {
+    pushUndo(); let x = Math.min(d.p0.x, d.p1.x), y = Math.min(d.p0.y, d.p1.y), w = Math.abs(d.p1.x - d.p0.x), h = Math.abs(d.p1.y - d.p0.y);
+    if (d.otype === 'mark') {
+      if (w < 8 || h < 8) { w = 60; h = 40; x -= 30; y -= 20; }
+      const o = { type: 'mark', x, y, w, h, color: RED, sw: 3 }; if (d.parent && byId(d.parent)) attachTo(o, byId(d.parent));
+      addObj(o); fixKidOrder(); setTool('select'); select([o.id]);
+    } else {
+    if (w < 12 || h < 12) { w = 160; h = 110; }
+    const o = addObj({ type: 'rect', x, y, w, h, label: '', fs: 18, sw: 2, fill: 'none', dash: false }); setTool('select'); select([o.id]); focusField('label');
+    }
+  } else if (d.kind === 'mk-dim' && d.otype === 'arrow') {
+    if (dist([d.p0.x, d.p0.y], [d.p1.x, d.p1.y]) > 4) { pushUndo(); const o = { type: 'arrow', p1: [d.p0.x, d.p0.y], p2: [d.p1.x, d.p1.y], color: d.parent ? CAM : BLUE, w: d.parent ? 2.5 : 3, dash: false, halo: true }; if (d.parent && byId(d.parent)) attachTo(o, byId(d.parent)); addObj(o); fixKidOrder(); setTool('select'); select([o.id]); }
+  } else if (d.kind === 'mk-dim') {
+    if (dist([d.p0.x, d.p0.y], [d.p1.x, d.p1.y]) > 10) { pushUndo(); const o = addObj({ type: 'dim', p1: [d.p0.x, d.p0.y], p2: [d.p1.x, d.p1.y], lenMode: doc.scale ? 'auto' : 'manual', lenText: doc.scale ? '' : '約○m', lx: 0, ly: 0 }); setTool('select'); select([o.id]); if (!doc.scale) focusField('lenText'); }
+  } else if (['move', 'label', 'handle'].includes(d.kind) && d.moved) { pushUndo(d.before); save(); refreshPane(true); }
+  render();
+}
+svg.addEventListener('pointerup', endPointer);
+svg.addEventListener('pointercancel', endPointer);
+svg.addEventListener('dblclick', e => {
+  if (tool !== 'select') return;
+  const tgt = document.elementFromPoint(e.clientX, e.clientY) || e.target;
+  const h = tgt.closest('[data-h]');
+  if (h && h.dataset.h.startsWith('v:') && sel.size === 1) { const o = byId([...sel][0]); if (o.pts.length > (o.type === 'poly' ? 3 : 2)) { pushUndo(); o.pts.splice(+h.dataset.h.slice(2), 1); render(); save(); } return; }
+  const g = tgt.closest('[data-id]'); if (!g) return;
+  const o = byId(g.dataset.id); if (!o) return;
+  if (editPhoto && o.parent !== editPhoto) return;
+  if (o.type === 'photo') { if (o.asset) enterPhotoEdit(o.id); else pickPhoto(o.id); }
+  else if (o.type === 'text' || o.type === 'callout') focusField('text');
+  else if (o.type === 'rect' || o.type === 'poly') focusField('label');
+  else if (o.type === 'camera') focusField('name');
+});
+svg.addEventListener('wheel', e => { e.preventDefault(); const p = pt(e); zoomAt(Math.exp(e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), p.x, p.y); }, { passive: false });
+
+/* ============ selection & pane ============ */
+let curTab = 'props';
+function select(ids) { sel = new Set(ids); if (curTab !== 'props' && ids.length) showTab('props'); else refreshPane(); render(); }
+function showTab(t) { curTab = t; document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false')); refreshPane(); }
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
+const F = {
+  text: (k, label, v, ph = '') => `<div class="f"><label for="p_${k}">${label}</label><input type="text" id="p_${k}" data-k="${k}" value="${esc(v)}" placeholder="${esc(ph)}"></div>`,
+  area: (k, label, v) => `<div class="f"><label for="p_${k}">${label}</label><textarea id="p_${k}" data-k="${k}">${esc(v)}</textarea></div>`,
+  num: (k, label, v, min, max, step = 1) => `<div class="f"><label for="p_${k}">${label}</label><input type="number" id="p_${k}" data-k="${k}" data-t="num" value="${v}" min="${min}" max="${max}" step="${step}"></div>`,
+  range: (k, label, v, min, max, step = 1, unit = '') => `<div class="f"><label for="p_${k}">${label}：<b data-out="${k}">${v}${unit}</b></label><input type="range" id="p_${k}" data-k="${k}" data-t="num" data-unit="${unit}" value="${v}" min="${min}" max="${max}" step="${step}"></div>`,
+  sel: (k, label, v, opts) => `<div class="f"><label for="p_${k}">${label}</label><select id="p_${k}" data-k="${k}">${Object.entries(opts).map(([a, b]) => `<option value="${esc(a)}" ${String(a) === String(v) ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></div>`,
+  chk: (k, label, v) => `<label class="chk"><input type="checkbox" data-k="${k}" data-t="bool" ${v ? 'checked' : ''}> ${label}</label>`,
+};
+const TYPE_NAME = { arrow: '矢印', sym: '建具・階段', mark: '囲み', poly: '建物', north: '方位記号', line: '壁・線', wire: '配線', rect: '部屋・建物', text: '文字', camera: 'カメラ', device: '機器', dim: '寸法線', callout: '吹き出し', photo: '写真', image: '平面図画像', legend: '凡例' };
+function lenFields(o) {
+  const auto = o.type === 'dim' ? dist(o.p1, o.p2) : polyLen(wirePts(o)); const m = meters(auto);
+  return `<div class="f"><span class="l">長さの表示</span><div class="seg" role="group">
+      <button data-act="lenMode" data-v="auto" aria-pressed="${o.lenMode === 'auto'}">縮尺から自動</button>
+      <button data-act="lenMode" data-v="manual" aria-pressed="${o.lenMode === 'manual'}">手入力</button></div></div>
+    ${o.lenMode === 'manual' ? F.text('lenText', '表示する文字', o.lenText, '約12m') : `<div class="calc">${m == null ? '縮尺が未設定です（図面情報 › 縮尺）' : `図上の長さ ${m.toFixed(1)} m → 表示「${esc(lenLabel(o))}」`}</div>`}`;
+}
+function propsHTML() {
+  if (sel.size === 0) return `<h2>使い方</h2>
+    <ol class="help">
+      <li>左の<b>部屋・壁・文字</b>で平面図を描く。<b>地図から</b>で地図のスクリーンショットを下絵にし、<b>建物</b>ツールで外形をなぞることもできます</li>
+      <li><b>縮尺設定</b>で既知の長さを2点クリック → 実長を入力（配線長が自動で「約○m」に）</li>
+      <li><b>カメラ</b>を置き、取っ手を回して撮影方向を合わせる</li>
+      <li><b>配線</b>（露出・隠蔽・架空・電源）を機器からカメラへ引く。凡例は自動</li>
+      <li><b>写真枠</b>に現場写真をドロップしてキャプションを入力</li>
+      <li>右上から <b>Excel / PDF / PNG</b> で A3 横に書き出し</li>
+    </ol>
+    <p class="note"><kbd>Del</kbd> 削除　<kbd>Ctrl</kbd>+<kbd>D</kbd> 複製　<kbd>Ctrl</kbd>+<kbd>Z</kbd> 元に戻す　矢印キーで微調整（<kbd>Shift</kbd>で10倍）　<kbd>Alt</kbd>+クリックで固定中の図形を選択</p>
+    <p class="note">作業内容はこのブラウザに自動保存されます。別のPCで続けるときは「保存」で .json を書き出してください。</p>`;
+  if (sel.size > 1) return `<h2>${sel.size}個を選択中</h2><p class="note">ドラッグでまとめて移動できます。</p>${actionsHTML(true)}`;
+  const o = byId([...sel][0]); if (!o) return '';
+  let s = `<h2>${TYPE_NAME[o.type]}</h2>`;
+  switch (o.type) {
+    case 'camera':
+      s += `<div class="row">${F.num('num', '番号', o.num, 1, 99)}${F.sel('kind', '種類', o.kind, { bullet: 'バレット(屋外)', dome: 'ドーム' })}</div>`
+        + F.text('name', '表示名', o.name, camLabel({ ...o, name: '' }) + '（自動）')
+        + F.range('ang', '向き', o.ang, -180, 180, 5, '°') + F.range('sz', '大きさ', o.sz || 1, 0.4, 2.5, 0.1)
+        + F.chk('hideLabel', '名前（カメラ①など）を隠す', o.hideLabel)
+        + F.chk('cone', '撮影範囲を表示', o.cone)
+        + (o.cone ? F.range('coneAng', '画角', o.coneAng, 20, 140, 5, '°') + F.range('coneLen', '範囲の長さ', o.coneLen, 30, 400, 10) : '')
+        + `<button class="btn" data-act="renum" style="justify-self:start;background:var(--panel-2)">カメラ番号を配置順に振り直す</button>`;
+      break;
+    case 'device':
+      s += F.sel('kind', '種類', o.kind, Object.fromEntries(Object.entries(DEV).map(([a, b]) => [a, b.name]))) + F.text('label', 'ラベル', o.label, 'なし') + (o.kind === 'pole' ? `<p class="note">例：「ポール H=4.5m」「新設ポール」「既設電柱」。カメラをポールの位置に重ねて置くと取付位置がわかりやすくなります。</p>` : '');
+      break;
+    case 'wire':
+      s += `<div class="f"><span class="l">配線の種類</span><div class="seg" role="group">${Object.entries(WIRE).map(([a, b]) => `<button data-act="style" data-v="${a}" aria-pressed="${o.style === a}">${b.name.replace('配線', '')}</button>`).join('')}</div></div>`
+        + F.chk('smooth', '曲線にする', o.smooth) + F.chk('showLen', '長さを図に表示', o.showLen) + lenFields(o)
+        + `<p class="note">頂点をドラッグで変形、辺の中央の○をドラッグで頂点追加、頂点をダブルクリックで削除。長さの文字はドラッグで位置調整。</p>`;
+      break;
+    case 'line':
+      s += `<div class="row">${F.num('w', '線の太さ', o.w, 0.5, 12, 0.5)}${F.sel('color', '色', o.color, COLORS)}</div>` + F.chk('dash', '破線', o.dash);
+      break;
+    case 'rect':
+      s += F.area('label', '名前（改行可）', o.label) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
+        + F.sel('fill', '塗り', o.fill, { none: 'なし', '#ffffff': '白', '#eef1f4': '薄いグレー', '#e3f1f6': '薄い水色' }) + F.chk('dash', '破線', o.dash);
+      break;
+    case 'poly':
+      s += F.area('label', '名前（改行可）', o.label) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
+        + F.sel('fill', '塗り', o.fill, { none: 'なし', '#ffffff': '白', '#eef1f4': '薄いグレー', '#e3f1f6': '薄い水色', '#fdf2d6': '薄い黄色' }) + F.chk('dash', '破線', o.dash)
+        + F.chk('showEdges', '各辺の長さを表示' + (doc.scale ? '' : '（縮尺の設定が必要）'), o.showEdges)
+        + `<p class="note">角をドラッグで修正、辺の中央の○で角を追加、角をダブルクリックで削除。名前はドラッグで位置調整。</p>`;
+      break;
+    case 'sym': {
+      const mm = v => doc.scale ? ` <span class="note">(約${(v / doc.scale).toFixed(2)}m)</span>` : '';
+      s += F.sel('kind', '種類', o.kind, Object.fromEntries(Object.entries(SYM).map(([a, b]) => [a, b.name])))
+        + `<div class="row">${F.num('w', '幅', o.w, 6, 2000)}${o.kind === 'door1' || o.kind === 'door2' ? '' : F.num('h', '奥行き', o.h, 4, 2000)}</div>`
+        + `<p class="note" style="margin:0">幅${mm(o.w)}　奥行き${mm(o.h)}</p>`
+        + F.range('rot', '回転', o.rot || 0, -180, 180, 15, '°')
+        + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="symFlip" style="background:var(--panel-2)">左右反転</button></div>`
+        + (o.kind === 'stair' ? `<div class="row">${F.num('n', '段数', o.n || 10, 2, 40)}${F.sel('dir', '矢印', o.dir || 'up', { up: 'UP（上り）', dn: 'DN（下り）', none: 'なし' })}</div>` : F.chk('cut', '壁を白抜きにする（開口部）', o.cut !== false));
+      break;
+    }
+    case 'arrow':
+      s += `<div class="row">${F.sel('color', '色', o.color, { ...COLORS, [CAM]: '水色', '#f59e0b': 'オレンジ', '#ffffff': '白' })}${F.num('w', '太さ', o.w || 3, 1, 12, 0.5)}</div>` + F.chk('dash', '破線', o.dash) + F.chk('halo', '白いふちどり（写真の上で見やすく）', o.halo !== false);
+      break;
+    case 'mark':
+      s += `<div class="row">${F.sel('color', '色', o.color, COLORS)}${F.num('sw', '線の太さ', o.sw, 1, 12, 0.5)}</div>`;
+      break;
+    case 'north':
+      s += F.range('ang', '向き', o.ang, -180, 180, 1, '°') + F.range('sz', '大きさ', o.sz || 1, 0.5, 3, 0.1);
+      break;
+    case 'text':
+      s += F.area('text', '文字（改行可）', o.text) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 80)}${F.sel('color', '色', o.color, COLORS)}</div>`
+        + `<div class="row">${F.sel('box', '枠線', o.box, { none: 'なし', [BLUE]: '青枠', [RED]: '赤枠', '#111111': '黒枠' })}${F.sel('anchor', '揃え', o.anchor, { start: '左', middle: '中央' })}</div>` + F.chk('bold', '太字', o.bold);
+      break;
+    case 'callout':
+      s += F.area('text', '文字（改行可）', o.text) + F.num('fs', '文字サイズ', o.fs, 8, 40) + `<button class="btn" data-act="fitCallout" style="justify-self:start;background:var(--panel-2)">枠を文字に合わせる</button>`;
+      break;
+    case 'photo':
+      s += (o.asset ? `<button class="btn primary" data-act="photoEdit" style="justify-self:start">写真をアップにして描き込む</button><button class="btn" data-act="pick" style="justify-self:start;background:var(--panel-2)">写真を差し替え</button>` : `<button class="btn primary" data-act="pick" style="justify-self:start">写真を選択</button>`)
+        + F.text('caption', 'キャプション', o.caption, 'カメラ①設置場所') + `<div class="row">${F.sel('ccol', '枠の色', o.ccol, { [BLUE]: '青', [RED]: '赤', '#111111': '黒' })}${F.num('cfs', '文字サイズ', o.cfs, 8, 30)}</div>`
+        + (o.asset ? `<div class="row"><button class="btn" data-act="fitPhoto" style="background:var(--panel-2)">写真の比率に合わせる</button><button class="btn danger" data-act="unphoto" style="background:var(--panel-2)">写真を外す</button></div>` : '')
+        + `<p class="note"><b>写真への描き込み：</b>「写真をアップにして描き込む」（または写真をダブルクリック）で写真を大きく表示して描き込めます。写真の上に直接描いてもかまいません。写真を動かしたり拡大縮小したりすると一緒に付いてきます。${kidsOf(o.id).length ? `（描き込み ${kidsOf(o.id).length} 個）` : ''}</p>`;
+      break;
+    case 'image':
+      s += F.chk('locked', '固定する（動かない・クリックで選択されない）', o.locked)
+        + (o.locked ? `<p class="note">固定中です。拡大縮小・移動するにはチェックを外してください。</p>` : `<p class="note">四隅をドラッグで拡大縮小（縦横比は保持、<kbd>Shift</kbd>で自由変形）、中をドラッグで移動。</p>
+        <div class="row"><button class="btn" data-act="imgZoom" data-v="0.9" style="background:var(--panel-2)">縮小 −10%</button><button class="btn" data-act="imgZoom" data-v="1.1" style="background:var(--panel-2)">拡大 ＋10%</button><button class="btn" data-act="imgZoom" data-v="0.99" style="background:var(--panel-2)">−1%</button><button class="btn" data-act="imgZoom" data-v="1.01" style="background:var(--panel-2)">＋1%</button></div>`)
+        + (doc.scale && o.isMap && !o.locked ? `<p class="note" style="color:var(--danger)">縮尺設定後に大きさを変えると縮尺がずれます。変えた場合は縮尺を設定し直してください。</p>` : '')
+        + F.range('opacity', '濃さ', o.opacity, 0.1, 1, 0.05) + F.range('rot', '回転', o.rot || 0, -180, 180, 1, '°')
+        + F.chk('print', '書き出しに含める（外すとなぞり用の下絵として画面だけに表示）', o.print !== false)
+        + `<button class="btn" data-act="fitPage" style="justify-self:start;background:var(--panel-2)">用紙の作図範囲に合わせる</button>`;
+      break;
+    case 'dim':
+      s += lenFields(o);
+      break;
+    case 'legend':
+      s += `<p class="note">図面で使っている配線の種類とカメラを自動で一覧にします。</p>`;
+      break;
+  }
+  if (attached(o)) { const ph = byId(o.parent); s += `<p class="note">写真「${esc(ph.caption || '無題')}」に描き込み中（写真と一緒に動きます。数量集計には含めません）</p><button class="btn" data-act="detach" style="justify-self:start;background:var(--panel-2)">写真から切り離す</button>`; }
+  return s + actionsHTML(false);
+}
+function actionsHTML(multi) {
+  return `<div class="actions"><button class="btn" data-act="dup">複製</button><button class="btn" data-act="front">前面へ</button><button class="btn" data-act="back">背面へ</button><button class="btn" data-act="lock">${[...sel].every(id => byId(id)?.locked) ? '固定を解除' : '固定'}</button><button class="btn danger" data-act="del">削除</button></div>`;
+}
+function metaHTML() {
+  const m = doc.meta, imgs = doc.objects.filter(o => o.type === 'image');
+  const pgN = doc.pages.length;
+  return `<h3>ページ（${doc.cur + 1} / ${pgN}）</h3>
+    <div class="row"><span style="font-weight:700;flex:1;min-width:0">${esc(doc.pages[doc.cur].name)}</span><button class="btn" data-act="pgRen" style="background:var(--panel-2)">名前を変更</button></div>
+    <div class="row"><button class="btn" data-act="pgAdd" style="background:var(--panel-2)">＋ 追加</button><button class="btn" data-act="pgLeft" style="background:var(--panel-2)" ${doc.cur ? '' : 'disabled'}>← 前へ</button><button class="btn" data-act="pgRight" style="background:var(--panel-2)" ${doc.cur < pgN - 1 ? '' : 'disabled'}>次へ →</button>${pgN > 1 ? '<button class="btn danger" data-act="pgDel" style="background:var(--panel-2)">削除</button>' : ''}</div>
+    <p class="note">ページは図面の下のタブで切り替えます。表題欄・用紙サイズは全ページ共通、縮尺はページごとです。PDFは全ページ、Excelはページごとにシートを分けて書き出します。</p>
+    <h3>別のパソコン・ブラウザで続ける</h3>
+    <ol class="help" style="font-size:11.5px"><li>「作業データを保存」で <b>.json</b> を書き出す（全ページ・写真・縮尺込み）</li><li>メールや共有フォルダで .json を渡す</li><li>別のパソコンでこのツールを開き、「作業データを開く」で .json を選ぶ（図面へドラッグでも可）</li></ol>
+    <div class="row"><button class="btn primary" data-act="saveJson">作業データを保存</button><button class="btn" data-act="openJson" style="background:var(--panel-2)">作業データを開く</button></div>
+    <p class="note">このブラウザには自動保存されますが、別のブラウザ・パソコンには引き継がれません。区切りのよいところで .json を保存しておくと安心です。</p>
+    <h3>用紙</h3>
+    ${F.sel('m.paper', '用紙サイズ（書き出しもこのサイズ）', doc.paper, Object.fromEntries(Object.entries(PAPERS).map(([a, b]) => [a, b.name])))}
+    <h3>表題欄</h3>
+    ${F.text('m.title', '図名', m.title)}${F.text('m.property', '物件名', m.property, '市営○○住宅 1号棟')}${F.text('m.contractor', '施工業者', m.contractor)}
+    <div class="f"><label for="p_m_date">作成日</label><input type="date" id="p_m_date" data-k="m.date" value="${esc(m.date)}"></div>
+    <h3>地図</h3>
+    ${F.text('m.address', '所在地（地図検索用・図には出ません）', m.address || '', '大阪市港区○○1-2-3')}
+    <div class="row"><button class="btn primary" data-act="mapModal">地図から建物を作る</button></div>
+    <h3>縮尺</h3>
+    <div class="calc">${doc.scale ? `図上 ${(10 / (doc.scale / 4)).toFixed(1)} mm = 実長 10 m（約 1/${Math.round(1000 / (doc.scale / 4))}）` : '未設定：配線長は手入力になります'}</div>
+    <div class="row"><button class="btn" data-act="scaleTool" style="background:var(--panel-2)">2点をクリックして設定</button>${doc.scale ? '<button class="btn danger" data-act="scaleClear" style="background:var(--panel-2)">解除</button>' : ''}</div>
+    <div class="row">${F.num('m.scaleDirect', '1/○○ で直接指定', doc.scale ? Math.round(1000 / (doc.scale / 4)) : '', 10, 5000, 10)}</div>
+    <h3>平面図画像（下絵）</h3>
+    <p class="note">写真・スキャン・CADから書き出した画像を下絵として敷けます。上から部屋や配線をなぞってください。</p>
+    <button class="btn" data-act="loadPlan" style="justify-self:start;background:var(--panel-2)">画像を読み込む</button>
+    ${imgs.length ? `<div class="imglist">${imgs.map((o, i) => `<div class="it"><span>${o.isMap ? '地図' : '下絵'} ${i + 1}${o.locked ? '・固定中' : ''}${o.print === false ? '・印刷しない' : ''}</span><button class="btn" data-act="selImg" data-v="${o.id}">選択</button><button class="btn danger" data-act="delImg" data-v="${o.id}">削除</button></div>`).join('')}</div>` : ''}
+    ${doc.objects.some(o => o.locked && o.type !== 'image') ? `<h3>固定中</h3><div class="row"><span class="note">固定中の図形 ${doc.objects.filter(o => o.locked && o.type !== 'image').length} 個</span><button class="btn" data-act="unlockAll" style="background:var(--panel-2)">固定をすべて解除</button></div>` : ''}
+    <h3>表示</h3>
+    <div class="row"><button class="btn" data-act="sample" style="background:var(--panel-2)">記入例を開く</button></div>`;
+}
+function summary() {
+  const cams = doc.objects.filter(o => o.type === 'camera' && !onPhoto(o)).sort((a, b) => a.num - b.num);
+  const wires = {}; let unk = 0;
+  for (const o of doc.objects.filter(o => o.type === 'wire' && !onPhoto(o))) { const v = lenValue(o); wires[o.style] = wires[o.style] || 0; if (v == null) unk++; else wires[o.style] += v; }
+  const devs = {}; for (const o of doc.objects.filter(o => o.type === 'device' && !onPhoto(o))) devs[o.kind] = (devs[o.kind] || 0) + 1;
+  const rows = [];
+  const bullet = cams.filter(c => c.kind !== 'dome').length, dome = cams.length - bullet;
+  if (bullet) rows.push(['防犯カメラ（バレット）', bullet, '台']);
+  if (dome) rows.push(['防犯カメラ（ドーム）', dome, '台']);
+  for (const kk of Object.keys(DEV)) if (devs[kk] && !['vent', 'hole'].includes(kk)) rows.push([DEV[kk].name, devs[kk], kk === 'recorder' ? '式' : kk === 'pole' ? '本' : '台']);
+  if (devs.hole) rows.push(['貫通・穴あけ', devs.hole, '箇所']);
+  if (devs.vent) rows.push(['換気口使用', devs.vent, '箇所']);
+  for (const kk of Object.keys(WIRE)) if (kk in wires) rows.push([WIRE[kk].name, wires[kk], 'm']);
+  return { rows, unk, cams };
+}
+function summaryAll() {
+  const per = []; forEachPage(pg => per.push({ name: pg.name, rows: summary().rows }));
+  const keys = []; const unit = {};
+  for (const p of per) for (const r of p.rows) { if (!keys.includes(r[0])) keys.push(r[0]); unit[r[0]] = r[2]; }
+  return { per, rows: keys.map(k => [k, per.map(p => (p.rows.find(r => r[0] === k) || [0, 0])[1]), per.reduce((a, p) => a + ((p.rows.find(r => r[0] === k) || [0, 0])[1]), 0), unit[k]]) };
+}
+function sumHTML() {
+  const { rows, unk, cams } = summary();
+  const ex = doc.objects.filter(o => COUNTED.includes(o.type) && onPhoto(o));
+  const exTxt = ex.length ? `<p class="note">写真の上の描き込み（${[['camera', 'カメラ', '台'], ['wire', '配線', '本'], ['device', '機器', '個']].map(([t, n, u]) => { const c = ex.filter(o => o.type === t).length; return c ? n + c + u : ''; }).filter(Boolean).join('・')}）は集計に含めていません。</p>` : '';
+  return `<h3>数量集計${doc.pages.length > 1 ? '（このページ：' + esc(doc.pages[doc.cur].name) + '）' : ''}</h3>`.concat(exTxt, ``) + `
+    <table class="sum"><thead><tr><th>項目</th><th style="text-align:right">数量</th><th>単位</th></tr></thead><tbody>
+    ${rows.map(r => `<tr><td>${r[2] === 'm' ? `<span class="sw" style="border-top-color:${WIRE[Object.keys(WIRE).find(k => WIRE[k].name === r[0])].color};border-top-style:${r[0] === '露出配線' || r[0] === '電源配線' ? 'solid' : 'dashed'}"></span>` : ''}${esc(r[0])}</td><td class="n">${r[1]}</td><td>${r[2]}</td></tr>`).join('') || '<tr><td colspan="3" class="note">まだ何も配置されていません</td></tr>'}
+    </tbody></table>
+    ${unk ? `<p class="note">長さ不明の配線が ${unk} 本あります（縮尺未設定、または手入力が空）。</p>` : ''}
+    <p class="note">配線長は各配線の「約○m」（切り上げ）を合計しています。余長は含みません。</p>
+    ${doc.pages.length > 1 ? (() => { const A = summaryAll(); return `<h3>全ページ合計（${doc.pages.length}ページ）</h3><div style="overflow-x:auto"><table class="sum"><thead><tr><th>項目</th>${A.per.map(p => `<th style="text-align:right">${esc(p.name)}</th>`).join('')}<th style="text-align:right">合計</th><th>単位</th></tr></thead><tbody>${A.rows.map(r => `<tr><td>${esc(r[0])}</td>${r[1].map(v => `<td class="n">${v || '−'}</td>`).join('')}<td class="n"><b>${r[2]}</b></td><td>${r[3]}</td></tr>`).join('')}</tbody></table></div>`; })() : ''}
+    <button class="btn primary" data-act="copySum" style="justify-self:start">表をコピー（Excelに貼り付け）</button>
+    ${cams.length ? `<h3>カメラ一覧</h3><table class="sum"><tbody>${cams.map(c => `<tr><td>${esc(camLabel(c))}</td><td>${c.kind === 'dome' ? 'ドーム' : 'バレット'}</td><td class="n">${c.ang}°</td></tr>`).join('')}</tbody></table>` : ''}`;
+}
+let paneSig = '';
+function refreshPane(soft) {
+  const pane = $('#pane');
+  if (soft && pane.contains(document.activeElement) && document.activeElement.matches('input,textarea,select')) return;
+  pane.innerHTML = curTab === 'props' ? propsHTML() : curTab === 'meta' ? metaHTML() : sumHTML();
+}
+let editing = false;
+$('#pane').addEventListener('input', e => {
+  const el = e.target, key = el.dataset.k; if (!key) return;
+  if (!editing) { pushUndo(); editing = true; }
+  let v = el.dataset.t === 'num' ? parseFloat(el.value) : el.dataset.t === 'bool' ? el.checked : el.value;
+  if (el.dataset.t === 'num' && isNaN(v)) return;
+  if (key.startsWith('m.')) {
+    const mk = key.slice(2);
+    if (mk === 'paper') { editing = false; undoStack.pop(); el.value = doc.paper; changePaper(v); return; }
+    if (mk === 'scaleDirect') { doc.scale = v > 0 ? 4000 / v : null; $('#sScale').textContent = scaleText(); }
+    else doc.meta[mk] = v;
+  } else {
+    const o = byId([...sel][0]); if (!o) return; const old = o[key];
+    if (key === 'locked') { editing = false; undoStack.pop(); if (v) { o.type === 'image' ? lockImages([o]) : (pushUndo(), o.locked = true, select([]), save()); } else { pushUndo(); o.locked = false; render(); refreshPane(); save(); } return; }
+    o[key] = v;
+    if (o.type === 'sym' && key === 'kind') { [o.w, o.h] = symSize(v); refreshPane(); }
+    if (o.type === 'sym' && key === 'w') { if (o.kind === 'door1') o.h = v; if (o.kind === 'door2') o.h = Math.round(v / 2); }
+    if (o.type === 'device' && key === 'kind') { if (!o.label || o.label === (DEV[old] || {}).label) o.label = DEV[v].label; refreshPane(); }
+    if (o.type === 'image' && key === 'rot' && o.isMap) doc.objects.filter(n => n.type === 'north').forEach(n => n.ang = v);
+  }
+  const out = document.querySelector(`[data-out="${key}"]`); if (out) out.textContent = v + (el.dataset.unit || '');
+  render(); save();
+  if (el.type === 'checkbox' || el.tagName === 'SELECT') { editing = false; refreshPane(); }
+});
+$('#pane').addEventListener('focusout', () => { editing = false; });
+$('#pane').addEventListener('change', e => { editing = false; if (e.target.dataset.k === 'm.scaleDirect') refreshPane(); });
+$('#pane').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const act = b.dataset.act, o = byId([...sel][0]);
+  const mut = fn => { pushUndo(); fn(); render(); refreshPane(); save(); };
+  switch (act) {
+    case 'lenMode': mut(() => { o.lenMode = b.dataset.v; if (o.lenMode === 'manual' && !o.lenText) o.lenText = lenLabel({ ...o, lenMode: 'auto' }) || '約○m'; }); if (b.dataset.v === 'manual') focusField('lenText'); break;
+    case 'style': mut(() => { o.style = b.dataset.v; }); break;
+    case 'renum': mut(() => { doc.objects.filter(x => x.type === 'camera' && !onPhoto(x)).forEach((c, i) => c.num = i + 1); }); toast('カメラ番号を振り直しました'); break;
+    case 'fitCallout': mut(() => { const lines = String(o.text).split('\n'); o.w = Math.round(Math.max(...lines.map(l => textW(l, o.fs))) + 28); o.h = Math.round(lines.length * o.fs * 1.3 + 16); }); break;
+    case 'pick': pickPhoto(o.id); break;
+    case 'unphoto': mut(() => { o.asset = null; }); break;
+    case 'fitPhoto': { const im = new Image(); im.onload = () => mut(() => { o.h = Math.round(o.w * im.naturalHeight / im.naturalWidth); }); im.src = blobs[o.asset] || doc.assets[o.asset]; break; }
+    case 'fitPage': mut(() => { const ar = o.w / o.h, aw = W - 120, ah = H - 300; let w = aw, h = w / ar; if (h > ah) { h = ah; w = h * ar; } o.w = Math.round(w); o.h = Math.round(h); o.x = Math.round((W - w) / 2); o.y = Math.round(240 + (ah - h) / 2); }); break;
+    case 'dup': duplicate(); break;
+    case 'front': mut(() => { const ids = sel; const a = doc.objects.filter(x => !ids.has(x.id)), b2 = doc.objects.filter(x => ids.has(x.id)); doc.objects = [...a, ...b2]; fixKidOrder(); }); break;
+    case 'back': mut(() => { const ids = sel; const a = doc.objects.filter(x => !ids.has(x.id)), b2 = doc.objects.filter(x => ids.has(x.id)); doc.objects = [...b2, ...a]; fixKidOrder(); }); break;
+    case 'del': delSel(); break;
+    case 'scaleTool': setTool('scale'); toast('長さが分かる2点をクリックしてください'); break;
+    case 'scaleClear': mut(() => { doc.scale = null; }); break;
+    case 'loadPlan': photoTarget = '__plan'; $('#fImg').multiple = false; $('#fImg').click(); break;
+    case 'selImg': select([b.dataset.v]); break;
+    case 'pgRen': renamePage(doc.cur); break;
+    case 'saveJson': saveJson(); break;
+    case 'openJson': $('#fJson').click(); break;
+    case 'pgAdd': addPage(); break;
+    case 'pgDel': deletePage(doc.cur); break;
+    case 'pgLeft': movePage(doc.cur, -1); break;
+    case 'pgRight': movePage(doc.cur, 1); break;
+    case 'photoEdit': enterPhotoEdit(o.id); break;
+    case 'exitEdit': exitPhotoEdit(); break;
+    case 'symRot': mut(() => { let a = (o.rot || 0) + 90; if (a > 180) a -= 360; o.rot = a; }); break;
+    case 'symFlip': mut(() => { o.flip = !o.flip; }); break;
+    case 'detach': mut(() => { delete o.parent; }); toast('写真から切り離しました'); break;
+    case 'imgZoom': mut(() => { const f = +b.dataset.v, cx = o.x + o.w / 2, cy = o.y + o.h / 2; o.w = Math.round(o.w * f); o.h = Math.round(o.h * f); o.x = Math.round(cx - o.w / 2); o.y = Math.round(cy - o.h / 2); }); break;
+    case 'lock': { const xs = [...sel].map(byId); const all = xs.every(x => x.locked); if (!all && xs.every(x => x.type === 'image')) { lockImages(xs); break; } mut(() => xs.forEach(x => x.locked = !all)); if (!all) { select([]); toast('固定しました（図面情報タブの「固定をすべて解除」で戻せます）'); } break; }
+    case 'unlockAll': mut(() => doc.objects.forEach(x => x.locked = false)); toast('固定をすべて解除しました'); break;
+    case 'delImg': mut(() => { doc.objects = doc.objects.filter(x => x.id !== b.dataset.v); sel.delete(b.dataset.v); }); toast('画像を削除しました'); break;
+    case 'sample': confirmModal('記入例を開く', '現在の図面は消えます（必要なら先に「保存」してください）。記入例を開きますか？', '記入例を開く').then(ok => { if (ok) { pushUndo(); loadDoc(sampleDoc()); toast('記入例を開きました'); } }); break;
+    case 'copySum': copySummary(); break;
+    case 'mapModal': openMapModal(); break;
+  }
+});
+function duplicate() {
+  if (!sel.size) return; pushUndo(); const ids = [];
+  for (const id of sel) {
+    const src = byId(id); const c = clone(src); c.id = uid(); moveObj(c, clone(c), 20, 20); if (c.type === 'camera' && !attached(c)) c.num = nextCamNum(), c.name = ''; doc.objects.push(c); ids.push(c.id);
+    if (src.type === 'photo') for (const k0 of kidsOf(id)) { if (sel.has(k0.id)) continue; const kc = clone(k0); kc.id = uid(); kc.parent = c.id; moveObj(kc, clone(kc), 20, 20); doc.objects.push(kc); }
+  }
+  select(ids); save();
+}
+function delSel() { if (!sel.size) return; if ([...sel].every(id => byId(id)?.locked)) { toast('固定中のため削除できません。固定を解除してください'); return; } pushUndo(); const ids = withKids(sel); doc.objects = doc.objects.filter(o => !ids.has(o.id)); select([]); save(); }
+function copySummary() {
+  let tsv;
+  if (doc.pages.length > 1) { const A = summaryAll(); tsv = [['項目', ...A.per.map(p => p.name), '合計', '単位'].join('\t'), ...A.rows.map(r => [r[0], ...r[1], r[2], r[3]].join('\t'))].join('\n'); }
+  else { const { rows } = summary(); tsv = ['項目\t数量\t単位', ...rows.map(r => r.join('\t'))].join('\n'); }
+  navigator.clipboard.writeText(tsv).then(() => toast('集計表をコピーしました。Excelに貼り付けできます')).catch(() => toast('コピーできませんでした。表を選択してコピーしてください'));
+}
+function scaleText() { return doc.scale ? `1/${Math.round(1000 / (doc.scale / 4))}` : '未設定'; }
+function updateStatus() { $('#sScale').textContent = scaleText(); $('#sSel').textContent = sel.size ? `${sel.size}個選択中` : ''; $('#bUndo').disabled = !undoStack.length; $('#bRedo').disabled = !redoStack.length; }
+
+/* ============ modal ============ */
+function modal(title, bodyHTML, okText, onOk) {
+  return new Promise(res => {
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<form class="modal"><h2>${title}</h2>${bodyHTML}<div class="acts"><button type="button" class="btn" data-x>キャンセル</button><button type="submit" class="btn primary">${okText}</button></div></form>`;
+    document.body.appendChild(bg);
+    const f = bg.querySelector('form'); const close = v => { bg.remove(); res(v); };
+    f.onsubmit = ev => { ev.preventDefault(); const v = onOk ? onOk(f) : true; if (v !== false) close(v); };
+    bg.querySelector('[data-x]').onclick = () => close(null);
+    bg.addEventListener('keydown', ev => { if (ev.key === 'Escape') close(null); });
+    setTimeout(() => { const i = f.querySelector('input'); (i || f.querySelector('.primary')).focus(); i && i.select(); }, 20);
+  });
+}
+const confirmModal = (t, msg, ok) => modal(t, `<p class="note" style="font-size:13px;color:var(--ink)">${msg}</p>`, ok).then(v => !!v);
+async function askScale(units) {
+  const v = await modal('縮尺の設定', `<p class="note">クリックした2点間の実際の長さを入力してください。</p><div class="f"><label for="mScale">実際の長さ（m）</label><input type="number" id="mScale" step="0.1" min="0.1" value="10"></div>`, '設定する',
+    f => { const n = parseFloat(f.querySelector('#mScale').value); return n > 0 ? n : false; });
+  setTool('select');
+  if (v) { pushUndo(); doc.scale = units / v; render(); refreshPane(); save(); toast(`縮尺を設定しました（約 ${scaleText()}）。配線長を自動計算します`); }
+}
+
+/* ============ images ============ */
+function dataURLtoBlob(d) { const [h, b] = d.split(','); const mime = h.match(/:(.*?);/)[1]; const bin = atob(b); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return new Blob([u], { type: mime }); }
+async function importImage(file, maxSide) {
+  let bmp;
+  try { bmp = await createImageBitmap(file); }
+  catch { throw new Error('この画像形式は読み込めません（HEICはJPEGに変換してください）'); }
+  const s = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const c = document.createElement('canvas'); c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(bmp, 0, 0, c.width, c.height);
+  const id = 'a' + uid().slice(1); const data = c.toDataURL('image/jpeg', 0.86);
+  doc.assets[id] = data; blobs[id] = URL.createObjectURL(dataURLtoBlob(data));
+  return { id, w: c.width, h: c.height };
+}
+function pickPhoto(id) { photoTarget = id; $('#fImg').multiple = !id; $('#fImg').click(); }
+$('#fImg').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = ''; if (!files.length) return;
+  const target = photoTarget; photoTarget = null;
+  try {
+    if (target === '__plan') {
+      const a = await importImage(files[0], 2600); pushUndo();
+      const ar = a.w / a.h, aw = W - 120, ah = H - 300; let w = aw, h = w / ar; if (h > ah) { h = ah; w = h * ar; }
+      const o = addObj({ type: 'image', asset: a.id, x: Math.round((W - w) / 2), y: Math.round(240 + (ah - h) / 2), w: Math.round(w), h: Math.round(h), opacity: 0.55, locked: false }, true);
+      setTool('select'); select([o.id]); toast('四隅で拡大縮小、中をドラッグで移動。決まったら右上の「固定する」を押してください'); return;
+    }
+    await placePhotos(files, target, pendingDrop);
+  } catch (err) { toast(err.message || '画像を読み込めませんでした'); }
+  pendingDrop = null;
+});
+async function placePhotos(files, targetId, at) {
+  const imgs = files.filter(f => f.type.startsWith('image/') || /\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name)); if (!imgs.length) return;
+  pushUndo(); const ids = [];
+  let target = targetId ? byId(targetId) : null;
+  if (!target && at) { const hitPh = doc.objects.slice().reverse().find(o => o.type === 'photo' && at.x >= o.x && at.x <= o.x + o.w && at.y >= o.y && at.y <= o.y + o.h); if (hitPh) target = hitPh; }
+  const empties = doc.objects.filter(o => o.type === 'photo' && !o.asset);
+  for (let i = 0; i < imgs.length; i++) {
+    const a = await importImage(imgs[i], 1600);
+    let o = i === 0 ? target : null;
+    if (!o && !at && !targetId) o = empties.find(p => !p.asset && !ids.includes(p.id));
+    if (o) { o.asset = a.id; ids.push(o.id); continue; }
+    const c = at || { x: vb.x + vb.w / 2, y: vb.y + vb.h / 2 };
+    const w = 220, h = Math.round(w * a.h / a.w);
+    o = addObj({ type: 'photo', x: Math.round(c.x - w / 2 + i * 24), y: Math.round(c.y - h / 2 + i * 24), w, h, asset: a.id, caption: '', ccol: BLUE, cfs: 13 });
+    ids.push(o.id);
+  }
+  select(ids); save();
+  toast(imgs.length > 1 ? `${imgs.length}枚の写真を配置しました` : '写真を配置しました');
+}
+stage.addEventListener('dragover', e => { e.preventDefault(); });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => { if (e.defaultPrevented) return; e.preventDefault(); const f = [...(e.dataTransfer?.files || [])].find(f => /\.json$/i.test(f.name)); if (f) openJsonFile(f); });
+stage.addEventListener('drop', async e => {
+  e.preventDefault(); const files = [...e.dataTransfer.files]; if (!files.length) return;
+  const json = files.find(f => /\.json$/i.test(f.name)); if (json) { openJsonFile(json); return; }
+  try { await placePhotos(files, null, pt(e)); } catch (err) { toast(err.message); }
+});
+document.addEventListener('paste', async e => {
+  if (mapPaste) { const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith('image/')); if (f) { e.preventDefault(); mapPaste(f); } return; }
+  if (e.target.matches && e.target.matches('input,textarea')) return;
+  const files = [...(e.clipboardData?.files || [])]; if (files.length) { e.preventDefault(); const t = sel.size === 1 && byId([...sel][0])?.type === 'photo' ? [...sel][0] : null; try { await placePhotos(files, t, null); } catch (err) { toast(err.message); } return; }
+  if (clip) { pushUndo(); const ids = []; for (const c0 of clip) { const c = clone(c0); c.id = uid(); moveObj(c, clone(c), 30, 30); if (c.type === 'camera') c.num = nextCamNum(); doc.objects.push(c); ids.push(c.id); } clip = clip.map(c => { const d = clone(c); moveObj(d, clone(d), 30, 30); return d; }); select(ids); save(); }
+});
+let clip = null;
+document.addEventListener('copy', e => { if (e.target.matches && e.target.matches('input,textarea')) return; if (sel.size) { clip = [...sel].map(id => clone(byId(id))); e.preventDefault(); toast('コピーしました（Ctrl+Vで貼り付け）'); } });
+
+/* ============ map ============ */
+let mapPaste = null;
+function openMapModal() {
+  if (draft) finishDraft(true);
+  const addr = doc.meta.address || doc.meta.property || '';
+  const gq = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr);
+  const bg = document.createElement('div'); bg.className = 'modal-bg';
+  bg.innerHTML = `<div class="modal" style="width:min(540px,100%)" role="dialog" aria-label="地図から建物を作る">
+    <h2>地図から建物を作る</h2>
+    <ol class="help">
+      <li>地図サイトで物件を表示し、<b>縮尺バーが写るように</b>スクリーンショットを撮る（Windows：<kbd>Win</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>）
+        <div class="row" style="margin:4px 0 2px"><a class="btn" style="background:var(--panel-2)" href="https://maps.gsi.go.jp/" target="_blank" rel="noopener">地理院地図を開く</a><a class="btn" style="background:var(--panel-2)" href="${esc(gq)}" target="_blank" rel="noopener">Googleマップで${addr ? '「' + esc(addr.slice(0, 14)) + '」を' : ''}開く</a></div></li>
+      <li>この画面で <kbd>Ctrl</kbd>+<kbd>V</kbd> で貼り付け（または画像ファイルを選択）</li>
+      <li>地図の縮尺バーの両端をクリック → 長さ(m)を入力</li>
+      <li>「建物」ツールで建物の角をなぞる</li>
+    </ol>
+    <div class="f"><span class="l">使い方</span><div class="seg" role="group" id="mMode">
+      <button type="button" data-v="trace" aria-pressed="true">下絵にしてなぞる</button><button type="button" data-v="inset" aria-pressed="false">案内図として貼る</button></div></div>
+    <label class="chk" id="mPrintWrap"><input type="checkbox" id="mPrint"> 書き出しにも地図を残す（通常はなぞった線だけを出力）</label>
+    <div class="f" id="mSrcWrap" hidden><label for="mSrc">出典の表記</label><select id="mSrc"><option value="出典：国土地理院">出典：国土地理院（地理院地図）</option><option value="">なし（画像内に表記あり）</option></select></div>
+    <div id="mDrop" tabindex="0" style="border:2px dashed var(--line);border-radius:10px;padding:22px 12px;text-align:center;color:var(--ink-2);background:var(--panel-2)">
+      ここに地図の画像を <b style="color:var(--ink)">Ctrl+V で貼り付け</b> またはドロップ<br><button type="button" class="btn" id="mPick" style="margin-top:8px;background:var(--panel)">画像ファイルを選ぶ</button></div>
+    <p class="note">地図は物件位置の参考です。境界や寸法は現地確認の値を優先してください。</p>
+    <div class="acts"><button type="button" class="btn" data-x>閉じる</button></div></div>`;
+  document.body.appendChild(bg);
+  let mode = 'trace';
+  const close = () => { mapPaste = null; bg.remove(); };
+  bg.querySelector('[data-x]').onclick = close;
+  bg.addEventListener('keydown', ev => { if (ev.key === 'Escape') close(); });
+  bg.querySelector('#mMode').onclick = ev => { const b = ev.target.closest('[data-v]'); if (!b) return; mode = b.dataset.v; bg.querySelectorAll('#mMode button').forEach(x => x.setAttribute('aria-pressed', x === b)); bg.querySelector('#mPrintWrap').hidden = mode !== 'trace'; bg.querySelector('#mSrcWrap').hidden = mode !== 'inset'; };
+  const drop = bg.querySelector('#mDrop');
+  drop.addEventListener('dragover', ev => ev.preventDefault());
+  drop.addEventListener('drop', ev => { ev.preventDefault(); ev.stopPropagation(); const f = [...ev.dataTransfer.files].find(f => f.type.startsWith('image/')); if (f) got(f); });
+  bg.querySelector('#mPick').onclick = () => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.onchange = () => inp.files[0] && got(inp.files[0]); inp.click(); };
+  setTimeout(() => drop.focus(), 30);
+  async function got(file) {
+    const keepPrint = bg.querySelector('#mPrint').checked, src = bg.querySelector('#mSrc').value;
+    close();
+    try {
+      if (mode === 'inset') {
+        const a = await importImage(file, 1600); pushUndo();
+        const w = 320, h = Math.round(w * a.h / a.w);
+        const o = addObj({ type: 'photo', x: W - 40 - w - 20, y: 250, w, h, asset: a.id, caption: '案内図' + (src ? '（' + src + '）' : ''), ccol: '#111111', cfs: 12 });
+        select([o.id]); toast('案内図を配置しました。ドラッグで位置を調整できます'); return;
+      }
+      const a = await importImage(file, 3000); pushUndo();
+      const ar = a.w / a.h, aw = W - 120, ah = H - 300; let w = aw, h = w / ar; if (h > ah) { h = ah; w = h * ar; }
+      const mo = addObj({ type: 'image', asset: a.id, x: Math.round((W - w) / 2), y: Math.round(240 + (ah - h) / 2), w: Math.round(w), h: Math.round(h), opacity: 0.6, locked: false, print: keepPrint, rot: 0, isMap: true }, true);
+      if (!doc.objects.some(o => o.type === 'north')) addObj({ type: 'north', x: W - 110, y: 320, ang: 0, sz: 1 });
+      setTool('select'); select([mo.id]);
+      toast('四隅をドラッグで拡大縮小、中をドラッグで移動。決まったら右上の「固定する」を押してください');
+    } catch (err) { toast(err.message || '画像を読み込めませんでした'); }
+  }
+  mapPaste = got;
+}
+
+/* ============ keyboard ============ */
+document.addEventListener('keydown', e => {
+  if (document.querySelector('.modal-bg')) return;
+  const inField = e.target.matches('input,textarea,select');
+  if (e.key === 'Alt') document.body.classList.add('alt');
+  if (inField) { if (e.key === 'Escape') e.target.blur(); return; }
+  const mod = e.ctrlKey || e.metaKey;
+  if (e.code === 'Space') { spaceDown = true; stage.classList.add('pan'); e.preventDefault(); return; }
+  if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
+  if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return; }
+  if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); select(doc.objects.filter(o => !o.locked).map(o => o.id)); return; }
+  if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveJson(); return; }
+  if (mod) return;
+  if (e.key === 'Escape') { if (draft) finishDraft(true); else if (tool !== 'select') setTool('select'); else if (sel.size) select([]); else if (editPhoto) exitPhotoEdit(); return; }
+  if (e.key === 'Enter' && draft) { finishDraft(); return; }
+  if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); delSel(); return; }
+  if (e.key.startsWith('Arrow') && sel.size) {
+    e.preventDefault(); const st = e.shiftKey ? 10 : 1; const dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dy = e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0;
+    if (!e.repeat) pushUndo(); for (const id of withKids(sel)) { const o = byId(id); if (o && !o.locked) moveObj(o, clone(o), dx, dy); } render(); save(); return;
+  }
+  const t = TOOLS.find(t => t.key && t.key.toLowerCase() === e.key.toLowerCase()); if (t) setTool(t.id);
+});
+document.addEventListener('keyup', e => { if (e.code === 'Space') { spaceDown = false; stage.classList.toggle('pan', tool === 'hand'); } if (e.key === 'Alt') document.body.classList.remove('alt'); });
+window.addEventListener('blur', () => { spaceDown = false; document.body.classList.remove('alt'); });
+
+/* ============ persistence ============ */
+let idb = null;
+function idbOpen() { return new Promise(res => { try { const r = indexedDB.open('camera-gaiyouzu', 1); r.onupgradeneeded = () => r.result.createObjectStore('docs'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch { res(null); } }); }
+function idbGet(key) { return new Promise(res => { try { const t = idb.transaction('docs').objectStore('docs').get(key); t.onsuccess = () => res(t.result); t.onerror = () => res(null); } catch { res(null); } }); }
+function idbPut(key, v) { return new Promise(res => { try { const t = idb.transaction('docs', 'readwrite').objectStore('docs').put(v, key); t.onsuccess = () => res(true); t.onerror = () => res(false); } catch { res(false); } }); }
+function usedAssets() { syncPage(); const u = {}; for (const o of doc.pages.flatMap(pg => pg.objects)) if (o.asset && doc.assets[o.asset]) u[o.asset] = doc.assets[o.asset]; return u; }
+function serialize() { syncPage(); return JSON.stringify({ app: 'camera-gaiyouzu', v: 2, savedAt: new Date().toISOString(), meta: doc.meta, paper: doc.paper, cur: doc.cur, pages: doc.pages, assets: usedAssets() }); }
+let saveT = null;
+function save() { clearTimeout(saveT); saveT = setTimeout(async () => { if (!idb) return; const ok = await idbPut('current', serialize()); $('#sSaved').textContent = ok ? 'このブラウザに自動保存済み ' + new Date().toTimeString().slice(0, 5) : ''; }, 700); }
+function loadDoc(d) {
+  if (editPhoto) { editPhoto = null; stage.classList.remove('editing'); $('#editbar').hidden = true; }
+  for (const u of Object.values(blobs)) URL.revokeObjectURL(u); blobs = {};
+  const pages = Array.isArray(d.pages) && d.pages.length ? d.pages : [{ id: uid(), name: d.pageName || '1枚目', objects: d.objects || [], scale: d.scale || null }];
+  for (const pg of pages) { pg.id = pg.id || uid(); pg.objects = pg.objects || []; pg.scale = pg.scale || null; for (const o of pg.objects) o.id = o.id || uid(); }
+  doc = { meta: { ...blankDoc().meta, ...(d.meta || {}) }, assets: d.assets || {}, paper: PAPERS[d.paper] ? d.paper : 'A3L', pages, cur: 0, objects: [], scale: null };
+  usePage(Math.min(d.cur || 0, pages.length - 1));
+  forEachPage(() => adoptPhotoKids());
+  applyPaper(); renderPages();
+  for (const [id, data] of Object.entries(doc.assets)) { try { blobs[id] = URL.createObjectURL(dataURLtoBlob(data)); } catch { } }
+  for (const o of doc.objects) o.id = o.id || uid();
+  adoptPhotoKids();
+  sel = new Set(); render(); refreshPane(); save();
+}
+function openJsonFile(f) {
+  const r = new FileReader(); r.onload = () => { try { const d = JSON.parse(r.result); if (!Array.isArray(d.objects) && !Array.isArray(d.pages)) throw 0; pushUndo(); loadDoc(d); toast('「' + f.name + '」を開きました（' + doc.pages.length + 'ページ）'); } catch { toast('このファイルは読み込めません（カメラ概要図メーカーの .json を選んでください）'); } }; r.readAsText(f);
+}
+$('#fJson').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) openJsonFile(f); });
+
+/* ============ Excel: native shapes (DrawingML) ============ */
+const XL = (() => {
+  const E = u => Math.round(u * 9000);           // 1 unit = 0.25 mm = 9000 EMU
+  const hx = c => String(c || '#111111').replace('#', '').slice(0, 6).toUpperCase();
+  let id = 1;
+  const fill = (c, a) => (!c || c === 'none') ? '<a:noFill/>' : `<a:solidFill><a:srgbClr val="${hx(c)}">${a != null && a < 1 ? `<a:alpha val="${Math.round(a * 100000)}"/>` : ''}</a:srgbClr></a:solidFill>`;
+  const ln = (c, w, o = {}) => (!c || c === 'none') ? '<a:ln><a:noFill/></a:ln>'
+    : `<a:ln w="${Math.max(3175, E(w))}"${o.cap ? ` cap="${o.cap}"` : ''}>${fill(c, o.a)}${o.dash ? `<a:prstDash val="${o.dash}"/>` : ''}<a:round/>${o.head ? `<a:headEnd type="${o.head}" w="med" len="med"/>` : ''}${o.tail ? `<a:tailEnd type="${o.tail}" w="med" len="med"/>` : ''}</a:ln>`;
+  const tx = (text, fs, o = {}) => {
+    const sz = Math.max(100, Math.round(fs * 0.7087 * 100)), ins = E(o.ins || 0);
+    const rpr = `<a:rPr lang="ja-JP" altLang="en-US" sz="${sz}"${o.bold ? ' b="1"' : ''}>${fill(o.color || '#111111')}<a:latin typeface="Meiryo UI"/><a:ea typeface="Meiryo UI"/></a:rPr>`;
+    return `<xdr:txBody><a:bodyPr vertOverflow="overflow" horzOverflow="overflow" wrap="none" lIns="${ins}" tIns="0" rIns="${ins}" bIns="0" anchor="ctr" rtlCol="0"/><a:lstStyle/>`
+      + String(text).split('\n').map(l => `<a:p><a:pPr algn="${o.algn || 'ctr'}"/>${l ? `<a:r>${rpr}<a:t>${esc(l)}</a:t></a:r>` : ''}<a:endParaRPr lang="ja-JP" sz="${sz}"/></a:p>`).join('') + '</xdr:txBody>';
+  };
+  const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); const x = Math.min(...xs), y = Math.min(...ys); return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }; };
+  const xfrm = (b, rot) => `<a:xfrm${rot ? ` rot="${Math.round(rot * 60000)}"` : ''}><a:off x="${E(b.x)}" y="${E(b.y)}"/><a:ext cx="${Math.max(1, E(b.w))}" cy="${Math.max(1, E(b.h))}"/></a:xfrm>`;
+  function sp(name, b, geom, f, l, t, o = {}) {
+    const i = ++id;
+    return { b, xml: `<xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="${i}" name="${esc(name)} ${i}"/><xdr:cNvSpPr${o.box ? ' txBox="1"' : ''}/></xdr:nvSpPr><xdr:spPr>${xfrm(b, o.rot)}${geom}${f}${l}</xdr:spPr>${t || ''}</xdr:sp>` };
+  }
+  const prst = (p, av = '') => `<a:prstGeom prst="${p}"><a:avLst>${av}</a:avLst></a:prstGeom>`;
+  function geomPath(cmds, b, filled) {
+    const W2 = Math.max(1, E(b.w)), H2 = Math.max(1, E(b.h)), P = (x, y) => `<a:pt x="${E(x - b.x)}" y="${E(y - b.y)}"/>`;
+    return `<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst><a:path w="${W2}" h="${H2}"${filled ? '' : ' fill="none"'}>`
+      + cmds.map(c => c[0] === 'M' ? `<a:moveTo>${P(c[1], c[2])}</a:moveTo>` : c[0] === 'L' ? `<a:lnTo>${P(c[1], c[2])}</a:lnTo>` : c[0] === 'C' ? `<a:cubicBezTo>${P(c[1], c[2])}${P(c[3], c[4])}${P(c[5], c[6])}</a:cubicBezTo>` : '<a:close/>').join('')
+      + '</a:path></a:pathLst></a:custGeom>';
+  }
+  function path(name, cmds, o = {}) {
+    const pts = []; cmds.forEach(c => { for (let i = 1; i + 1 < c.length; i += 2) pts.push([c[i], c[i + 1]]); });
+    const b = box(pts);
+    return sp(name, b, geomPath(cmds, b, !!o.fill), fill(o.fill, o.fa), ln(o.stroke, o.w || 1, o));
+  }
+  const poly = (name, pts, o = {}) => path(name, [['M', ...pts[0]], ...pts.slice(1).map(p => ['L', ...p]), ...(o.closed ? [['Z']] : [])], o);
+  const rect = (name, x, y, w, h, o = {}) => sp(name, { x, y, w, h }, prst(o.prst || 'rect', o.av || ''), fill(o.fill, o.fa), ln(o.stroke, o.w || 1, o), (o.text != null && o.text !== '') ? tx(o.text, o.fs || 14, o) : '', o);
+  const ell = (name, cx, cy, rx, ry, o = {}) => rect(name, cx - rx, cy - ry, 2 * rx, 2 * ry, { ...o, prst: 'ellipse' });
+  function label(name, s, x, baseY, fs, o = {}) {
+    const lines = String(s).split('\n'), lh = fs * 1.35, w = Math.max(...lines.map(l => textW(l, fs, o.bold))) + (o.pad ?? 6), h = lines.length * lh;
+    const left = o.algn === 'l' ? x : x - w / 2, top = baseY - fs * 0.85 - (lh - fs) / 2;
+    return rect(name, left, top, w, h, { fill: o.bg ?? null, stroke: o.border || null, w: o.bw || 1, text: s, fs, bold: o.bold, color: o.color, algn: o.algn === 'l' ? 'l' : 'ctr', box: true });
+  }
+  function group(name, kids) {
+    kids = kids.filter(Boolean); if (!kids.length) return null; if (kids.length === 1) return kids[0];
+    const xs = kids.flatMap(k => [k.b.x, k.b.x + k.b.w]), ys = kids.flatMap(k => [k.b.y, k.b.y + k.b.h]);
+    const b = { x: Math.min(...xs), y: Math.min(...ys) }; b.w = Math.max(...xs) - b.x; b.h = Math.max(...ys) - b.y;
+    const i = ++id, ch = `<a:chOff x="${E(b.x)}" y="${E(b.y)}"/><a:chExt cx="${Math.max(1, E(b.w))}" cy="${Math.max(1, E(b.h))}"/>`;
+    return { b, xml: `<xdr:grpSp><xdr:nvGrpSpPr><xdr:cNvPr id="${i}" name="${esc(name)}"/><xdr:cNvGrpSpPr/></xdr:nvGrpSpPr><xdr:grpSpPr>${xfrm(b).replace('</a:xfrm>', ch + '</a:xfrm>')}</xdr:grpSpPr>${kids.map(k => k.xml).join('')}</xdr:grpSp>` };
+  }
+  function pic(name, rid, x, y, w, h, o = {}) {
+    const i = ++id, sr = o.src ? `<a:srcRect l="${o.src.l}" t="${o.src.t}" r="${o.src.r}" b="${o.src.b}"/>` : '';
+    return { b: { x, y, w, h }, xml: `<xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${i}" name="${esc(name)}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="${rid}">${o.alpha != null && o.alpha < 1 ? `<a:alphaModFix amt="${Math.round(o.alpha * 100000)}"/>` : ''}</a:blip>${sr}<a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr>${xfrm({ x, y, w, h }, o.rot)}${prst('rect')}${o.stroke ? ln(o.stroke, 1) : '<a:ln><a:noFill/></a:ln>'}</xdr:spPr></xdr:pic>` };
+  }
+  const RT = (cx, cy, ang, s = 1, flip = false) => (lx, ly) => { lx *= s * (flip ? -1 : 1); ly *= s; const a = ang * Math.PI / 180, c = Math.cos(a), sn = Math.sin(a); return [cx + lx * c - ly * sn, cy + lx * sn + ly * c]; };
+  function cmdsOf(pts, smooth) {
+    if (!smooth || pts.length < 3) return [['M', ...pts[0]], ...pts.slice(1).map(p => ['L', ...p])];
+    const out = [['M', ...pts[0]]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      out.push(['C', p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6, p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6, p2[0], p2[1]]);
+    }
+    return out;
+  }
+  const DASH = { concealed: 'dash', aerial: 'lgDashDot' };
+
+  function camEl(o, withLabel = true) {
+    const T = RT(o.x, o.y, o.ang || 0, o.sz || 1), P = pts => pts.map(p => T(...p)), k = [], s = o.sz || 1;
+    if (o.cone) { const a = (o.coneAng || 60) * Math.PI / 360, L = o.coneLen || 110, fan = [[0, 0]]; for (let i = 0; i <= 14; i++) { const t = -a + 2 * a * i / 14; fan.push([L * Math.cos(t), L * Math.sin(t)]); } k.push(poly('撮影範囲', P(fan), { closed: true, fill: CAM, fa: .2, stroke: CAM, a: .55, w: 1 })); }
+    if (o.kind === 'dome') { k.push(ell('ドーム', o.x, o.y, 13 * s, 13 * s, { fill: '#e8f8fc', stroke: CAMD, w: 1.6 })); k.push(ell('レンズ', o.x, o.y, 7 * s, 7 * s, { fill: CAM, stroke: CAMD, w: 1.2 })); }
+    else {
+      const R4 = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
+      k.push(poly('取付金具', P(R4(-26, -5, 5, 10)), { closed: true, fill: '#94a3b8', stroke: CAMD, w: 1 }));
+      k.push(poly('アーム', P([[-21, 0], [-15, 0]]), { stroke: CAMD, w: 2 }));
+      k.push(poly('本体', P(R4(-15, -8.5, 22, 17)), { closed: true, fill: CAM, stroke: CAMD, w: 1.6 }));
+      k.push(poly('レンズ', P([[7, -6], [15, -9.5], [15, 9.5], [7, 6]]), { closed: true, fill: CAMD }));
+    }
+    if (withLabel && !o.hideLabel) k.push(label('カメラ名', camLabel(o), o.x + (o.lx || 0), o.y + (o.ly || 0) + 5, 14, { bg: '#ffffff' }));
+    return group(withLabel ? camLabel(o) : 'カメラ', k);
+  }
+  function devEl(o) {
+    const x = o.x, y = o.y, k = [];
+    const R = (n, a, b, w, h, opt) => k.push(rect(n, x + a, y + b, w, h, opt)), Ln = (n, pts, opt) => k.push(poly(n, pts.map(p => [x + p[0], y + p[1]]), opt)), C = (n, cx, cy, r, opt, ry) => k.push(ell(n, x + cx, y + cy, r, ry ?? r, opt));
+    switch (o.kind) {
+      case 'recorder': R('モニター', -17, -22, 34, 23, { fill: '#1e293b', stroke: '#0f172a', w: 1.4 }); R('画面', -14, -19, 28, 17, { fill: CAM }); Ln('スタンド', [[0, 1], [0, 7]], { stroke: '#0f172a', w: 2.5 }); R('レコーダー', -19, 8, 38, 11, { fill: '#334155', stroke: '#0f172a', w: 1.2 }); C('LED', 13, 13.5, 1.8, { fill: '#4ade80' }); break;
+      case 'nvr': R('レコーダー', -20, -9, 40, 18, { fill: '#334155', stroke: '#0f172a', w: 1.4 }); Ln('線', [[-15, -3], [3, -3]], { stroke: '#64748b', w: 1.6 }); Ln('線', [[-15, 2], [3, 2]], { stroke: '#64748b', w: 1.6 }); C('LED', 10, 0, 2, { fill: '#4ade80' }); C('LED', 15, 0, 2, { fill: '#fbbf24' }); break;
+      case 'monitor': R('モニター', -19, -20, 38, 26, { fill: '#1e293b', stroke: '#0f172a', w: 1.4 }); R('画面', -16, -17, 32, 20, { fill: CAM }); Ln('スタンド', [[0, 6], [0, 12]], { stroke: '#0f172a', w: 2.5 }); Ln('台', [[-9, 13], [9, 13]], { stroke: '#0f172a', w: 3, cap: 'rnd' }); break;
+      case 'panel': R('分電盤', -10, -16, 20, 32, { fill: RED, stroke: '#7f1d1d', w: 1.5 }); Ln('線', [[-6, -10], [6, -10]], { stroke: '#fecaca', w: 1.5 }); Ln('線', [[-6, -4], [6, -4]], { stroke: '#fecaca', w: 1.5 }); break;
+      case 'box': R('盤BOX', -14, -12, 28, 24, { fill: '#f1f5f9', stroke: '#334155', w: 1.6, text: 'BOX', fs: 9, bold: true, color: '#334155' }); break;
+      case 'hub': R('HUB', -17, -8, 34, 16, { fill: '#e2e8f0', stroke: '#334155', w: 1.5 }); [-10, -4, 2, 8].forEach(a => R('ポート', a, -3, 4, 5, { fill: '#334155' })); break;
+      case 'outlet': C('コンセント', 0, 0, 10, { fill: '#ffffff', stroke: '#111111', w: 1.6 }); Ln('刃', [[-3.5, -4], [-3.5, 4]], { stroke: '#111111', w: 2 }); Ln('刃', [[3.5, -4], [3.5, 4]], { stroke: '#111111', w: 2 }); break;
+      case 'vent': C('換気口', 0, 0, 15, { fill: '#cbd5e1', stroke: '#334155', w: 1.5 }, 9); [[-9, -3, 9], [-10, 0, 10], [-9, 3, 9]].forEach(([a, b, c]) => Ln('線', [[a, b], [c, b]], { stroke: '#64748b', w: 1 })); break;
+      case 'hole': C('貫通', 0, 0, 7.5, { fill: '#ffffff', stroke: RED, w: 2.6 }); break;
+      case 'pole': C('ポール', 0, 0, 11, { fill: '#ffffff', stroke: '#111111', w: 2 }); C('ポール芯', 0, 0, 5.5, { fill: '#111111' }); break;
+    }
+    if (o.label) k.push(label('ラベル', o.label, x + (o.lx || 0), y + (o.ly || 0) + 5, 13, { bg: '#ffffff' }));
+    return group(DEV[o.kind] ? DEV[o.kind].name : '機器', k);
+  }
+  function symEl(o) {
+    const T = RT(o.x, o.y, o.rot || 0, 1, o.flip), P = pts => pts.map(p => T(...p)), w = o.w, h = o.h, X = -w / 2, Y = -h / 2, cut = o.cut !== false, k = [];
+    const L = (a, b, sw = 1.4, col = '#111111', ex = {}) => k.push(poly('線', P([a, b]), { stroke: col, w: sw, ...ex }));
+    const arc = (cx, cy, r, a0, a1) => { const pts = []; for (let i = 0; i <= 16; i++) { const t = (a0 + (a1 - a0) * i / 16) * Math.PI / 180; pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]); } k.push(poly('開き', P(pts), { stroke: '#111111', w: 1 })); };
+    const B = (x, y, ww, hh, opt) => k.push(poly('枠', P([[x, y], [x + ww, y], [x + ww, y + hh], [x, y + hh]]), { closed: true, ...opt }));
+    switch (o.kind) {
+      case 'door1': if (cut) L([X, -Y], [-X, -Y], 8, '#ffffff'); L([X, -Y], [X, Y], 2.2); arc(X, -Y, w, 0, -90); L([X, -Y - 4], [X, -Y + 4], 2); L([-X, -Y - 4], [-X, -Y + 4], 2); break;
+      case 'door2': if (cut) L([X, -Y], [-X, -Y], 8, '#ffffff'); L([X, -Y], [X, Y], 2.2); L([-X, -Y], [-X, Y], 2.2); arc(X, -Y, w / 2, 0, -90); arc(-X, -Y, w / 2, 180, 270); L([X, -Y - 4], [X, -Y + 4], 2); L([-X, -Y - 4], [-X, -Y + 4], 2); break;
+      case 'slide': { const pw = w * 0.56; if (cut) B(X, Y - 2, w, h + 4, { fill: '#ffffff' }); B(X, Y, pw, h / 2, { fill: '#ffffff', stroke: '#111111', w: 1.3 }); B(-X - pw, 0, pw, h / 2, { fill: '#ffffff', stroke: '#111111', w: 1.3 }); L([X, Y - 3], [X, -Y + 3], 2.2); L([-X, Y - 3], [-X, -Y + 3], 2.2); break; }
+      case 'window': if (cut) B(X, Y - 2, w, h + 4, { fill: '#ffffff' }); L([X, Y], [-X, Y], 1.2); L([X, -Y], [-X, -Y], 1.2); L([X, 0], [-X, 0], 1); L([X, Y - 2], [X, -Y + 2], 2.2); L([-X, Y - 2], [-X, -Y + 2], 2.2); break;
+      case 'stair': {
+        const n = Math.max(2, o.n || 8); B(X, Y, w, h, { fill: '#ffffff', stroke: '#111111', w: 1.6 });
+        for (let i = 1; i < n; i++) { const x = X + w * i / n; L([x, Y], [x, -Y], 1); }
+        if (o.dir !== 'none') { L([X + 8, 0], [-X - 4, 0], 1.4, '#111111', { tail: 'triangle' }); const d = T(X + 8, 0); k.push(ell('始点', d[0], d[1], 2.6, 2.6, { fill: '#111111' })); const t = T(X + 12, Y - 5); k.push(label('UP/DN', o.dir === 'dn' ? 'DN' : 'UP', t[0], t[1], 12, { bold: true, algn: 'l' })); }
+        break;
+      }
+    }
+    return group(SYM[o.kind] ? SYM[o.kind].name : '建具', k);
+  }
+  function emit(o, ctx) {
+    switch (o.type) {
+      case 'line': return path('壁・線', cmdsOf(o.pts, false), { stroke: o.color, w: o.w, dash: o.dash ? 'dash' : '' });
+      case 'wire': {
+        const st = WIRE[o.style] || WIRE.exposed, cm = cmdsOf(o.pts, o.smooth), k = [];
+        if (o.parent) k.push(path('ふちどり', cm, { stroke: '#ffffff', a: .85, w: 6.5, cap: 'rnd' }));
+        k.push(path(st.name, cm, { stroke: st.color, w: 3, dash: DASH[o.style], cap: 'rnd' }));
+        const lab = o.showLen ? lenLabel(o) : ''; if (lab) { const m = pointAt(wirePts(o), 0.5); k.push(label('長さ', lab, m[0] + (o.lx || 0), m[1] + (o.ly || 0) + 5, 14, { bg: '#ffffff' })); }
+        return group(st.name, k);
+      }
+      case 'rect': return rect(o.label ? '部屋 ' + o.label.replace(/\n/g, ' ') : '四角', o.x, o.y, o.w, o.h, { fill: o.fill === 'none' ? null : o.fill, stroke: '#111111', w: o.sw, dash: o.dash ? 'dash' : '', text: o.label, fs: o.fs });
+      case 'text': {
+        const b = textBox(o), al = o.anchor === 'middle' ? 'ctr' : 'l';
+        return o.box !== 'none' ? rect('文字', b.x - 6, b.y - 5, b.w + 12, b.h + 10, { fill: '#ffffff', stroke: o.box, w: 1.6, text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: al, ins: 6, box: true })
+          : rect('文字', b.x, b.y, b.w + 4, b.h, { text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: al, box: true });
+      }
+      case 'camera': return camEl(o);
+      case 'device': return devEl(o);
+      case 'sym': return symEl(o);
+      case 'poly': {
+        const n = o.pts.length, k = [poly(o.label ? '建物 ' + o.label : '建物', o.pts, { closed: true, fill: o.fill === 'none' ? null : o.fill, stroke: '#111111', w: o.sw, dash: o.dash ? 'dash' : '' })];
+        const cx = o.pts.reduce((a, p) => a + p[0], 0) / n, cy = o.pts.reduce((a, p) => a + p[1], 0) / n;
+        if (o.showEdges && doc.scale) for (let i = 0; i < n; i++) {
+          const a = o.pts[i], b = o.pts[(i + 1) % n], L = dist(a, b); if (L < 30) continue;
+          let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+          if ((mx + nx - cx) ** 2 + (my + ny - cy) ** 2 < (mx - cx) ** 2 + (my - cy) ** 2) { nx = -nx; ny = -ny; }
+          k.push(label('辺の長さ', '約' + (L / doc.scale).toFixed(1) + 'm', mx + nx * 15, my + ny * 15 + 4, 12, { bg: '#ffffff' }));
+        }
+        if (o.label) k.push(label('名前', o.label, cx + (o.lx || 0), cy + (o.ly || 0) + o.fs * 0.36, o.fs));
+        return group('建物', k);
+      }
+      case 'dim': {
+        const [x1, y1] = o.p1, [x2, y2] = o.p2, L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L, nx = -uy, ny = ux;
+        const k = [poly('寸法線', [o.p1, o.p2], { stroke: '#111111', w: 1.3, head: 'triangle', tail: 'triangle' }),
+          poly('端', [[x1 + nx * 9, y1 + ny * 9], [x1 - nx * 9, y1 - ny * 9]], { stroke: '#111111', w: 1.3 }), poly('端', [[x2 + nx * 9, y2 + ny * 9], [x2 - nx * 9, y2 - ny * 9]], { stroke: '#111111', w: 1.3 })];
+        const lab = lenLabel(o);
+        if (lab) { const side = (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) ? -1 : 1; k.push(label('寸法', lab, (x1 + x2) / 2 + nx * side * (Math.abs(ux) > 0.7 ? 14 : 26) + (o.lx || 0), (y1 + y2) / 2 + ny * side * 14 + (o.ly || 0) + 5, 14, { bg: '#ffffff' })); }
+        return group('寸法', k);
+      }
+      case 'arrow': {
+        const k = [], w = o.w || 3;
+        if (o.halo !== false) k.push(poly('ふちどり', [o.p1, o.p2], { stroke: '#ffffff', a: .85, w: w + 3.5, cap: 'rnd', tail: 'triangle' }));
+        k.push(poly('矢印', [o.p1, o.p2], { stroke: o.color, w, dash: o.dash ? 'dash' : '', cap: 'rnd', tail: 'triangle' }));
+        return group('矢印', k);
+      }
+      case 'callout': {
+        const cx = o.x + o.w / 2, cy = o.y + o.h / 2, av = `<a:gd name="adj1" fmla="val ${Math.round((o.tx - cx) / o.w * 100000)}"/><a:gd name="adj2" fmla="val ${Math.round((o.ty - cy) / o.h * 100000)}"/><a:gd name="adj3" fmla="val 16667"/>`;
+        return rect('吹き出し', o.x, o.y, o.w, o.h, { prst: 'wedgeRoundRectCallout', av, fill: '#ffffff', stroke: '#333333', w: 1.4, text: o.text, fs: o.fs });
+      }
+      case 'mark': return ell('囲み', o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, { stroke: o.color, w: o.sw });
+      case 'photo': {
+        const k = [];
+        if (o.asset && doc.assets[o.asset]) {
+          const sz = ctx.size[o.asset]; let src = null;
+          if (sz) { const ia = sz.w / sz.h, ba = o.w / o.h, c = ia > ba ? Math.round((1 - ba / ia) / 2 * 100000) : Math.round((1 - ia / ba) / 2 * 100000); src = ia > ba ? { l: c, r: c, t: 0, b: 0 } : { l: 0, r: 0, t: c, b: c }; }
+          k.push(pic('写真', ctx.img(o.asset), o.x, o.y, o.w, o.h, { src, stroke: '#8a96a3' }));
+        } else k.push(rect('写真枠', o.x, o.y, o.w, o.h, { fill: '#f1f4f7', stroke: '#a3afbb', w: 1 }));
+        if (o.caption) { const tw = textW(o.caption, o.cfs) + 14, chh = o.cfs * 1.6; k.push(rect('キャプション', o.x + o.w / 2 - tw / 2, o.y + o.h + 6, tw, chh, { fill: '#ffffff', stroke: o.ccol, w: 1.6, text: o.caption, fs: o.cfs, box: true })); }
+        for (const c of kidsOf(o.id)) k.push(emit(c, ctx));
+        return group('写真 ' + (o.caption || ''), k);
+      }
+      case 'image': {
+        if (o.hide || o.print === false || !doc.assets[o.asset]) return null;
+        return pic(o.isMap ? '地図' : '下絵', ctx.img(o.asset), o.x, o.y, o.w, o.h, { alpha: o.opacity, rot: o.rot || 0 });
+      }
+      case 'north': {
+        const T = RT(o.x, o.y, o.ang || 0, o.sz || 1), s = o.sz || 1, P = pts => pts.map(p => T(...p)), t = T(0, -35);
+        return group('方位', [ell('円', o.x, o.y, 22 * s, 22 * s, { fill: '#ffffff', stroke: '#111111', w: 1.5 }),
+          poly('矢', P([[0, -30], [9, 12], [0, 5]]), { closed: true, fill: '#ffffff', stroke: '#111111', w: 1.4 }), poly('矢', P([[0, -30], [-9, 12], [0, 5]]), { closed: true, fill: '#111111', stroke: '#111111', w: 1.4 }),
+          label('N', 'N', t[0], t[1], 15 * s, { bold: true })]);
+      }
+      case 'legend': {
+        const items = legendItems(), b = bbox(o), k = [rect('凡例枠', o.x, o.y, b.w, b.h, { fill: '#ffffff', stroke: '#111111', w: 1.4 }), poly('線', [[o.x, o.y + 28], [o.x + b.w, o.y + 28]], { stroke: '#111111', w: 1 }), label('凡例', '凡　例', o.x + b.w / 2, o.y + 19, 14, { bold: true })];
+        items.forEach((it, i) => {
+          const y = o.y + 30 + i * 24 + 12;
+          if (it.k === 'cam') k.push(camEl({ x: o.x + 44, y, ang: 0, sz: it.kind === 'dome' ? .7 : .75, kind: it.kind }, false));
+          else { const st = WIRE[it.k]; k.push(poly(st.name, [[o.x + 14, y], [o.x + 74, y]], { stroke: st.color, w: 3, dash: DASH[it.k] })); }
+          k.push(label('凡例名', it.name, o.x + 88, y + 5, 13, { algn: 'l' }));
+        });
+        return group('凡例', k);
+      }
+    }
+    return null;
+  }
+  function titleEl() {
+    const m = doc.meta, w = 400, x = W - 40 - w, rh = 34, lw = 110, rows = [['物件名', m.property], ['施工業者', m.contractor], ['作成日', fmtDate(m.date)]];
+    if (doc.pages && doc.pages.length > 1) rows.push(['図面', `${doc.pages[doc.cur].name}（${doc.cur + 1}/${doc.pages.length}）`]);
+    const y = H - 40 - rh * (rows.length + 1), k = [rect('表題欄', x, y, w, rh * (rows.length + 1), { fill: '#ffffff', stroke: '#111111', w: 1.6 }), rect('図名', x, y, w, rh, { text: m.title, fs: 16, bold: true, box: true })];
+    rows.forEach((r, i) => { const yy = y + rh * (i + 1); k.push(poly('罫線', [[x, yy], [x + w, yy]], { stroke: '#111111', w: 1 }), rect(r[0], x, yy, lw, rh, { text: r[0], fs: 13, box: true }), rect(r[0] + '欄', x + lw, yy, w - lw, rh, { text: r[1] || ' ', fs: 14, box: true })); });
+    k.push(poly('罫線', [[x + lw, y + rh], [x + lw, y + rh * (rows.length + 1)]], { stroke: '#111111', w: 1 }));
+    return group('表題欄', k);
+  }
+  function build(ctx) {
+    id = 1;
+    const els = [rect('図枠', 24, 24, W - 48, H - 48, { stroke: '#111111', w: 2 })];
+    for (const o of doc.objects) { if (attached(o)) continue; const e = emit(o, ctx); if (e) els.push(e); }
+    els.push(titleEl());
+    const body = els.filter(Boolean).map(e => `<xdr:absoluteAnchor><xdr:pos x="${E(e.b.x)}" y="${E(e.b.y)}"/><xdr:ext cx="${Math.max(1, E(e.b.w))}" cy="${Math.max(1, E(e.b.h))}"/>${e.xml}<xdr:clientData/></xdr:absoluteAnchor>`).join('');
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${body}</xdr:wsDr>`;
+  }
+  async function inject(buf, drawings, media) {
+    const zip = await JSZip.loadAsync(buf);
+    let ct = await zip.file('[Content_Types].xml').async('string');
+    const addDef = (ext, type) => { if (!new RegExp(`Extension="${ext}"`, 'i').test(ct)) ct = ct.replace('<Default ', `<Default Extension="${ext}" ContentType="${type}"/><Default `); };
+    addDef('jpeg', 'image/jpeg'); addDef('png', 'image/png');
+    for (const [name, b64] of Object.entries(media)) zip.file('xl/media/' + name, b64, { base64: true });
+    const wbx = await zip.file('xl/workbook.xml').async('string'), wbr = await zip.file('xl/_rels/workbook.xml.rels').async('string');
+    const relT = {}; wbr.replace(/<Relationship\b[^>]*>/g, t => { const i = /Id="([^"]+)"/.exec(t), g = /Target="([^"]+)"/.exec(t); if (i && g) relT[i[1]] = g[1].replace(/^\/?xl\//, ''); return t; });
+    const sheetFile = {}; wbx.replace(/<sheet\b[^>]*>/g, t => { const n = /name="([^"]+)"/.exec(t), r = /r:id="([^"]+)"/.exec(t); if (n && r) sheetFile[n[1].replace(/&amp;/g, '&')] = 'xl/' + relT[r[1]]; return t; });
+    let k = 0;
+    for (const d of drawings) {
+      const sf = sheetFile[d.sheet]; if (!sf || !zip.file(sf)) continue;
+      k++; const dn = `drawingCam${k}.xml`;
+      zip.file('xl/drawings/' + dn, d.xml);
+      if (d.rels.length) zip.file(`xl/drawings/_rels/${dn}.rels`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${d.rels.map(r => `<Relationship Id="${r.id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${r.target}"/>`).join('')}</Relationships>`);
+      const base = sf.split('/').pop(), relPath = sf.replace(base, '_rels/' + base + '.rels');
+      const rel = `<Relationship Id="rIdCamDr" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/${dn}"/>`;
+      if (zip.file(relPath)) { const t = await zip.file(relPath).async('string'); zip.file(relPath, t.replace('</Relationships>', rel + '</Relationships>')); }
+      else zip.file(relPath, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${rel}</Relationships>`);
+      let sx = await zip.file(sf).async('string');
+      if (!/xmlns:r=/.test(sx.slice(0, 600))) sx = sx.replace('<worksheet ', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ');
+      const tag = '<drawing r:id="rIdCamDr"/>';
+      const m = /<(legacyDrawing|legacyDrawingHF|picture|oleObjects|controls|webPublishItems|tableParts|extLst)\b/.exec(sx);
+      sx = m ? sx.slice(0, m.index) + tag + sx.slice(m.index) : sx.replace('</worksheet>', tag + '</worksheet>');
+      zip.file(sf, sx);
+      ct = ct.replace('</Types>', `<Override PartName="/xl/drawings/${dn}" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`);
+    }
+    zip.file('[Content_Types].xml', ct);
+    return zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  return { build, inject };
+})();
+
+/* ============ export ============ */
+let dlApi = null;
+(async () => { try { if (window.claude && window.claude.use) dlApi = await window.claude.use('downloads'); } catch { dlApi = null; } })();
+function baseName(withPage) { const p = (doc.meta.property || '').replace(/[\\/:*?"<>|（）()]/g, '').trim(); const pg = withPage && doc.pages.length > 1 ? '_' + doc.pages[doc.cur].name.replace(/[\\/:*?"<>|]/g, '') : ''; return (p || 'カメラ') + '_概要図' + pg + '_' + PAPERS[doc.paper || 'A3L'].name; }
+async function saveFile(name, data) {
+  if (dlApi) {
+    try { await dlApi.save({ filename: name, data }); toast('「' + name + '」を保存しました'); }
+    catch (err) { const c = err && err.code; toast(c === 'declined' ? '保存をキャンセルしました' : c === 'rate_limited' ? '保存の確認画面が開いています' : '保存できませんでした（' + (c || 'エラー') + '）'); }
+    return;
+  }
+  const blob = data instanceof Blob ? data : new Blob([data]); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function exportSVG() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#fff"/>${frame()}`
+    + doc.objects.map(o => `<g>${renderObj(o, true)}</g>`).join('') + titleBlock() + '</svg>';
+}
+function rasterize(scale) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(new Blob([exportSVG()], { type: 'image/svg+xml' })); const img = new Image();
+    img.onload = () => { const c = document.createElement('canvas'); c.width = Math.round(W * scale); c.height = Math.round(H * scale); const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('画像化に失敗しました')); };
+    img.src = url;
+  });
+}
+const toBlob = (c, type, q) => new Promise(r => c.toBlob(r, type, q));
+const libs = {};
+function loadScript(src) { return libs[src] = libs[src] || new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { delete libs[src]; rej(new Error('ライブラリを読み込めませんでした')); }; document.head.appendChild(s); }); }
+async function busy(label, fn) {
+  const b = document.createElement('div'); b.className = 'busy'; b.innerHTML = `<span>${label}</span>`; document.body.appendChild(b);
+  try { await new Promise(r => setTimeout(r, 30)); await fn(); } catch (err) { toast(err.message || '書き出しに失敗しました'); } finally { b.remove(); }
+}
+const DPI_SCALE = 200 / 25.4 / 4; // 200dpi
+$('#bPng').onclick = () => busy('PNGを作成中…', async () => { const c = await rasterize(DPI_SCALE); await saveFile(baseName(true) + '.png', await toBlob(c, 'image/png')); });
+$('#bPdf').onclick = () => busy('PDFを作成中…', async () => {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const P = PAPERS[doc.paper], ori = P.mm[0] > P.mm[1] ? 'landscape' : 'portrait', fmt = doc.paper.slice(0, 2).toLowerCase(), pdf = new window.jspdf.jsPDF({ orientation: ori, unit: 'mm', format: fmt });
+  syncPage(); const back = doc.cur;
+  try { for (let i = 0; i < doc.pages.length; i++) { usePage(i); const c = await rasterize(DPI_SCALE); if (i) pdf.addPage(fmt, ori); pdf.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, P.mm[0], P.mm[1]); } }
+  finally { usePage(back); } pdf.setProperties({ title: doc.meta.title + ' ' + doc.meta.property });
+  await saveFile(baseName() + '.pdf', pdf.output('blob'));
+});
+$('#bXlsx').onclick = async () => {
+  let last = 'shapes'; try { last = localStorage.getItem('camzu-xlmode') || 'shapes'; } catch { }
+  const mode = await modal('Excelで書き出し', `
+    <label class="chk" style="align-items:flex-start"><input type="radio" name="xm" value="shapes" ${last !== 'image' ? 'checked' : ''}><span><b>図形として書き出す（編集できる）</b><br><span class="note">線・カメラ・文字・表題欄がExcelの図形になります。Excelで文字の修正や位置の調整ができます。</span></span></label>
+    <label class="chk" style="align-items:flex-start"><input type="radio" name="xm" value="image" ${last === 'image' ? 'checked' : ''}><span><b>画像として書き出す（見た目そのまま）</b><br><span class="note">図面全体を1枚の画像で貼り付けます。編集はできませんが、見た目は画面と同じです。</span></span></label>`,
+    '書き出す', f => f.querySelector('input[name=xm]:checked').value);
+  if (!mode) return;
+  try { localStorage.setItem('camzu-xlmode', mode); } catch { }
+  busy('Excelを作成中…', async () => {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
+  if (mode === 'shapes') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+  const wb = new ExcelJS.Workbook(); wb.creator = 'カメラ概要図メーカー';
+  syncPage(); const back = doc.cur, used = new Set(), drawings = [], media = {}, mediaName = {}, sizes = {};
+  if (mode === 'shapes') {
+    await Promise.all(Object.keys(usedAssets()).map(aid => new Promise(res => { const im = new Image(); im.onload = () => { sizes[aid] = { w: im.naturalWidth, h: im.naturalHeight }; res(); }; im.onerror = res; im.src = blobs[aid] || doc.assets[aid]; })));
+  }
+  try { for (let pi = 0; pi < doc.pages.length; pi++) {
+  usePage(pi);
+  let sn = doc.pages.length > 1 ? doc.pages[pi].name.replace(/[\\/?*:\[\]]/g, '').slice(0, 28) || ('図' + (pi + 1)) : '概要図'; if (sn === '数量集計') sn += '図'; let sn2 = sn, k2 = 2; while (used.has(sn2)) sn2 = sn.slice(0, 26) + '_' + k2++; used.add(sn2);
+  const ws = wb.addWorksheet(sn2, { pageSetup: { paperSize: doc.paper.startsWith('A3') ? 8 : 9, orientation: PAPERS[doc.paper].mm[0] > PAPERS[doc.paper].mm[1] ? 'landscape' : 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 1, horizontalCentered: true, verticalCentered: true, margins: { left: 0.2, right: 0.2, top: 0.2, bottom: 0.2, header: 0, footer: 0 } }, views: [{ showGridLines: false, zoomScale: 70 }] });
+  const extW = mode === 'shapes' ? Math.round(W * 9000 / 9525) : Math.round(PAPERS[doc.paper].mm[0] / 25.4 * 96 * 0.98), extH = mode === 'shapes' ? Math.round(H * 9000 / 9525) : Math.round(extW * H / W);
+  const nCol = Math.ceil(extW / 70) + (mode === 'shapes' ? 0 : 1), nRow = Math.ceil(extH / 20) + (mode === 'shapes' ? 0 : 1);
+  for (let i = 1; i <= nCol; i++) ws.getColumn(i).width = 10;
+  for (let i = 1; i <= nRow; i++) ws.getRow(i).height = 15;
+  if (mode === 'shapes') {
+    const rels = [], rid = {};
+    const ctx = { size: sizes, img: aid => { if (!rid[aid]) { if (!mediaName[aid]) { const d = doc.assets[aid], ext = /^data:image\/png/.test(d) ? 'png' : 'jpeg'; mediaName[aid] = 'camzu_' + Object.keys(mediaName).length + '.' + ext; media[mediaName[aid]] = d.split(',')[1]; } rid[aid] = 'rIdImg' + (rels.length + 1); rels.push({ id: rid[aid], target: mediaName[aid] }); } return rid[aid]; } };
+    drawings.push({ sheet: sn2, xml: XL.build(ctx), rels });
+  } else {
+    const c = await rasterize(DPI_SCALE); const png = c.toDataURL('image/png');
+    const img = wb.addImage({ base64: png, extension: 'png' });
+    ws.addImage(img, { tl: { col: 0, row: 0 }, ext: { width: extW, height: extH }, editAs: 'oneCell' });
+  }
+  ws.pageSetup.printArea = 'A1:' + ws.getColumn(nCol).letter + nRow;
+  } } finally { usePage(back); }
+  const s2 = wb.addWorksheet('数量集計', { pageSetup: { paperSize: 9, orientation: 'portrait' } });
+  if (doc.pages.length > 1) {
+    const A = summaryAll();
+    s2.columns = [{ header: '項目', width: 26 }, ...A.per.map(p => ({ header: p.name, width: 11 })), { header: '合計', width: 10 }, { header: '単位', width: 7 }];
+    for (const r of A.rows) s2.addRow([r[0], ...r[1], r[2], r[3]]);
+  } else {
+    s2.columns = [{ header: '項目', width: 28 }, { header: '数量', width: 10 }, { header: '単位', width: 8 }];
+    for (const r of summary().rows) s2.addRow(r);
+  }
+  s2.getRow(1).font = { bold: true }; s2.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE3EEF3' } };
+  s2.addRow([]); s2.addRow(['物件名：' + doc.meta.property]); s2.addRow(['※配線長は概算（約○mの切り上げ合計、余長含まず）']);
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = mode === 'shapes' ? await XL.inject(buf, drawings, media) : new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await saveFile(baseName() + (mode === 'shapes' ? '' : '_画像') + '.xlsx', blob);
+  });
+};
+$('#bCopyImg').onclick = () => busy('画像を作成中…', async () => {
+  const c = await rasterize(150 / 25.4 / 4);
+  try { const blob = await toBlob(c, 'image/png'); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); toast('画像をコピーしました。Excelで Ctrl+V で貼り付けできます'); }
+  catch { toast('この画面では画像コピーが使えません。PNGで書き出してください'); }
+});
+function saveJson() { const d = new Date(), z = n => String(n).padStart(2, '0'); saveFile(`${baseName()}_作業データ_${d.getFullYear()}${z(d.getMonth() + 1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}.json`, serialize()); }
+$('#bSave').onclick = saveJson;
+$('#bOpen').onclick = () => $('#fJson').click();
+$('#bNew').onclick = () => confirmModal('新規作成', '現在の図面を閉じて白紙から始めますか？（元に戻すで戻せます）', '白紙にする').then(ok => { if (ok) { pushUndo(); const d = blankDoc(); d.objects.push({ id: uid(), type: 'legend', x: 1000, y: 905 }); loadDoc(d); } });
+$('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
+$('#zIn').onclick = () => zoomAt(1 / 1.25); $('#zOut').onclick = () => zoomAt(1.25); $('#zFit').onclick = fit;
+$('#selPaper').onchange = e => changePaper(e.target.value);
+$('#cGrid').onchange = e => { gridOn = e.target.checked; render(); };
+$('#cSnap').onchange = e => { snapOn = e.target.checked; };
+$('#tools').addEventListener('click', e => { const b = e.target.closest('[data-tool]'); if (!b) return; if (b.dataset.tool === 'map') { openMapModal(); return; } setTool(b.dataset.tool); });
+
+/* ============ boot ============ */
+buildTools(); setTool('select');
+loadDoc(sampleDoc());
+(async () => {
+  idb = await idbOpen();
+  const saved = idb ? await idbGet('current') : null;
+  if (saved) { try { const d = JSON.parse(saved); if (Array.isArray(d.objects) || Array.isArray(d.pages)) { loadDoc(d); $('#sSaved').textContent = '前回の作業を復元しました'; return; } } catch { } }
+  save();
+})();
+</script>
+
+</body></html>
