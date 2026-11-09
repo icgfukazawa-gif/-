@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>施工完了報告書 入力アシスト</title>
+<title>施工完了報告書作成ツール</title>
 <style>
 :root{
   --ink:#20262E; --sub:#5B6470; --bg:#EEF0EB; --panel:#FFFFFF;
@@ -172,8 +172,8 @@ window.addEventListener('error',function(e){
 <header>
   <div class="wrap">
     <div class="brand">
-      <span class="eyebrow">GENBA REPORT ASSIST</span>
-      <h1>施工完了報告書 入力アシスト</h1>
+      <span class="eyebrow">GENBA REPORT TOOL</span>
+      <h1>施工完了報告書作成ツール</h1>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <span id="fileChip" class="loaded">内蔵雛型を使用</span>
@@ -202,7 +202,7 @@ window.addEventListener('error',function(e){
       <button class="btn small" id="pasteClear">入力欄を空にする</button>
     </div>
     <div id="pasteResult" style="display:none; margin-top:10px;"></div>
-    <p class="hint">受付No.・案件名・請負会社を自動で下の欄に入れます。報告書に欄のない情報（顧客名・住所・工事名など）は参考として下に表示し、必要なら引継ぎ事項に追記できます。</p>
+    <p class="hint">受付No.・案件名・請負会社・事業チーム・案件予実比較の金額を自動で下の欄に入れます。報告書に欄のない情報（顧客名・住所・工事名など）は参考として下に表示し、必要なら引継ぎ事項に追記できます。</p>
   </div>
 
   <div class="card">
@@ -318,7 +318,7 @@ window.addEventListener('error',function(e){
       <summary>連携シートから取り込み</summary>
       <div class="hbody">
         <p>連携シートの内容をコピーし、基本情報タブ一番上の欄に<b>そのまま貼り付けて</b>「貼り付け内容を取り込む」を押すだけです。項目名と値が並んだ形式のまま貼れば、タブ区切り・「項目名：値」どちらでも読み取ります。</p>
-        <p><b>自動で入る欄</b>…受付No.／案件名（物件名）／請負会社／事業チーム。選択肢にない会社名・チーム名だった場合は、その旨を表示するので手動で選んでください。</p>
+        <p><b>自動で入る欄</b>…受付No.／案件名（物件名）／請負会社／事業チーム／案件予実比較の6つの金額（見積額・請求額・施工費計・支払合計・材料仕入額合計・外注施工費合計）。金額は「¥300,000」のような表記のままでも数値として取り込みます。選択肢にない会社名・チーム名だった場合は、その旨を表示するので手動で選んでください。</p>
         <p><b>報告書に欄のない情報</b>（顧客名・住所・工事名・担当者など）は参考として画面に表示します。必要なら「引継ぎ事項に追記する」で報告書に残せます（引継ぎ事項は最大6行まで出力されます）。</p>
         <p>取り込み後も各欄は自由に直せます。貼り付け欄の内容自体はExcelには書き込まれません。</p>
       </div>
@@ -491,7 +491,9 @@ function syncPDate(){
 /* ---- 連携シートの貼り付け取り込み ---- */
 function normLabel(s){
   return String(s).replace(/[\s　]/g,'')
-    .replace(/[（(].*?[）)]/g,'')
+    .replace(/[（(].*?[）)]/g,'')          // （税抜）（①〜⑤）などの補足を除去
+    .replace(/^[0-9a-zA-Zａ-ｚＡ-Ｚ０-９]{1,2}[)）\].．、]/,'') // 先頭の「y)」「a)」「1.」などの記号を除去
+    .replace(/^[①-⑳◆●■□・]+/,'')
     .replace(/[：:．.・]/g,'')
     .replace(/No/gi,'No');
 }
@@ -508,7 +510,14 @@ const PASTE_LABELS=[
   [['営業担当者','営業担当'],'eigyo'],
   [['工事担当','工事担当者'],'koujitanto'],
   [['顧客担当者名','顧客担当者','先方担当者'],'kokyakutanto'],
-  [['受付日'],'uketsukebi']
+  [['受付日'],'uketsukebi'],
+  // 案件予実比較（金額）
+  [['見積額','見積金額'],'est'],
+  [['成約時見込み施工費計','成約時見込施工費計','施工費計'],'estLabor'],
+  [['成約時見込み支払合計','成約時見込支払合計','支払合計'],'estPay'],
+  [['請求額','請求金額'],'fin'],
+  [['材料仕入額合計','材料仕入合計'],'finMat'],
+  [['外注施工費合計','外注費合計'],'finOut']
 ];
 function parsePasted(text){
   const out={};
@@ -557,6 +566,17 @@ function applyPasted(parsed){
       p.team=parsed.team; $('#p_team').value=p.team; applied.push('事業チーム：'+p.team);
     }else warned.push('事業チーム「'+parsed.team+'」は選択肢にないため手動で選んでください');
   }
+  const MONEY=[['est','見積額（税抜）','p_est'],['estLabor','成約時見込み 施工費計','p_estLabor'],
+               ['estPay','成約時見込み 支払合計','p_estPay'],['fin','請求額（税抜）','p_fin'],
+               ['finMat','材料仕入額合計','p_finMat'],['finOut','外注施工費合計','p_finOut']];
+  MONEY.forEach(m=>{
+    const raw=parsed[m[0]];
+    if(raw==null||raw==='')return;
+    const num=cleanNum(raw);
+    if(num===''||isNaN(parseFloat(num))){ warned.push(m[1]+'「'+raw+'」は数値として読めませんでした'); return; }
+    p[m[0]]=num; document.getElementById(m[2]).value=num;
+    applied.push(m[1]+'：'+Number(num).toLocaleString()+'円');
+  });
   const extras=[['kokyaku','顧客名'],['jusho','物件住所'],['kouji','工事名'],['bunrui','案件分類'],
                 ['eigyo','営業担当者'],['koujitanto','工事担当'],['kokyakutanto','顧客担当者名'],['uketsukebi','受付日']];
   extras.forEach(e=>{ if(parsed[e[0]] && !(e[0]==='kouji'&&p.name===parsed.kouji) && !(e[0]==='kokyaku'&&p.name===parsed.kokyaku)) info.push(e[1]+'：'+parsed[e[0]]); });
@@ -851,6 +871,12 @@ function refreshSummary(){
    Excel書き込みコア
 ========================================================= */
 /*__CORE_START__*/
+// 「¥300,000」「１２３」など全角・通貨記号付きでも数値として読めるよう整える
+function cleanNum(v){
+  const z='０１２３４５６７８９．－', h='0123456789.-';
+  let s=String(v).replace(/[０-９．－]/g,function(ch){return h.charAt(z.indexOf(ch));});
+  return s.replace(/[,，\s　円¥￥$]/g,'');
+}
 function escXml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function unescXml(s){return s.replace(/&quot;/g,'"').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#(\d+);/g,(m,d)=>String.fromCharCode(d)).replace(/&amp;/g,'&');}
 
@@ -885,7 +911,7 @@ function setCell(xml,ref,value,type){ // type: 'n' number | 's' string
 }
 function setNum(xml,ref,v){
   if(v===''||v==null)return xml;
-  const n=parseFloat(String(v).replace(/[,，\s円]/g,''));
+  const n=parseFloat(cleanNum(v));
   return isNaN(n)?xml:setCell(xml,ref,n,'n');
 }
 function setStr(xml,ref,v){
