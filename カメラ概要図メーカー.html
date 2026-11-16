@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
 <title>カメラ概要図メーカー</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -92,6 +92,27 @@ body.alt #cv .locked{pointer-events:auto}
 .seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
 .seg button{flex:1;border:0;background:var(--panel-2);padding:6px 4px;cursor:pointer;font-size:12px}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.libpop{position:fixed;z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:10px 12px 12px;width:min(420px,calc(100vw - 20px));max-height:calc(100vh - 20px);overflow-y:auto;display:grid;gap:6px}
+.libhd{display:flex;gap:10px;align-items:baseline}
+.libcap{font-size:11px;color:var(--ink-2);letter-spacing:.06em;margin-top:4px}
+.libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:4px}
+.libit{border:1px solid transparent;background:var(--panel-2);border-radius:8px;padding:6px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;font-size:10.5px;line-height:1.2;text-align:center;color:var(--ink)}
+.libit:hover{border-color:var(--accent)}
+.libgrid.sm{grid-template-columns:repeat(auto-fill,minmax(70px,1fr))}
+.libit svg{width:28px;height:28px;background:#fff;border-radius:5px}
+.swatches{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.sw2{width:22px;height:22px;border-radius:6px;border:1px solid var(--line);cursor:pointer;padding:0;position:relative}
+.sw2[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px}
+.sw2.none{background:linear-gradient(135deg,#fff 45%,#dc2626 46%,#dc2626 54%,#fff 55%)}
+.sw2.pick{background:conic-gradient(#dc2626,#eab308,#16a34a,#0ea5e9,#7c3aed,#dc2626);overflow:hidden;display:inline-block}
+.sw2.pick input{opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
+.camviews{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:4px}
+.cvb{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;line-height:1.15;color:#334155}
+.cvb svg{width:44px;height:40px}
+.cvb[aria-pressed="true"]{outline:2px solid var(--accent);outline-offset:1px;background:var(--accent-soft);color:var(--ink)}
+.algrid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.algrid .alb{justify-content:center;background:var(--panel-2);padding:7px 4px}
+.algrid .alb svg{width:20px;height:20px}
 .actions{display:flex;flex-wrap:wrap;gap:4px;border-top:1px solid var(--line);padding-top:10px}
 .actions .btn{background:var(--panel-2);padding:6px 9px}
 .note{font-size:11.5px;color:var(--ink-2);line-height:1.6}
@@ -199,6 +220,7 @@ table.sum th{font-size:11px;color:var(--ink-2);font-weight:700}
     <span>縮尺 <b class="k" id="sScale">未設定</b></span>
     <label><input type="checkbox" id="cGrid" checked> グリッド</label>
     <label><input type="checkbox" id="cSnap" checked> スナップ</label>
+    <label title="配線を壁から少し離して沿わせる"><input type="checkbox" id="cWall" checked> 壁沿い</label>
     <span id="sSel"></span>
     <span class="spacer"></span>
     <span id="sSaved"></span>
@@ -225,25 +247,156 @@ const WIRE = {
   power:     { name: '電源配線', color: RED,  dash: '' },
 };
 const DEV = {
-  recorder: { name: 'レコーダー＋モニター', label: 'レコーダー・モニター', tool: 'レコーダー+モニター' },
-  nvr:      { name: 'レコーダーのみ', label: 'レコーダー', tool: 'レコーダー' },
-  monitor:  { name: 'モニターのみ', label: 'モニター', tool: 'モニター' },
-  panel:    { name: '分電盤', label: '分電盤' },
-  box:      { name: '盤BOX', label: '' },
-  hub:      { name: 'PoEハブ', label: 'HUB' },
-  outlet:   { name: 'コンセント', label: '' },
-  pole:     { name: 'ポール', label: 'ポール', tool: 'ポール' },
-  vent:     { name: '換気口', label: '' },
-  hole:     { name: '貫通・穴あけ', label: '' },
+  recorder: { name: 'レコーダー＋モニター', label: 'レコーダー・モニター', tool: 'レコーダー+モニター', rail: 1, unit: '式', c: '#38c3e2' },
+  nvr:      { name: 'レコーダーのみ', label: 'レコーダー', tool: 'レコーダー', rail: 1, c: '#334155' },
+  monitor:  { name: 'モニターのみ', label: 'モニター', tool: 'モニター', rail: 1, c: '#38c3e2' },
+  panel:    { name: '分電盤', label: '分電盤', rail: 1, c: '#dc2626' },
+  box:      { name: '盤BOX', label: '', rail: 1, c: '#f1f5f9' },
+  hub:      { name: 'PoEハブ', label: 'HUB', rail: 1, c: '#e2e8f0' },
+  outlet:   { name: 'コンセント', label: '', rail: 1, c: '#111111' },
+  pole:     { name: 'ポール', label: 'ポール', tool: 'ポール', rail: 1, unit: '本', c: '#111111' },
+  hatch:    { name: '点検口', label: '点検口', tool: '点検口', rail: 1, unit: '箇所', c: '#111111' },
+  vent:     { name: '換気口', label: '', rail: 1, count: false, c: '#cbd5e1' },
+  hole:     { name: '貫通・穴あけ', label: '', rail: 1, count: false, c: '#dc2626' },
+  light:    { name: '照明・防犯灯', label: '', c: '#111111' },
+  slight:   { name: 'センサーライト', label: '', c: '#f59e0b' },
+  sensor:   { name: '人感センサー', label: '', c: '#334155' },
+  speaker:  { name: 'スピーカー', label: '', c: '#334155' },
+  siren:    { name: '回転灯・警報', label: '', c: '#dc2626' },
+  intercom: { name: 'インターホン', label: '', c: '#64748b' },
+  onu:      { name: 'ONU・ルーター', label: 'ONU', c: '#e2e8f0' },
+  ap:       { name: '無線AP（Wi-Fi）', label: '', c: '#1d4ed8' },
+  jbox:     { name: 'ジョイントボックス', label: '', unit: '個', c: '#111111' },
+  pbox:     { name: 'プルボックス', label: '', unit: '個', c: '#111111' },
+  sticker:  { name: '防犯カメラステッカー', label: '', unit: '枚', c: '#facc15' },
+  tree:     { name: '植栽・樹木', label: '', count: false, c: '#16a34a' },
+  car:      { name: '車両（駐車）', label: '', count: false, c: '#9ca3af' },
+  bike:     { name: '自転車', label: '', count: false, c: '#374151' },
 };
+const SHAPES = {
+  rect: { name: '四角形', prst: 'rect' }, roundRect: { name: '角丸四角形', prst: 'roundRect' }, ellipse: { name: '円・楕円', prst: 'ellipse' },
+  triangle: { name: '三角形', prst: 'triangle' }, rtTriangle: { name: '直角三角形', prst: 'rtTriangle' }, parallelogram: { name: '平行四辺形', prst: 'parallelogram' },
+  trapezoid: { name: '台形', prst: 'trapezoid' }, diamond: { name: 'ひし形', prst: 'diamond' }, pentagon: { name: '五角形', prst: 'pentagon' },
+  hexagon: { name: '六角形', prst: 'hexagon' }, octagon: { name: '八角形', prst: 'octagon' }, plus: { name: '十字', prst: 'plus' },
+  can: { name: '円柱', prst: 'can' }, cube: { name: '直方体', prst: 'cube' }, star5: { name: '星', prst: 'star5' },
+  frame: { name: '額縁', prst: 'frame' }, donut: { name: 'ドーナツ', prst: 'donut' },
+  rightArrow: { name: '右矢印', prst: 'rightArrow', g: 'a' }, leftArrow: { name: '左矢印', prst: 'leftArrow', g: 'a' }, upArrow: { name: '上矢印', prst: 'upArrow', g: 'a' },
+  downArrow: { name: '下矢印', prst: 'downArrow', g: 'a' }, leftRightArrow: { name: '左右矢印', prst: 'leftRightArrow', g: 'a' }, upDownArrow: { name: '上下矢印', prst: 'upDownArrow', g: 'a' },
+  chevron: { name: '山形', prst: 'chevron', g: 'a' }, homePlate: { name: 'ホームベース', prst: 'homePlate', g: 'a' },
+};
+function shapePath(k, w, h) {
+  const X = w / 2, Y = h / 2, m = Math.min(w, h), P = pts => 'M' + pts.map(q => r1(q[0]) + ',' + r1(q[1])).join('L') + 'Z';
+  const a = m * 0.25, hl = m * 0.5;
+  switch (k) {
+    case 'roundRect': { const r = r1(m * 0.1667); return `M${-X + r},${-Y}H${X - r}A${r},${r} 0 0 1 ${X},${-Y + r}V${Y - r}A${r},${r} 0 0 1 ${X - r},${Y}H${-X + r}A${r},${r} 0 0 1 ${-X},${Y - r}V${-Y + r}A${r},${r} 0 0 1 ${-X + r},${-Y}Z`; }
+    case 'ellipse': return `M${-X},0A${X},${Y} 0 1 0 ${X},0A${X},${Y} 0 1 0 ${-X},0Z`;
+    case 'triangle': return P([[0, -Y], [X, Y], [-X, Y]]);
+    case 'rtTriangle': return P([[-X, -Y], [X, Y], [-X, Y]]);
+    case 'parallelogram': return P([[-X + a, -Y], [X, -Y], [X - a, Y], [-X, Y]]);
+    case 'trapezoid': return P([[-X + a, -Y], [X - a, -Y], [X, Y], [-X, Y]]);
+    case 'diamond': return P([[0, -Y], [X, 0], [0, Y], [-X, 0]]);
+    case 'pentagon': return P([[0, -Y], [X, -Y + h * 0.382], [w * 0.309, Y], [-w * 0.309, Y], [-X, -Y + h * 0.382]]);
+    case 'hexagon': return P([[-X, 0], [-X + a, -Y], [X - a, -Y], [X, 0], [X - a, Y], [-X + a, Y]]);
+    case 'octagon': { const c = m * 0.2929; return P([[-X + c, -Y], [X - c, -Y], [X, -Y + c], [X, Y - c], [X - c, Y], [-X + c, Y], [-X, Y - c], [-X, -Y + c]]); }
+    case 'plus': return P([[-X + a, -Y], [X - a, -Y], [X - a, -Y + a], [X, -Y + a], [X, Y - a], [X - a, Y - a], [X - a, Y], [-X + a, Y], [-X + a, Y - a], [-X, Y - a], [-X, -Y + a], [-X + a, -Y + a]]);
+    case 'can': { const ry = r1(m * 0.125); return `M${-X},${-Y + ry}A${X},${ry} 0 0 1 ${X},${-Y + ry}V${Y - ry}A${X},${ry} 0 0 1 ${-X},${Y - ry}ZM${-X},${-Y + ry}A${X},${ry} 0 0 0 ${X},${-Y + ry}`; }
+    case 'cube': return P([[-X, -Y + a], [X - a, -Y + a], [X - a, Y], [-X, Y]]) + P([[-X, -Y + a], [-X + a, -Y], [X, -Y], [X - a, -Y + a]]) + P([[X - a, -Y + a], [X, -Y], [X, Y - a], [X - a, Y]]);
+    case 'star5': { const pts = []; for (let i = 0; i < 10; i++) { const t = (-90 + i * 36) * Math.PI / 180, r = i % 2 ? 0.382 : 1; pts.push([Math.cos(t) * X * r, Math.sin(t) * Y * r + Y * 0.1]); } return P(pts); }
+    case 'frame': { const t = m * 0.125; return P([[-X, -Y], [X, -Y], [X, Y], [-X, Y]]) + P([[-X + t, -Y + t], [-X + t, Y - t], [X - t, Y - t], [X - t, -Y + t]]); }
+    case 'donut': { const t = m * 0.25; return `M${-X},0A${X},${Y} 0 1 0 ${X},0A${X},${Y} 0 1 0 ${-X},0ZM${-X + t},0A${X - t},${Y - t} 0 1 1 ${X - t},0A${X - t},${Y - t} 0 1 1 ${-X + t},0Z`; }
+    case 'rightArrow': return P([[-X, -h / 4], [X - hl, -h / 4], [X - hl, -Y], [X, 0], [X - hl, Y], [X - hl, h / 4], [-X, h / 4]]);
+    case 'leftArrow': return P([[X, -h / 4], [-X + hl, -h / 4], [-X + hl, -Y], [-X, 0], [-X + hl, Y], [-X + hl, h / 4], [X, h / 4]]);
+    case 'upArrow': return P([[-w / 4, Y], [-w / 4, -Y + hl], [-X, -Y + hl], [0, -Y], [X, -Y + hl], [w / 4, -Y + hl], [w / 4, Y]]);
+    case 'downArrow': return P([[-w / 4, -Y], [-w / 4, Y - hl], [-X, Y - hl], [0, Y], [X, Y - hl], [w / 4, Y - hl], [w / 4, -Y]]);
+    case 'leftRightArrow': return P([[-X, 0], [-X + hl, -Y], [-X + hl, -h / 4], [X - hl, -h / 4], [X - hl, -Y], [X, 0], [X - hl, Y], [X - hl, h / 4], [-X + hl, h / 4], [-X + hl, Y]]);
+    case 'upDownArrow': return P([[0, -Y], [X, -Y + hl], [w / 4, -Y + hl], [w / 4, Y - hl], [X, Y - hl], [0, Y], [-X, Y - hl], [-w / 4, Y - hl], [-w / 4, -Y + hl], [-X, -Y + hl]]);
+    case 'chevron': return P([[-X, -Y], [X - hl, -Y], [X, 0], [X - hl, Y], [-X, Y], [-X + hl, 0]]);
+    case 'homePlate': return P([[-X, -Y], [X - hl, -Y], [X, 0], [X - hl, Y], [-X, Y]]);
+  }
+  return P([[-X, -Y], [X, -Y], [X, Y], [-X, Y]]);
+}
+const PALETTE = [['#111111', '黒'], ['#6b7280', 'グレー'], ['#1d4ed8', '青'], ['#0ea5e9', '水色'], ['#16a34a', '緑'], ['#eab308', '黄'], ['#f97316', 'オレンジ'], ['#dc2626', '赤'], ['#7c3aed', '紫'], ['#92400e', '茶']];
+const LIGHTS = [['#ffffff', '白'], ['#eef1f4', '薄いグレー'], ['#e3f1f6', '薄い水色'], ['#dbeafe', '薄い青'], ['#dcfce7', '薄い緑'], ['#fdf2d6', '薄い黄'], ['#fee2e2', '薄い赤'], ['#ede9fe', '薄い紫']];
+function colorName(c) { const f = [...PALETTE, ...LIGHTS].find(x => x[0].toLowerCase() === String(c).toLowerCase()); return f ? f[1] : c; }
+function arcPts(cx, cy, r, a0, a1, n = 12) { const o = []; for (let i = 0; i <= n; i++) { const t = (a0 + (a1 - a0) * i / n) * Math.PI / 180; o.push([r1(cx + r * Math.cos(t)), r1(cy + r * Math.sin(t))]); } return o; }
+/* device icons as primitives, shared by the screen and the Excel export */
+const DEVP = {
+  recorder: c => [{ t: 'rect', x: -17, y: -22, w: 34, h: 23, rx: 2, fill: '#1e293b', stroke: '#0f172a', sw: 1.4 }, { t: 'rect', x: -14, y: -19, w: 28, h: 17, fill: c }, { t: 'line', pts: [[0, 1], [0, 7]], stroke: '#0f172a', sw: 2.5 }, { t: 'rect', x: -19, y: 8, w: 38, h: 11, rx: 1.5, fill: '#334155', stroke: '#0f172a', sw: 1.2 }, { t: 'circ', cx: 13, cy: 13.5, r: 1.8, fill: '#4ade80' }],
+  nvr: c => [{ t: 'rect', x: -20, y: -9, w: 40, h: 18, rx: 2, fill: c, stroke: '#0f172a', sw: 1.4 }, { t: 'line', pts: [[-15, -3], [3, -3]], stroke: '#64748b', sw: 1.6 }, { t: 'line', pts: [[-15, 2], [3, 2]], stroke: '#64748b', sw: 1.6 }, { t: 'circ', cx: 10, cy: 0, r: 2, fill: '#4ade80' }, { t: 'circ', cx: 15, cy: 0, r: 2, fill: '#fbbf24' }],
+  monitor: c => [{ t: 'rect', x: -19, y: -20, w: 38, h: 26, rx: 2, fill: '#1e293b', stroke: '#0f172a', sw: 1.4 }, { t: 'rect', x: -16, y: -17, w: 32, h: 20, fill: c }, { t: 'line', pts: [[0, 6], [0, 12]], stroke: '#0f172a', sw: 2.5 }, { t: 'line', pts: [[-9, 13], [9, 13]], stroke: '#0f172a', sw: 3, cap: 1 }],
+  panel: c => [{ t: 'rect', x: -10, y: -16, w: 20, h: 32, fill: c, stroke: '#1f2937', sw: 1.5 }, { t: 'line', pts: [[-6, -10], [6, -10]], stroke: '#ffffff', sw: 1.5 }, { t: 'line', pts: [[-6, -4], [6, -4]], stroke: '#ffffff', sw: 1.5 }],
+  box: c => [{ t: 'rect', x: -14, y: -12, w: 28, h: 24, fill: c, stroke: '#334155', sw: 1.6 }, { t: 'text', x: 0, y: 3.5, s: 'BOX', fs: 9, bold: 1, fill: '#334155' }],
+  hub: c => [{ t: 'rect', x: -17, y: -8, w: 34, h: 16, rx: 2, fill: c, stroke: '#334155', sw: 1.5 }, ...[-10, -4, 2, 8].map(x => ({ t: 'rect', x, y: -3, w: 4, h: 5, fill: '#334155' }))],
+  outlet: c => [{ t: 'circ', r: 10, fill: '#ffffff', stroke: c, sw: 1.6 }, { t: 'line', pts: [[-3.5, -4], [-3.5, 4]], stroke: c, sw: 2 }, { t: 'line', pts: [[3.5, -4], [3.5, 4]], stroke: c, sw: 2 }],
+  pole: c => [{ t: 'circ', r: 11, fill: '#ffffff', stroke: c, sw: 2 }, { t: 'circ', r: 5.5, fill: c }],
+  vent: c => [{ t: 'circ', r: 15, ry: 9, fill: c, stroke: '#334155', sw: 1.5 }, { t: 'line', pts: [[-9, -3], [9, -3]], stroke: '#64748b', sw: 1 }, { t: 'line', pts: [[-10, 0], [10, 0]], stroke: '#64748b', sw: 1 }, { t: 'line', pts: [[-9, 3], [9, 3]], stroke: '#64748b', sw: 1 }],
+  hatch: c => [{ t: 'rect', x: -12, y: -12, w: 24, h: 24, fill: '#ffffff', stroke: c, sw: 1.8 }, { t: 'rect', x: -8.5, y: -8.5, w: 17, h: 17, stroke: c, sw: 1 }, { t: 'line', pts: [[-8.5, 8.5], [8.5, -8.5]], stroke: c, sw: 1 }],
+  hole: c => [{ t: 'circ', r: 7.5, fill: '#ffffff', stroke: c, sw: 2.6 }],
+  light: c => [{ t: 'circ', r: 10, fill: '#ffffff', stroke: c, sw: 1.6 }, { t: 'line', pts: [[-7, -7], [7, 7]], stroke: c, sw: 1.4 }, { t: 'line', pts: [[7, -7], [-7, 7]], stroke: c, sw: 1.4 }],
+  slight: c => [{ t: 'circ', r: 7.5, fill: c, stroke: '#92400e', sw: 1.3 }, ...[0, 45, 90, 135, 180, 225, 270, 315].map(a => { const t = a * Math.PI / 180; return { t: 'line', pts: [[r1(Math.cos(t) * 10.5), r1(Math.sin(t) * 10.5)], [r1(Math.cos(t) * 15), r1(Math.sin(t) * 15)]], stroke: c, sw: 1.8, cap: 1 }; })],
+  sensor: c => [{ t: 'poly', pts: [...arcPts(0, 5, 11, 180, 360)], fill: '#f1f5f9', stroke: c, sw: 1.6 }, { t: 'line', pts: [[-13, 5], [13, 5]], stroke: c, sw: 1.8 }, { t: 'circ', cx: 0, cy: -1, r: 2.4, fill: c }, { t: 'line', pts: arcPts(0, 5, 15, 215, 325, 8), stroke: c, sw: 1.1 }],
+  speaker: c => [{ t: 'poly', pts: [[-13, -5], [-7, -5], [1, -12], [1, 12], [-7, 5], [-13, 5]], fill: c, stroke: c, sw: 1 }, { t: 'line', pts: arcPts(3, 0, 6, -50, 50, 8), stroke: c, sw: 1.8, cap: 1 }, { t: 'line', pts: arcPts(3, 0, 11, -50, 50, 8), stroke: c, sw: 1.8, cap: 1 }],
+  siren: c => [{ t: 'poly', pts: arcPts(0, 5, 10, 180, 360), fill: c, stroke: '#1f2937', sw: 1.2 }, { t: 'rect', x: -13, y: 5, w: 26, h: 5, fill: '#334155' }, { t: 'line', pts: [[0, -9], [0, -15]], stroke: c, sw: 2, cap: 1 }, { t: 'line', pts: [[-9, -4], [-14, -9]], stroke: c, sw: 2, cap: 1 }, { t: 'line', pts: [[9, -4], [14, -9]], stroke: c, sw: 2, cap: 1 }],
+  intercom: c => [{ t: 'rect', x: -9, y: -13, w: 18, h: 26, rx: 3, fill: '#f1f5f9', stroke: c, sw: 1.5 }, { t: 'circ', cx: 0, cy: -5, r: 3.5, fill: c }, { t: 'line', pts: [[-4, 4], [4, 4]], stroke: c, sw: 1.2 }, { t: 'line', pts: [[-4, 7.5], [4, 7.5]], stroke: c, sw: 1.2 }],
+  onu: c => [{ t: 'line', pts: [[-10, -6], [-12, -16]], stroke: '#334155', sw: 1.6, cap: 1 }, { t: 'line', pts: [[10, -6], [12, -16]], stroke: '#334155', sw: 1.6, cap: 1 }, { t: 'rect', x: -16, y: -6, w: 32, h: 14, rx: 2, fill: c, stroke: '#334155', sw: 1.5 }, { t: 'circ', cx: -8, cy: 1, r: 1.6, fill: '#4ade80' }, { t: 'circ', cx: -3, cy: 1, r: 1.6, fill: '#4ade80' }, { t: 'circ', cx: 2, cy: 1, r: 1.6, fill: '#fbbf24' }],
+  ap: c => [{ t: 'circ', cx: 0, cy: 7, r: 2.8, fill: c }, { t: 'line', pts: arcPts(0, 7, 8, -135, -45, 8), stroke: c, sw: 2.2, cap: 1 }, { t: 'line', pts: arcPts(0, 7, 14, -135, -45, 10), stroke: c, sw: 2.2, cap: 1 }],
+  jbox: c => [{ t: 'circ', r: 9, fill: '#ffffff', stroke: c, sw: 1.6 }, { t: 'line', pts: [[-6.4, 6.4], [6.4, -6.4]], stroke: c, sw: 1.4 }],
+  pbox: c => [{ t: 'rect', x: -11, y: -11, w: 22, h: 22, fill: '#ffffff', stroke: c, sw: 1.6 }, { t: 'text', x: 0, y: 3.5, s: 'PB', fs: 9, bold: 1, fill: c }],
+  sticker: c => [{ t: 'rect', x: -12, y: -12, w: 24, h: 24, rx: 2, fill: c, stroke: '#111111', sw: 1.4 }, { t: 'rect', x: -8, y: -3.5, w: 10, h: 7, rx: 1, fill: '#111111' }, { t: 'poly', pts: [[2, -2], [8, -4.5], [8, 4.5], [2, 2]], fill: '#111111' }],
+  tree: c => [{ t: 'circ', r: 14, fill: '#dcfce7', stroke: c, sw: 1.6, dash: '4 2' }, { t: 'circ', r: 3, fill: c }],
+  car: c => [{ t: 'rect', x: -10, y: -20, w: 20, h: 40, rx: 5, fill: c, stroke: '#374151', sw: 1.4 }, { t: 'rect', x: -7, y: -11, w: 14, h: 7, rx: 1.5, fill: '#e5e7eb' }, { t: 'rect', x: -7, y: 8, w: 14, h: 5, rx: 1.5, fill: '#e5e7eb' }],
+  bike: c => [{ t: 'circ', cx: -9, cy: 4, r: 6, stroke: c, sw: 1.6 }, { t: 'circ', cx: 9, cy: 4, r: 6, stroke: c, sw: 1.6 }, { t: 'line', pts: [[-9, 4], [-1, -5], [6, -5], [9, 4]], stroke: c, sw: 1.6 }, { t: 'line', pts: [[-1, -5], [1, 4], [-9, 4]], stroke: c, sw: 1.6 }, { t: 'line', pts: [[6, -5], [5, -9], [8, -9]], stroke: c, sw: 1.6, cap: 1 }],
+};
+/* camera seen in a photo: side / three-quarter / front / hanging dome. Local coords face right (+x). */
+const CAMVIEWS = { bullet: { plan: '平面図（真上）', diag: '斜め前から', side: '横から', front: '正面（こちら向き）' }, dome: { plan: '平面図（真上）', hang: '天井吊り（横から）' } };
+function camView(o) { const v = o.view || 'plan'; return CAMVIEWS[o.kind === 'dome' ? 'dome' : 'bullet'][v] ? v : 'plan'; }
+function camPrims(o) {
+  const v = camView(o), c = o.color || '#e8edf2', ln = '#475569', arm = '#94a3b8', plate = '#cbd5e1', dark = '#334155', glass = '#0b1220', gl = '#cbd5e1', ceil = o.mount === 'ceil';
+  if (o.kind === 'dome') {
+    const a = (o.ang || 0) * Math.PI / 180, lx = r1(Math.cos(a) * 5);
+    return { origin: null, prims: [{ t: 'rect', x: -17, y: -12, w: 34, h: 6, rx: 2, fill: c, stroke: ln, sw: 1.2 }, { t: 'poly', pts: arcPts(0, -6, 14, 0, 180, 16), fill: '#1f2937', fa: .85, stroke: ln, sw: 1 }, { t: 'circ', cx: lx, cy: 1, r: 4.5, fill: glass }, { t: 'circ', cx: lx - 1.3, cy: -0.4, r: 1.2, fill: gl }] };
+  }
+  if (v === 'side') return { origin: 20, prims: [
+    ...(ceil ? [{ t: 'rect', x: -14, y: -27, w: 20, h: 4, fill: plate, stroke: ln, sw: .8 }, { t: 'rect', x: -6, y: -23, w: 4, h: 13, fill: arm, stroke: ln, sw: .8 }, { t: 'circ', cx: -4, cy: -10, r: 3, fill: arm, stroke: ln, sw: .8 }]
+      : [{ t: 'rect', x: -34, y: -3, w: 4, h: 22, fill: plate, stroke: ln, sw: .8 }, { t: 'rect', x: -30, y: 7, w: 22, h: 4, fill: arm, stroke: ln, sw: .8 }, { t: 'circ', cx: -8, cy: 8, r: 3, fill: arm, stroke: ln, sw: .8 }]),
+    { t: 'rect', x: -16, y: -8, w: 30, h: 16, rx: 3, fill: c, stroke: ln, sw: 1.2 }, { t: 'rect', x: -16, y: 3, w: 30, h: 5, fill: '#000000', fa: .1 },
+    { t: 'poly', pts: [[-18, -11], [20, -11], [22, -7], [-16, -7]], fill: c, stroke: ln, sw: 1.2 },
+    { t: 'rect', x: 14, y: -7, w: 4, h: 14, fill: dark }, { t: 'circ', cx: 18, cy: 0, r: 2.2, ry: 6.2, fill: glass }] };
+  if (v === 'diag') return { origin: 13, prims: [
+    ...(ceil ? [{ t: 'rect', x: -16, y: -29, w: 20, h: 4, fill: plate, stroke: ln, sw: .8 }, { t: 'rect', x: -8, y: -25, w: 4, h: 15, fill: arm, stroke: ln, sw: .8 }, { t: 'circ', cx: -6, cy: -10, r: 3, fill: arm, stroke: ln, sw: .8 }]
+      : [{ t: 'rect', x: -33, y: -5, w: 5, h: 22, fill: plate, stroke: ln, sw: .8 }, { t: 'poly', pts: [[-28, 5], [-10, 7], [-10, 11], [-28, 10]], fill: arm, stroke: ln, sw: .8 }, { t: 'circ', cx: -10, cy: 9, r: 3, fill: arm, stroke: ln, sw: .8 }]),
+    { t: 'poly', pts: [[-16, -8], [6, -9.5], [6, 9.5], [-16, 8]], fill: c, stroke: ln, sw: 1.2 }, { t: 'poly', pts: [[-16, 3], [6, 3.5], [6, 9.5], [-16, 8]], fill: '#000000', fa: .1 },
+    { t: 'poly', pts: [[-18, -11], [7, -13.5], [13, -10.5], [-15, -8]], fill: c, stroke: ln, sw: 1.2 },
+    { t: 'circ', cx: 7, cy: 0, r: 7, ry: 10, fill: c, stroke: ln, sw: 1.2 }, { t: 'circ', cx: 8, cy: 0, r: 5, ry: 7.2, fill: dark }, { t: 'circ', cx: 8.6, cy: 0.3, r: 3.4, ry: 5, fill: glass }, { t: 'circ', cx: 7.2, cy: -2.2, r: 1.2, fill: gl }] };
+  if (v === 'front') return { origin: null, prims: [
+    { t: 'rect', x: -11, y: -33, w: 22, h: 4, fill: plate, stroke: ln, sw: .8 }, { t: 'rect', x: -3, y: -29, w: 6, h: 15, fill: arm, stroke: ln, sw: .8 },
+    { t: 'poly', pts: [[-17, -16], [17, -16], [15, -11], [-15, -11]], fill: c, stroke: ln, sw: 1.2 },
+    { t: 'rect', x: -14, y: -12, w: 28, h: 25, rx: 5, fill: c, stroke: ln, sw: 1.2 }, { t: 'circ', cx: 0, cy: 1, r: 9.5, fill: dark }, { t: 'circ', cx: 0, cy: 1, r: 6.4, fill: glass },
+    ...[45, 135, 225, 315].map(d => ({ t: 'circ', cx: r1(Math.cos(d * Math.PI / 180) * 8), cy: r1(1 + Math.sin(d * Math.PI / 180) * 8), r: 0.9, fill: '#7f1d1d' })), { t: 'circ', cx: -2.3, cy: -1.3, r: 1.8, fill: gl }] };
+  return { origin: null, prims: [] };
+}
+function primSVG(p) {
+  const st = p.stroke ? ` stroke="${p.stroke}" stroke-width="${p.sw || 1}"${p.dash ? ` stroke-dasharray="${p.dash}"` : ''}${p.cap ? ' stroke-linecap="round"' : ''} stroke-linejoin="round"` : '';
+  switch (p.t) {
+    case 'rect': return `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"${p.rx ? ` rx="${p.rx}"` : ''} fill="${p.fill || 'none'}"${p.fa != null ? ` fill-opacity="${p.fa}"` : ''}${st}/>`;
+    case 'circ': return `<ellipse cx="${p.cx || 0}" cy="${p.cy || 0}" rx="${p.r}" ry="${p.ry ?? p.r}" fill="${p.fill || 'none'}"${p.fa != null ? ` fill-opacity="${p.fa}"` : ''}${st}/>`;
+    case 'line': return `<polyline points="${p.pts.map(q => q.join(',')).join(' ')}" fill="none"${st}/>`;
+    case 'poly': return `<polygon points="${p.pts.map(q => q.join(',')).join(' ')}" fill="${p.fill || 'none'}"${p.fa != null ? ` fill-opacity="${p.fa}"` : ''}${st}/>`;
+    case 'text': return `<text x="${p.x}" y="${p.y}" font-size="${p.fs}" text-anchor="middle"${p.bold ? ' font-weight="700"' : ''} fill="${p.fill || '#111'}" font-family="${FONT_ATTR}">${esc(p.s)}</text>`;
+  }
+  return '';
+}
+
 const SYM = {
   door1: { name: '片開きドア', tool: '片開き', m: [0.9, 0.9] },
   door2: { name: '両開きドア', tool: '両開き', m: [1.6, 0.8] },
   slide: { name: '引き戸', tool: '引き戸', m: [1.6, 0.25] },
   window: { name: '窓', tool: '窓', m: [1.6, 0.2] },
   stair: { name: '階段', tool: '階段', m: [3.0, 1.2] },
+  colsq: { name: '角柱', tool: '角柱', m: [0.6, 0.6] },
+  colrd: { name: '丸柱', tool: '丸柱', m: [0.5, 0.5] },
 };
-function symSize(kind) { const m = SYM[kind].m, f = doc && doc.scale ? doc.scale : 40; let w = m[0] * f, h = m[1] * f; const mn = { door1: 30, door2: 50, slide: 50, window: 50, stair: 90 }[kind]; if (w < mn) { h *= mn / w; w = mn; } if (kind === 'slide' || kind === 'window') h = Math.max(8, Math.min(h, 14)); return [Math.round(w), Math.round(h)]; }
+function symSize(kind) { const m = SYM[kind].m, f = doc && doc.scale ? doc.scale : 40; let w = m[0] * f, h = m[1] * f; const mn = { door1: 30, door2: 50, slide: 50, window: 50, stair: 90, colsq: 14, colrd: 14 }[kind]; if (w < mn) { h *= mn / w; w = mn; } if (kind === 'slide' || kind === 'window') h = Math.max(8, Math.min(h, 14)); return [Math.round(w), Math.round(h)]; }
 function symIcon(o) {
   const w = o.w, h = o.h, X = -w / 2, Y = -h / 2, cut = o.cut !== false;
   const L = (x1, y1, x2, y2, sw = 1.4) => `<path d="M${r1(x1)},${r1(y1)}L${r1(x2)},${r1(y2)}" stroke="#111" stroke-width="${sw}" fill="none"/>`;
@@ -257,6 +410,12 @@ function symIcon(o) {
       + L(X, Y - 3, X, -Y + 3, 2.2) + L(-X, Y - 3, -X, -Y + 3, 2.2); }
     case 'window': return (cut ? `<rect x="${X}" y="${Y - 2}" width="${w}" height="${h + 4}" fill="#fff"/>` : '')
       + L(X, Y, -X, Y, 1.2) + L(X, -Y, -X, -Y, 1.2) + L(X, 0, -X, 0, 1) + L(X, Y - 2, X, -Y + 2, 2.2) + L(-X, Y - 2, -X, -Y + 2, 2.2);
+    case 'colsq': case 'colrd': {
+      const st = o.fillStyle || 'solid', f = st === 'solid' ? (o.color || '#3f3f46') : '#fff', sh = o.kind === 'colsq' ? `x="${X}" y="${Y}" width="${w}" height="${h}"` : '';
+      let t = o.kind === 'colsq' ? `<rect ${sh} fill="${f}" stroke="#111" stroke-width="1.6"/>` : `<ellipse rx="${w / 2}" ry="${h / 2}" fill="${f}" stroke="#111" stroke-width="1.6"/>`;
+      if (st === 'x') { const k2 = o.kind === 'colrd' ? 0.7071 : 1; t += L(X * k2, Y * k2, -X * k2, -Y * k2, 1.2) + L(-X * k2, Y * k2, X * k2, -Y * k2, 1.2); }
+      return t;
+    }
     case 'stair': {
       const n = Math.max(2, o.n || 8); let t = `<rect x="${X}" y="${Y}" width="${w}" height="${h}" fill="#fff" stroke="#111" stroke-width="1.6"/>`;
       for (let i = 1; i < n; i++) { const x = X + w * i / n; t += L(x, Y, x, -Y, 1); }
@@ -292,7 +451,7 @@ let gridOn = true, snapOn = true;
 let undoStack = [], redoStack = [];
 let photoTarget = null, pendingDrop = null;
 let editPhoto = null, editPrevVB = null;
-const EDIT_TOOLS = ['select', 'hand', 'line', 'wire', 'camera', 'device', 'text', 'callout', 'mark', 'arrow'];
+const EDIT_TOOLS = ['select', 'hand', 'line', 'wire', 'camera', 'device', 'text', 'callout', 'mark', 'arrow', 'shape'];
 
 function blankDoc() {
   return { v: 1, meta: { title: '防犯カメラ設置概要図', property: '', contractor: '', date: new Date().toISOString().slice(0, 10), floor: '', address: '' }, scale: null, objects: [], assets: {}, paper: 'A3L' };
@@ -345,6 +504,7 @@ function sampleDoc() {
 }
 const byId = id => doc.objects.find(o => o.id === id);
 const attached = o => !!(o.parent && byId(o.parent));
+function grpIds(o) { return o.grp && !editPhoto ? doc.objects.filter(x => x.grp === o.grp).map(x => x.id) : [o.id]; }
 function photoAt(x, y) { return doc.objects.slice().reverse().find(o => o.type === 'photo' && !o.hide && x >= o.x && x <= o.x + o.w && y >= o.y && y <= o.y + o.h) || null; }
 function photoContaining(o) {
   const pts = o.pts ? o.pts : ('x' in o ? [[o.x, o.y]] : null); if (!pts) return null;
@@ -359,6 +519,7 @@ function mapChild(c, src, O, N) {
   const sx = N.w / O.w, sy = N.h / O.h, f = (x, y) => [r1(N.x + (x - O.x) * sx), r1(N.y + (y - O.y) * sy)];
   if ('x' in src) { [c.x, c.y] = f(src.x, src.y); if ('w' in src) { c.w = r1(src.w * sx); c.h = r1(src.h * sy); } }
   if (src.pts) c.pts = src.pts.map(p => f(p[0], p[1]));
+  if (src.arcs) { c.arcs = {}; for (const k2 in src.arcs) c.arcs[k2] = r1(src.arcs[k2] * (sx + sy) / 2); }
   if (src.p1) { c.p1 = f(...src.p1); c.p2 = f(...src.p2); }
   if ('tx' in src) [c.tx, c.ty] = f(src.tx, src.ty);
 }
@@ -405,6 +566,36 @@ function sampleSmooth(pts) {
   out.push(pts[pts.length - 1]);
   return out;
 }
+/* curved edges: o.arcs[i] = signed bulge (units) of edge i, measured from the chord's midpoint */
+let edgeMode = 'vertex';
+function arcInfo(a, b, h) {
+  const c = dist(a, b); if (!h || c < 1e-6) return null;
+  const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, nx = -(b[1] - a[1]) / c, ny = (b[0] - a[0]) / c;
+  const m = [mx + nx * h, my + ny * h], r = (c * c / 4 + h * h) / (2 * Math.abs(h));
+  const large = Math.abs(h) > c / 2 ? 1 : 0, cross = (b[0] - a[0]) * (m[1] - a[1]) - (b[1] - a[1]) * (m[0] - a[0]), sweep = cross > 0 ? 0 : 1;
+  const th = 2 * Math.asin(Math.min(1, c / (2 * r))), ang = large ? 2 * Math.PI - th : th;
+  const cen = [mx + nx * (h - Math.sign(h) * r), my + ny * (h - Math.sign(h) * r)];
+  return { r, large, sweep, mid: m, len: r * ang, cen, nx, ny };
+}
+function arcSample(a, b, ai, n = 24) {
+  const aA = Math.atan2(a[1] - ai.cen[1], a[0] - ai.cen[0]), aB = Math.atan2(b[1] - ai.cen[1], b[0] - ai.cen[0]), TAU = Math.PI * 2;
+  const tot = ai.sweep ? (((aB - aA) % TAU) + TAU) % TAU : -((((aA - aB) % TAU) + TAU) % TAU);
+  const out = []; for (let i = 1; i <= n; i++) { const t = aA + tot * i / n; out.push([r1(ai.cen[0] + ai.r * Math.cos(t)), r1(ai.cen[1] + ai.r * Math.sin(t))]); }
+  out[out.length - 1] = [b[0], b[1]]; return out;
+}
+const hasArcs = o => !!(o.arcs && Object.values(o.arcs).some(v => v));
+function edgeD(o, closed) {
+  const pts = o.pts, n = pts.length, E = closed ? n : n - 1; let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < E; i++) { const a = pts[i], b = pts[(i + 1) % n], ai = o.arcs && o.arcs[i] ? arcInfo(a, b, o.arcs[i]) : null; d += ai ? `A${r1(ai.r)},${r1(ai.r)} 0 ${ai.large} ${ai.sweep} ${b[0]},${b[1]}` : `L${b[0]},${b[1]}`; }
+  return d + (closed ? 'Z' : '');
+}
+function edgePts(o, closed) {
+  const pts = o.pts, n = pts.length, E = closed ? n : n - 1, out = [pts[0]];
+  for (let i = 0; i < E; i++) { const a = pts[i], b = pts[(i + 1) % n], ai = o.arcs && o.arcs[i] ? arcInfo(a, b, o.arcs[i]) : null; if (ai) out.push(...arcSample(a, b, ai)); else out.push(b); }
+  if (closed) out.pop();
+  return out;
+}
+function shiftArcs(o, fn) { if (!o.arcs) return; const na = {}; for (const [k, v] of Object.entries(o.arcs)) { const nk = fn(+k); if (nk != null && v) na[nk] = v; } o.arcs = na; }
 function polyLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i - 1], pts[i]); return L; }
 function pointAt(pts, frac) {
   const L = polyLen(pts) * frac; let acc = 0;
@@ -434,30 +625,38 @@ function textBox(o) {
   const x0 = o.anchor === 'middle' ? o.x - w / 2 : o.x;
   return { x: x0, y: o.y - o.fs * 1.0, w, h: lines.length * lh - (lh - o.fs) + o.fs * 0.25, lines, lh };
 }
-function legendItems() {
-  const used = new Set(doc.objects.filter(o => o.type === 'wire').map(o => o.style));
-  const items = Object.keys(WIRE).filter(k => used.has(k)).map(k => ({ k, name: WIRE[k].name }));
+function legendItems(lg) {
+  const wires = doc.objects.filter(o => o.type === 'wire'), items = [];
+  for (const k of Object.keys(WIRE)) {
+    const cols = [...new Set(wires.filter(o => o.style === k).map(o => (o.color || WIRE[k].color).toLowerCase()))];
+    cols.forEach(c => items.push({ k, color: c, name: WIRE[k].name + (cols.length > 1 ? '（' + colorName(c) + '）' : '') }));
+  }
   const cams = doc.objects.filter(o => o.type === 'camera'), plan = cams.filter(o => !onPhoto(o)), src = plan.length ? plan : cams;
   const kinds = [...new Set(src.map(o => o.kind === 'dome' ? 'dome' : 'bullet'))].sort();
-  items.unshift(...kinds.map(kd => ({ k: 'cam', kind: kd, name: kinds.length > 1 ? (kd === 'dome' ? 'ドームカメラ' : 'バレットカメラ') : (kd === 'dome' ? '防犯カメラ（ドーム）' : '防犯カメラ') })));
+  items.unshift(...kinds.map(kd => ({ k: 'cam', kind: kd, color: (src.find(o => (o.kind === 'dome' ? 'dome' : 'bullet') === kd) || {}).color, name: kinds.length > 1 ? (kd === 'dome' ? 'ドームカメラ' : 'バレットカメラ') : (kd === 'dome' ? '防犯カメラ（ドーム）' : '防犯カメラ') })));
+  const L = lg || doc.objects.find(o => o.type === 'legend');
+  if (L && L.devs) {
+    const seen = new Set();
+    for (const kk of Object.keys(DEV)) for (const d of doc.objects.filter(o => o.type === 'device' && o.kind === kk && !onPhoto(o))) { const key = kk + (d.color || ''); if (seen.has(key)) continue; seen.add(key); items.push({ k: 'dev', kind: kk, color: d.color, name: DEV[kk].name }); }
+  }
   return items;
 }
 function bbox(o) {
   switch (o.type) {
-    case 'sym': { const a = (o.rot || 0) * Math.PI / 180, c = Math.abs(Math.cos(a)), sn2 = Math.abs(Math.sin(a)); const bw = o.w * c + o.h * sn2, bh = o.w * sn2 + o.h * c; return { x: o.x - bw / 2, y: o.y - bh / 2, w: bw, h: bh }; }
+    case 'shape': case 'sym': { const a = (o.rot || 0) * Math.PI / 180, c = Math.abs(Math.cos(a)), sn2 = Math.abs(Math.sin(a)); const bw = o.w * c + o.h * sn2, bh = o.w * sn2 + o.h * c; return { x: o.x - bw / 2, y: o.y - bh / 2, w: bw, h: bh }; }
     case 'north': { const r = 40 * (o.sz || 1); return { x: o.x - r, y: o.y - r, w: 2 * r, h: 2 * r }; }
     case 'line': case 'wire': case 'poly': {
-      const xs = o.pts.map(p => p[0]), ys = o.pts.map(p => p[1]);
+      const pp = o.type !== 'wire' && hasArcs(o) ? edgePts(o, o.type === 'poly') : o.pts, xs = pp.map(p => p[0]), ys = pp.map(p => p[1]);
       return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
     }
     case 'arrow': return { x: Math.min(o.p1[0], o.p2[0]) - 4, y: Math.min(o.p1[1], o.p2[1]) - 4, w: Math.abs(o.p1[0] - o.p2[0]) + 8, h: Math.abs(o.p1[1] - o.p2[1]) + 8 };
     case 'dim': return { x: Math.min(o.p1[0], o.p2[0]), y: Math.min(o.p1[1], o.p2[1]) - 10, w: Math.abs(o.p1[0] - o.p2[0]), h: Math.abs(o.p1[1] - o.p2[1]) + 20 };
-    case 'camera': { const r = 22 * (o.sz || 1); return { x: o.x - r, y: o.y - r, w: 2 * r, h: 2 * r }; }
-    case 'device': return { x: o.x - 22, y: o.y - 22, w: 44, h: 44 };
+    case 'camera': { const r = (camView(o) === 'plan' ? 22 : 34) * (o.sz || 1); return { x: o.x - r, y: o.y - r, w: 2 * r, h: 2 * r }; }
+    case 'device': { const r = 22 * (o.sz || 1); return { x: o.x - r, y: o.y - r, w: 2 * r, h: 2 * r }; }
     case 'photo': return { x: o.x, y: o.y, w: o.w, h: o.h + (o.caption ? o.cfs * 1.9 + 6 : 0) };
     case 'callout': { const x = Math.min(o.x, o.tx), y = Math.min(o.y, o.ty); return { x, y, w: Math.max(o.x + o.w, o.tx) - x, h: Math.max(o.y + o.h, o.ty) - y }; }
     case 'text': { const b = textBox(o); return o.box !== 'none' ? { x: b.x - 6, y: b.y - 5, w: b.w + 12, h: b.h + 10 } : b; }
-    case 'legend': { const its = legendItems(), n = its.length, tw = Math.max(0, ...its.map(i => textW(i.name, 13))); return { x: o.x, y: o.y, w: Math.max(170, Math.ceil(88 + tw * 1.12 + 16)), h: 30 + Math.max(1, n) * 24 + 6 }; }
+    case 'legend': { const its = legendItems(o), n = its.length, tw = Math.max(0, ...its.map(i => textW(i.name, 13))); return { x: o.x, y: o.y, w: Math.max(170, Math.ceil(88 + tw * 1.12 + 16)), h: 30 + Math.max(1, n) * 24 + 6 }; }
     default: return { x: o.x, y: o.y, w: o.w, h: o.h };
   }
 }
@@ -465,35 +664,28 @@ function bbox(o) {
 /* ============ rendering ============ */
 const assetHref = (a, exp) => exp ? doc.assets[a] : (blobs[a] || doc.assets[a]);
 function camIcon(o) {
+  const v = camView(o);
+  if (v !== 'plan') {
+    const { origin, prims } = camPrims(o); let s2 = '';
+    if (o.cone && origin != null) { const a = (o.coneAng || 60) * Math.PI / 360, L = o.coneLen || 110; s2 += `<path d="M${origin},0L${r1(origin + L * Math.cos(-a))},${r1(L * Math.sin(-a))}A${L},${L} 0 0 1 ${r1(origin + L * Math.cos(a))},${r1(L * Math.sin(a))}Z" fill="${CAM}" fill-opacity=".22" stroke="${CAM}" stroke-opacity=".6" stroke-width="1"/>`; }
+    s2 += prims.map(primSVG).join('');
+    return o.flip ? `<g transform="scale(-1,1)">${s2}</g>` : s2;
+  }
   let s = '';
   if (o.cone) {
     const a = (o.coneAng || 60) * Math.PI / 360, L = o.coneLen || 110;
-    s += `<path d="M0,0L${r1(L * Math.cos(-a))},${r1(L * Math.sin(-a))}A${L},${L} 0 0 1 ${r1(L * Math.cos(a))},${r1(L * Math.sin(a))}Z" fill="${CAM}" fill-opacity=".2" stroke="${CAM}" stroke-opacity=".55" stroke-width="1"/>`;
+    s += `<path d="M0,0L${r1(L * Math.cos(-a))},${r1(L * Math.sin(-a))}A${L},${L} 0 0 1 ${r1(L * Math.cos(a))},${r1(L * Math.sin(a))}Z" fill="${o.color || CAM}" fill-opacity=".2" stroke="${o.color || CAM}" stroke-opacity=".55" stroke-width="1"/>`;
   }
   if (o.kind === 'dome') {
-    s += `<circle r="13" fill="#e8f8fc" stroke="${CAMD}" stroke-width="1.6"/><circle r="7" fill="${CAM}" stroke="${CAMD}" stroke-width="1.2"/><circle cx="4" r="2.4" fill="${CAMD}"/>`;
+    s += `<circle r="13" fill="#e8f8fc" stroke="${CAMD}" stroke-width="1.6"/><circle r="7" fill="${o.color || CAM}" stroke="${CAMD}" stroke-width="1.2"/><circle cx="4" r="2.4" fill="${CAMD}"/>`;
   } else {
     s += `<rect x="-26" y="-5" width="5" height="10" fill="#94a3b8" stroke="${CAMD}" stroke-width="1"/><path d="M-21,0H-15" stroke="${CAMD}" stroke-width="2"/>`
-      + `<rect x="-15" y="-8.5" width="22" height="17" rx="3" fill="${CAM}" stroke="${CAMD}" stroke-width="1.6"/>`
+      + `<rect x="-15" y="-8.5" width="22" height="17" rx="3" fill="${o.color || CAM}" stroke="${CAMD}" stroke-width="1.6"/>`
       + `<path d="M7,-6L15,-9.5V9.5L7,6Z" fill="${CAMD}"/>`;
   }
   return s;
 }
-function devIcon(kind) {
-  switch (kind) {
-    case 'recorder': return `<rect x="-17" y="-22" width="34" height="23" rx="2" fill="#1e293b" stroke="#0f172a" stroke-width="1.4"/><rect x="-14" y="-19" width="28" height="17" fill="${CAM}"/><path d="M0,1V7" stroke="#0f172a" stroke-width="2.5"/><rect x="-19" y="8" width="38" height="11" rx="1.5" fill="#334155" stroke="#0f172a" stroke-width="1.2"/><circle cx="13" cy="13.5" r="1.8" fill="#4ade80"/>`;
-    case 'nvr': return `<rect x="-20" y="-9" width="40" height="18" rx="2" fill="#334155" stroke="#0f172a" stroke-width="1.4"/><path d="M-15,-3H3M-15,2H3" stroke="#64748b" stroke-width="1.6"/><circle cx="10" cy="0" r="2" fill="#4ade80"/><circle cx="15" cy="0" r="2" fill="#fbbf24"/>`;
-    case 'monitor': return `<rect x="-19" y="-20" width="38" height="26" rx="2" fill="#1e293b" stroke="#0f172a" stroke-width="1.4"/><rect x="-16" y="-17" width="32" height="20" fill="${CAM}"/><path d="M0,6V12" stroke="#0f172a" stroke-width="2.5"/><path d="M-9,13H9" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>`;
-    case 'panel': return `<rect x="-10" y="-16" width="20" height="32" fill="${RED}" stroke="#7f1d1d" stroke-width="1.5"/><path d="M-6,-10H6M-6,-4H6" stroke="#fecaca" stroke-width="1.5"/>`;
-    case 'box': return `<rect x="-14" y="-12" width="28" height="24" fill="#f1f5f9" stroke="#334155" stroke-width="1.6"/><text y="3.5" text-anchor="middle" font-size="9" font-weight="700" fill="#334155" font-family="${FONT_ATTR}">BOX</text>`;
-    case 'hub': return `<rect x="-17" y="-8" width="34" height="16" rx="2" fill="#e2e8f0" stroke="#334155" stroke-width="1.5"/>${[-10, -4, 2, 8].map(x => `<rect x="${x}" y="-3" width="4" height="5" fill="#334155"/>`).join('')}`;
-    case 'pole': return `<circle r="11" fill="#fff" stroke="#111" stroke-width="2"/><circle r="5.5" fill="#111"/>`;
-    case 'outlet': return `<circle r="10" fill="#fff" stroke="#111" stroke-width="1.6"/><path d="M-3.5,-4V4M3.5,-4V4" stroke="#111" stroke-width="2"/>`;
-    case 'vent': return `<ellipse rx="15" ry="9" fill="#cbd5e1" stroke="#334155" stroke-width="1.5"/><path d="M-9,-3H9M-10,0H10M-9,3H9" stroke="#64748b" stroke-width="1"/>`;
-    case 'hole': return `<circle r="7.5" fill="#fff" stroke="${RED}" stroke-width="2.6"/>`;
-  }
-  return '';
-}
+function devIcon(kind, color) { const f = DEVP[kind]; return f ? f(color || (DEV[kind] && DEV[kind].c) || '#111111').map(primSVG).join('') : ''; }
 function halo(x, y, txt, fs, extra = '') {
   return `<text x="${r1(x)}" y="${r1(y)}" font-size="${fs}" text-anchor="middle" fill="#111" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="${FONT_ATTR}" ${extra}>${esc(txt)}</text>`;
 }
@@ -504,12 +696,12 @@ function renderObj(o, exp) {
   const hit = exp ? '' : ' ';
   switch (o.type) {
     case 'line': {
-      const pts = o.pts.map(p => p.join(',')).join(' ');
-      return `<polyline points="${pts}" fill="none" stroke="${o.color}" stroke-width="${o.w}" stroke-linecap="square" stroke-linejoin="miter" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`
-        + (exp ? '' : `<polyline points="${pts}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/>`);
+      const ld = edgeD(o, false);
+      return `<path d="${ld}" fill="none" stroke="${o.color}" stroke-width="${o.w}" stroke-linecap="square" stroke-linejoin="miter" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`
+        + (exp ? '' : `<path d="${ld}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/>`);
     }
     case 'wire': {
-      const st = WIRE[o.style] || WIRE.exposed;
+      const st0 = WIRE[o.style] || WIRE.exposed, st = { ...st0, color: o.color || st0.color };
       const d = o.smooth ? smoothPath(o.pts) : 'M' + o.pts.map(p => p.join(',')).join('L');
       let s = o.parent ? `<path d="${d}" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>` : '';
       s += `<path d="${d}" fill="none" stroke="${st.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''}/>`;
@@ -520,7 +712,7 @@ function renderObj(o, exp) {
     }
     case 'rect': {
       const fill = o.fill === 'none' ? 'none' : o.fill;
-      let s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="${fill}" stroke="#111" stroke-width="${o.sw}" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`;
+      let s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="${fill}" stroke="${o.stroke || '#111'}" stroke-width="${o.sw}" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`;
       if (!exp) s += `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="${fill === 'none' ? 'none' : 'transparent'}" stroke="transparent" stroke-width="14" pointer-events="${fill === 'none' ? 'stroke' : 'all'}"/>`;
       if (o.label) {
         const lines = o.label.split('\n'), lh = o.fs * 1.3;
@@ -536,21 +728,22 @@ function renderObj(o, exp) {
       return s;
     }
     case 'camera': {
-      return `<g transform="translate(${o.x},${o.y}) rotate(${o.ang}) scale(${o.sz || 1})">${camIcon(o)}</g>`
-        + (exp ? '' : `<circle cx="${o.x}" cy="${o.y}" r="${18 * (o.sz || 1)}" fill="transparent"/>`)
+      const crot = o.kind === 'dome' && camView(o) !== 'plan' ? 0 : o.ang;
+      return `<g transform="translate(${o.x},${o.y}) rotate(${crot}) scale(${o.sz || 1})">${camIcon(o)}</g>`
+        + (exp ? '' : `<circle cx="${o.x}" cy="${o.y}" r="${(camView(o) === 'plan' ? 18 : 24) * (o.sz || 1)}" fill="transparent"/>`)
         + (o.hideLabel ? '' : halo(o.x + (o.lx || 0), o.y + (o.ly || 0) + 5, camLabel(o), 14, 'data-part="label"'));
     }
     case 'device': {
-      return `<g transform="translate(${o.x},${o.y})">${devIcon(o.kind)}</g>`
-        + (exp ? '' : `<circle cx="${o.x}" cy="${o.y}" r="16" fill="transparent"/>`)
+      return `<g transform="translate(${o.x},${o.y}) scale(${o.sz || 1})">${devIcon(o.kind, o.color)}</g>`
+        + (exp ? '' : `<circle cx="${o.x}" cy="${o.y}" r="${16 * (o.sz || 1)}" fill="transparent"/>`)
         + (o.label ? halo(o.x + (o.lx || 0), o.y + (o.ly || 0) + 5, o.label, 13, 'data-part="label"') : '');
     }
     case 'dim': {
       const [x1, y1] = o.p1, [x2, y2] = o.p2, L = Math.hypot(x2 - x1, y2 - y1) || 1;
       const ux = (x2 - x1) / L, uy = (y2 - y1) / L, nx = -uy, ny = ux, A = 11, B = 4.5;
-      const ar = (x, y, dx, dy) => `<path d="M${r1(x)},${r1(y)}L${r1(x + dx * A + nx * B)},${r1(y + dy * A + ny * B)}L${r1(x + dx * A - nx * B)},${r1(y + dy * A - ny * B)}Z" fill="#111"/>`;
-      let s = `<path d="M${x1},${y1}L${x2},${y2}" stroke="#111" stroke-width="1.3"/>`
-        + `<path d="M${r1(x1 + nx * 9)},${r1(y1 + ny * 9)}L${r1(x1 - nx * 9)},${r1(y1 - ny * 9)}M${r1(x2 + nx * 9)},${r1(y2 + ny * 9)}L${r1(x2 - nx * 9)},${r1(y2 - ny * 9)}" stroke="#111" stroke-width="1.3"/>`
+      const ar = (x, y, dx, dy) => `<path d="M${r1(x)},${r1(y)}L${r1(x + dx * A + nx * B)},${r1(y + dy * A + ny * B)}L${r1(x + dx * A - nx * B)},${r1(y + dy * A - ny * B)}Z" fill="${o.color || '#111'}"/>`;
+      let s = `<path d="M${x1},${y1}L${x2},${y2}" stroke="${o.color || '#111'}" stroke-width="1.3"/>`
+        + `<path d="M${r1(x1 + nx * 9)},${r1(y1 + ny * 9)}L${r1(x1 - nx * 9)},${r1(y1 - ny * 9)}M${r1(x2 + nx * 9)},${r1(y2 + ny * 9)}L${r1(x2 - nx * 9)},${r1(y2 - ny * 9)}" stroke="${o.color || '#111'}" stroke-width="1.3"/>`
         + ar(x1, y1, ux, uy) + ar(x2, y2, -ux, -uy);
       if (!exp) s += `<path d="M${x1},${y1}L${x2},${y2}" stroke="transparent" stroke-width="14"/>`;
       const lab = lenLabel(o);
@@ -566,10 +759,11 @@ function renderObj(o, exp) {
       const bw = Math.min(16, o.w / 3, o.h / 1.5), px = -dy / L * bw / 2, py = dx / L * bw / 2;
       const tri = `M${r1(cx + px)},${r1(cy + py)}L${o.tx},${o.ty}L${r1(cx - px)},${r1(cy - py)}Z`;
       const lines = String(o.text || '').split('\n'), lh = o.fs * 1.3;
-      return `<path d="${tri}" fill="#fff" stroke="#333" stroke-width="1.4" stroke-linejoin="round"/>`
-        + `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="9" fill="#fff" stroke="#333" stroke-width="1.4"/>`
-        + `<path d="${tri}" fill="#fff"/>`
-        + multiText(lines, cx, cy - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111"');
+      const cf = o.fill || '#fff', cs = o.stroke || '#333';
+      return `<path d="${tri}" fill="${cf}" stroke="${cs}" stroke-width="1.4" stroke-linejoin="round"/>`
+        + `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="9" fill="${cf}" stroke="${cs}" stroke-width="1.4"/>`
+        + `<path d="${tri}" fill="${cf}"/>`
+        + multiText(lines, cx, cy - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, `text-anchor="middle" fill="${o.color || '#111'}"`);
     }
     case 'photo': {
       let s;
@@ -599,12 +793,13 @@ function renderObj(o, exp) {
     }
     case 'poly': {
       const pts = o.pts.map(p => p.join(',')).join(' '), fill = o.fill === 'none' ? 'none' : o.fill, n = o.pts.length;
-      let s = `<polygon points="${pts}" fill="${fill}" stroke="#111" stroke-width="${o.sw}" stroke-linejoin="miter" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`;
-      if (!exp) s += `<polygon points="${pts}" fill="${fill === 'none' ? 'none' : 'transparent'}" stroke="transparent" stroke-width="14" pointer-events="${fill === 'none' ? 'stroke' : 'all'}"/>`;
+      const pd = edgeD(o, true);
+      let s = `<path d="${pd}" fill="${fill}" stroke="${o.stroke || '#111'}" stroke-width="${o.sw}" stroke-linejoin="miter" ${o.dash ? 'stroke-dasharray="10 6"' : ''}/>`;
+      if (!exp) s += `<path d="${pd}" fill="${fill === 'none' ? 'none' : 'transparent'}" stroke="transparent" stroke-width="14" pointer-events="${fill === 'none' ? 'stroke' : 'all'}"/>`;
       const cx = o.pts.reduce((a, p) => a + p[0], 0) / n, cy = o.pts.reduce((a, p) => a + p[1], 0) / n;
       if (o.showEdges && doc.scale) for (let i = 0; i < n; i++) {
-        const a = o.pts[i], b = o.pts[(i + 1) % n], L = dist(a, b); if (L < 30) continue;
-        let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        const a = o.pts[i], b = o.pts[(i + 1) % n], ai = o.arcs && o.arcs[i] ? arcInfo(a, b, o.arcs[i]) : null, L = ai ? ai.len : dist(a, b); if (L < 30) continue;
+        const cl = dist(a, b) || 1; let nx = -(b[1] - a[1]) / cl, ny = (b[0] - a[0]) / cl; const mx = ai ? ai.mid[0] : (a[0] + b[0]) / 2, my = ai ? ai.mid[1] : (a[1] + b[1]) / 2;
         if ((mx + nx - cx) ** 2 + (my + ny - cy) ** 2 < (mx - cx) ** 2 + (my - cy) ** 2) { nx = -nx; ny = -ny; }
         s += halo(mx + nx * 15, my + ny * 15 + 4, '約' + (L / doc.scale).toFixed(1) + 'm', 12, exp ? '' : 'pointer-events="none"');
       }
@@ -615,16 +810,24 @@ function renderObj(o, exp) {
       return s;
     }
     case 'sym': {
-      return `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0}) scale(${o.flip ? -1 : 1},1)">${symIcon(o)}`
+      return `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0}) scale(${o.flip ? -1 : 1},1)">${o.color ? symIcon(o).replace(/"#111"/g, '"' + o.color + '"') : symIcon(o)}`
         + (exp ? '' : `<rect x="${-o.w / 2 - 4}" y="${-o.h / 2 - 4}" width="${o.w + 8}" height="${o.h + 8}" fill="transparent"/>`) + '</g>';
     }
     case 'arrow': {
       const [x1, y1] = o.p1, [x2, y2] = o.p2, L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L, w = o.w || 3, A = 6 + w * 3, B = 3 + w * 1.6;
-      const bx = x2 - ux * A, by = y2 - uy * A, head = `M${x2},${y2}L${r1(bx - uy * B)},${r1(by + ux * B)}L${r1(bx + uy * B)},${r1(by - ux * B)}Z`;
+      const bx = x2 - ux * A, by = y2 - uy * A, ax = o.both ? x1 + ux * A : x1, ay = o.both ? y1 + uy * A : y1;
+      const head = `M${x2},${y2}L${r1(bx - uy * B)},${r1(by + ux * B)}L${r1(bx + uy * B)},${r1(by - ux * B)}Z` + (o.both ? `M${x1},${y1}L${r1(ax - uy * B)},${r1(ay + ux * B)}L${r1(ax + uy * B)},${r1(ay - ux * B)}Z` : '');
       let s = '';
-      if (o.halo !== false) s += `<path d="M${x1},${y1}L${r1(bx)},${r1(by)}" stroke="#fff" stroke-opacity=".85" stroke-width="${w + 3.5}" stroke-linecap="round"/><path d="${head}" fill="#fff" fill-opacity=".85" stroke="#fff" stroke-opacity=".85" stroke-width="3.5" stroke-linejoin="round"/>`;
-      s += `<path d="M${x1},${y1}L${r1(bx)},${r1(by)}" stroke="${o.color}" stroke-width="${w}" stroke-linecap="round" ${o.dash ? `stroke-dasharray="${w * 3} ${w * 2}"` : ''}/><path d="${head}" fill="${o.color}"/>`;
+      if (o.halo !== false) s += `<path d="M${r1(ax)},${r1(ay)}L${r1(bx)},${r1(by)}" stroke="#fff" stroke-opacity=".85" stroke-width="${w + 3.5}" stroke-linecap="round"/><path d="${head}" fill="#fff" fill-opacity=".85" stroke="#fff" stroke-opacity=".85" stroke-width="3.5" stroke-linejoin="round"/>`;
+      s += `<path d="M${r1(ax)},${r1(ay)}L${r1(bx)},${r1(by)}" stroke="${o.color}" stroke-width="${w}" stroke-linecap="round" ${o.dash ? `stroke-dasharray="${w * 3} ${w * 2}"` : ''}/><path d="${head}" fill="${o.color}"/>`;
       if (!exp) s += `<path d="M${x1},${y1}L${x2},${y2}" stroke="transparent" stroke-width="14"/>`;
+      return s;
+    }
+    case 'shape': {
+      const fill = !o.fill || o.fill === 'none' ? 'none' : o.fill, ev = o.kind === 'frame' || o.kind === 'donut' ? ' fill-rule="evenodd"' : '';
+      let s = `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0}) scale(${o.flip ? -1 : 1},1)"><path d="${shapePath(o.kind, o.w, o.h)}" fill="${fill}"${ev} stroke="${o.stroke || '#111'}" stroke-width="${o.sw ?? 1.6}" stroke-linejoin="round" ${o.dash ? 'stroke-dasharray="8 5"' : ''}/>`
+        + (exp || fill !== 'none' ? '' : `<rect x="${-o.w / 2}" y="${-o.h / 2}" width="${o.w}" height="${o.h}" fill="transparent"/>`) + '</g>';
+      if (o.text) { const lines = String(o.text).split('\n'), lh = o.fs * 1.3; s += `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0})">` + multiText(lines, 0, -(lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, `text-anchor="middle" fill="${o.color || '#111'}"`) + '</g>'; }
       return s;
     }
     case 'mark': {
@@ -633,20 +836,21 @@ function renderObj(o, exp) {
         + (exp ? '' : `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/>`);
     }
     case 'north': {
-      return `<g transform="translate(${o.x},${o.y}) rotate(${o.ang}) scale(${o.sz || 1})"><circle r="22" fill="#fff" stroke="#111" stroke-width="1.5"/>`
-        + `<path d="M0,-30L9,12L0,5Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/><path d="M0,-30L-9,12L0,5Z" fill="#111" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/>`
-        + `<text y="-35" font-size="15" font-weight="700" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}">N</text></g>`;
+      return `<g transform="translate(${o.x},${o.y}) rotate(${o.ang}) scale(${o.sz || 1})"><circle r="22" fill="#fff" stroke="${o.color || '#111'}" stroke-width="1.5"/>`
+        + `<path d="M0,-30L9,12L0,5Z" fill="#fff" stroke="${o.color || '#111'}" stroke-width="1.4" stroke-linejoin="round"/><path d="M0,-30L-9,12L0,5Z" fill="${o.color || '#111'}" stroke="${o.color || '#111'}" stroke-width="1.4" stroke-linejoin="round"/>`
+        + `<text y="-35" font-size="15" font-weight="700" text-anchor="middle" fill="${o.color || '#111'}" font-family="${FONT_ATTR}">N</text></g>`;
     }
     case 'legend': {
-      const items = legendItems(), b = bbox(o);
+      const items = legendItems(o), b = bbox(o);
       let s = `<rect x="${o.x}" y="${o.y}" width="${b.w}" height="${b.h}" fill="#fff" stroke="#111" stroke-width="1.4"/>`
         + `<path d="M${o.x},${o.y + 28}H${o.x + b.w}" stroke="#111" stroke-width="1"/>`
         + `<text x="${o.x + b.w / 2}" y="${o.y + 19}" font-size="14" font-weight="700" text-anchor="middle" fill="#111" font-family="${FONT_ATTR}">凡　例</text>`;
       if (!items.length) s += `<text x="${o.x + 14}" y="${o.y + 50}" font-size="12" fill="#667" font-family="${FONT_ATTR}">（配線を引くと自動表示）</text>`;
       items.forEach((it, i) => {
         const y = o.y + 30 + i * 24 + 12;
-        if (it.k === 'cam') s += `<g transform="translate(${o.x + 44},${y}) scale(${it.kind === 'dome' ? .7 : .75})">${camIcon({ kind: it.kind })}</g>`;
-        else { const st = WIRE[it.k]; s += `<path d="M${o.x + 14},${y}H${o.x + 74}" stroke="${st.color}" stroke-width="3" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''}/>`; }
+        if (it.k === 'cam') s += `<g transform="translate(${o.x + 44},${y}) scale(${it.kind === 'dome' ? .7 : .75})">${camIcon({ kind: it.kind, color: it.color })}</g>`;
+        else if (it.k === 'dev') s += `<g transform="translate(${o.x + 44},${y}) scale(.62)">${devIcon(it.kind, it.color)}</g>`;
+        else { const st = WIRE[it.k]; s += `<path d="M${o.x + 14},${y}H${o.x + 74}" stroke="${it.color || st.color}" stroke-width="3" ${st.dash ? `stroke-dasharray="${st.dash}"` : ''}/>`; }
         s += `<text x="${o.x + 88}" y="${y + 5}" font-size="13" fill="#111" font-family="${FONT_ATTR}">${esc(it.name)}</text>`;
       });
       return s;
@@ -720,7 +924,9 @@ function lockImages(imgs) {
 function k() { const r = svg.getBoundingClientRect(); return vb.w / (r.width || 1); }
 function renderOverlay() {
   const K = k(), hs = 9 * K, sw = 1.4 * K; let s = '';
-  const H_ = (x, y, code, shape) => shape === 'c'
+  const H_ = (x, y, code, shape) => shape === 'd'
+    ? `<path d="M${r1(x)},${r1(y - hs * 0.8)}L${r1(x + hs * 0.8)},${r1(y)}L${r1(x)},${r1(y + hs * 0.8)}L${r1(x - hs * 0.8)},${r1(y)}Z" fill="#f59e0b" stroke="#fff" stroke-width="${sw}" data-h="${code}" style="cursor:grab"><title>ドラッグで弧に曲げる（ダブルクリックで直線に戻す）</title></path>`
+    : shape === 'c'
     ? `<circle cx="${r1(x)}" cy="${r1(y)}" r="${r1(hs * 0.62)}" fill="#fff" stroke="#0a7891" stroke-width="${sw}" data-h="${code}" style="cursor:pointer"/>`
     : `<rect x="${r1(x - hs / 2)}" y="${r1(y - hs / 2)}" width="${r1(hs)}" height="${r1(hs)}" fill="#fff" stroke="#0a7891" stroke-width="${sw}" data-h="${code}" style="cursor:${shape || 'move'}"/>`;
   for (const id of sel) {
@@ -732,12 +938,16 @@ function renderOverlay() {
     if (o && !o.locked) {
       if (o.type === 'line' || o.type === 'wire' || o.type === 'poly') {
         o.pts.forEach((p, i) => { s += H_(p[0], p[1], 'v:' + i); });
-        for (let i = 0; i < o.pts.length - (o.type === 'poly' ? 0 : 1); i++) { const a = o.pts[i], b = o.pts[(i + 1) % o.pts.length]; s += H_((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 'm:' + i, 'c'); }
+        for (let i = 0; i < o.pts.length - (o.type === 'poly' ? 0 : 1); i++) {
+          const a = o.pts[i], b = o.pts[(i + 1) % o.pts.length];
+          if (o.type !== 'wire' && edgeMode === 'arc') { const ai = o.arcs && o.arcs[i] ? arcInfo(a, b, o.arcs[i]) : null, m = ai ? ai.mid : [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; s += H_(m[0], m[1], 'b:' + i, 'd'); }
+          else s += H_((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, 'm:' + i, 'c');
+        }
       } else if (o.type === 'dim' || o.type === 'arrow') { s += H_(o.p1[0], o.p1[1], 'p1') + H_(o.p2[0], o.p2[1], 'p2'); }
       else if (['rect', 'photo', 'image', 'callout', 'mark'].includes(o.type)) {
         s += H_(o.x, o.y, 'c:nw', 'nwse-resize') + H_(o.x + o.w, o.y, 'c:ne', 'nesw-resize') + H_(o.x, o.y + o.h, 'c:sw', 'nesw-resize') + H_(o.x + o.w, o.y + o.h, 'c:se', 'nwse-resize');
         if (o.type === 'callout') s += H_(o.tx, o.ty, 't', 'c');
-      } else if (o.type === 'sym') {
+      } else if (o.type === 'sym' || o.type === 'shape') {
         const a = (o.rot || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), W2 = o.w / 2, H2 = o.h / 2;
         const cx = o.x + W2 * ca - H2 * sa, cy = o.y + W2 * sa + H2 * ca;
         const rl = H2 + 30 * K, rx = o.x + rl * sa, ry = o.y - rl * ca;
@@ -746,6 +956,9 @@ function renderOverlay() {
         const a = (o.ang - (o.type === 'north' ? 90 : 0)) * Math.PI / 180, L = o.type === 'north' ? 52 * (o.sz || 1) : 46;
         const hx = o.x + Math.cos(a) * L, hy = o.y + Math.sin(a) * L;
         s += `<path d="M${o.x},${o.y}L${r1(hx)},${r1(hy)}" stroke="#0a7891" stroke-width="${sw}" pointer-events="none"/>` + H_(hx, hy, 'rot', 'c');
+        const bb = bbox(o), pd = 5 * K; s += H_(bb.x + bb.w + pd, bb.y + bb.h + pd, 'sc', 'nwse-resize');
+      } else if (o.type === 'device' || o.type === 'text') {
+        const bb = bbox(o), pd = 5 * K; s += H_(bb.x + bb.w + pd, bb.y + bb.h + pd, 'sc', 'nwse-resize');
       }
     }
   }
@@ -755,7 +968,8 @@ function renderOverlay() {
   }
   if (drag && (drag.kind === 'mk-rect' || drag.kind === 'mk-dim')) {
     const a = drag.p0, b = drag.p1;
-    if (drag.kind === 'mk-rect' && drag.otype === 'mark') s += `<ellipse cx="${(a.x + b.x) / 2}" cy="${(a.y + b.y) / 2}" rx="${Math.abs(b.x - a.x) / 2}" ry="${Math.abs(b.y - a.y) / 2}" fill="none" stroke="${RED}" stroke-width="3" pointer-events="none"/>`;
+    if (drag.kind === 'mk-rect' && drag.otype === 'shape') { let w = Math.abs(b.x - a.x), h = Math.abs(b.y - a.y); s += `<g transform="translate(${(a.x + b.x) / 2},${(a.y + b.y) / 2})"><path d="${shapePath(opt.shape || 'rect', Math.max(w, 1), Math.max(h, 1))}" fill="none" stroke="#0a7891" stroke-width="2" stroke-dasharray="6 4" pointer-events="none"/></g>`; }
+    else if (drag.kind === 'mk-rect' && drag.otype === 'mark') s += `<ellipse cx="${(a.x + b.x) / 2}" cy="${(a.y + b.y) / 2}" rx="${Math.abs(b.x - a.x) / 2}" ry="${Math.abs(b.y - a.y) / 2}" fill="none" stroke="${RED}" stroke-width="3" pointer-events="none"/>`;
     else if (drag.kind === 'mk-rect') s += `<rect x="${Math.min(a.x, b.x)}" y="${Math.min(a.y, b.y)}" width="${Math.abs(b.x - a.x)}" height="${Math.abs(b.y - a.y)}" fill="none" stroke="#111" stroke-width="2" pointer-events="none"/>`;
     else if (drag.otype === 'arrow') s += `<path d="M${a.x},${a.y}L${b.x},${b.y}" stroke="${drag.parent ? CAM : BLUE}" stroke-width="3" pointer-events="none"/>`;
     else s += `<path d="M${a.x},${a.y}L${b.x},${b.y}" stroke="#111" stroke-width="1.3" pointer-events="none"/>` + (doc.scale ? halo((a.x + b.x) / 2, (a.y + b.y) / 2 - 10, '約' + Math.max(1, Math.ceil(dist([a.x, a.y], [b.x, b.y]) / doc.scale - 0.05)) + 'm', 14, 'pointer-events="none"') : '');
@@ -771,6 +985,8 @@ function renderOverlay() {
     draft.pts.forEach(p => { s += `<circle cx="${p[0]}" cy="${p[1]}" r="${r1(3.5 * K)}" fill="${stroke}" pointer-events="none"/>`; });
     if (draft.type === 'wire' && doc.scale && pts.length > 1) { const c = pts[pts.length - 1]; s += halo(c[0] + 14 * K, c[1] - 12 * K, '計 約' + Math.ceil(polyLen(pts) / doc.scale) + 'm', 13, 'text-anchor="start" pointer-events="none"'); }
   }
+  const wh = (draft && draft.wallHit) || (drag && drag.kind === 'handle' && drag.wallHit);
+  if (wh) { for (const sg of wh.segs) s += `<path d="M${sg.a[0]},${sg.a[1]}L${sg.b[0]},${sg.b[1]}" stroke="#16a34a" stroke-opacity=".35" stroke-width="${r1(7 * K)}" stroke-linecap="round" pointer-events="none"/>`; s += `<circle cx="${wh.pt[0]}" cy="${wh.pt[1]}" r="${r1(5 * K)}" fill="#16a34a" pointer-events="none"/>`; }
   if (draft && draft.snapHit) s += `<circle cx="${draft.snapHit[0]}" cy="${draft.snapHit[1]}" r="${r1(11 * K)}" fill="none" stroke="#16a34a" stroke-width="${2 * K}" pointer-events="none"/>`;
   if (editPhoto) { const ph = byId(editPhoto); if (ph) { const big = 1e5; s = `<path d="M${-big},${-big}H${big}V${big}H${-big}Z M${ph.x},${ph.y}V${ph.y + ph.h}H${ph.x + ph.w}V${ph.y}Z" fill="#0d141c" fill-opacity=".72" fill-rule="evenodd" pointer-events="none"/><rect x="${ph.x}" y="${ph.y}" width="${ph.w}" height="${ph.h}" fill="none" stroke="#38c3e2" stroke-width="${r1(2 * K)}" pointer-events="none"/>` + s; } }
   $('#overlay').innerHTML = s;
@@ -832,6 +1048,39 @@ $('#pagebar').addEventListener('change', e => { if (e.target.id === 'pgsel') swi
 $('#pagebar').addEventListener('wheel', e => { const sc = e.target.closest('#pgscroll'); if (sc && Math.abs(e.deltaY) > Math.abs(e.deltaX)) { sc.scrollLeft += e.deltaY; e.preventDefault(); } }, { passive: false });
 $('#pagebar').addEventListener('dblclick', e => { const b = e.target.closest('[data-pg]'); if (b && b.dataset.pg !== 'add') renamePage(+b.dataset.pg); });
 
+/* ============ symbol library ============ */
+function closeLib() { const p0 = $('#libpop'); if (p0) p0.remove(); document.removeEventListener('pointerdown', libOutside, true); }
+function libOutside(e) { if (!e.target.closest('#libpop') && !e.target.closest('[data-tool="lib"]') && !e.target.closest('[data-tool="shapes"]')) closeLib(); }
+function openLib(btn) {
+  if ($('#libpop')) { closeLib(); return; }
+  const pop = document.createElement('div'); pop.className = 'libpop'; pop.id = 'libpop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', '記号一覧');
+  const groups = [['防犯・映像', ['recorder', 'nvr', 'monitor', 'hub', 'onu', 'ap', 'sticker']], ['電気・設備', ['panel', 'box', 'outlet', 'jbox', 'pbox', 'pole', 'light', 'slight', 'sensor', 'speaker', 'siren', 'intercom']], ['施工・周辺', ['hatch', 'vent', 'hole', 'tree', 'car', 'bike']]];
+  pop.innerHTML = `<div class="libhd"><b>記号一覧</b><span class="note">選んで図面をクリック</span></div>` + groups.map(([g, ks]) => `<div class="libcap">${g}</div><div class="libgrid">${ks.map(k => `<button class="libit" data-k="${k}" title="${esc(DEV[k].name)}">${toolIcon('dev:' + k)}<span>${esc(DEV[k].name)}</span></button>`).join('')}</div>`).join('');
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+  pop.style.left = Math.max(10, Math.min(r.right + 8, innerWidth - pw - 10)) + 'px';
+  pop.style.top = Math.max(10, Math.min(r.top - 60, innerHeight - ph - 10)) + 'px';
+  pop.addEventListener('click', e => { const b = e.target.closest('[data-k]'); if (!b) return; setTool('dev-' + b.dataset.k); closeLib(); toast(DEV[b.dataset.k].name + '：図面をクリックして配置'); });
+  pop.addEventListener('keydown', e => { if (e.key === 'Escape') closeLib(); });
+  setTimeout(() => document.addEventListener('pointerdown', libOutside, true), 0);
+}
+
+function shapeIcon(k) { const w = SHAPES[k].g === 'a' && /up|down|Down|Up/.test(k) ? 13 : 19, h = SHAPES[k].g === 'a' && /up|down|Down|Up/.test(k) ? 19 : 14; return `<svg viewBox="0 0 24 24"><g transform="translate(12 12)"><path d="${shapePath(k, w, h)}" fill="none"${k === 'frame' || k === 'donut' ? ' fill-rule="evenodd"' : ''} stroke="#334155" stroke-width="1.4" stroke-linejoin="round"/></g></svg>`; }
+function openShapes(btn) {
+  if ($('#libpop')) { closeLib(); return; }
+  const pop = document.createElement('div'); pop.className = 'libpop'; pop.id = 'libpop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', '図形');
+  const keys = Object.keys(SHAPES), g = [['基本図形', keys.filter(k => !SHAPES[k].g)], ['ブロック矢印', keys.filter(k => SHAPES[k].g === 'a')]];
+  pop.innerHTML = `<div class="libhd"><b>図形</b><span class="note">選んで図面をドラッグ</span></div>` + g.map(([n, ks]) => `<div class="libcap">${n}</div><div class="libgrid sm">${ks.map(k => `<button class="libit" data-k="${k}" title="${esc(SHAPES[k].name)}">${shapeIcon(k)}<span>${esc(SHAPES[k].name)}</span></button>`).join('')}</div>`).join('')
+    + `<div class="libcap">線・矢印</div><div class="libgrid sm"><button class="libit" data-t="line" title="直線・折れ線">${toolIcon('line')}<span>直線・折れ線</span></button><button class="libit" data-t="arrow" title="矢印">${toolIcon('arrow')}<span>矢印</span></button><button class="libit" data-t="arrow2" title="両矢印"><svg viewBox="0 0 24 24"><path d="M7 17L17 7" stroke="currentColor" stroke-width="2.2"/><path d="M20 4l-2 7-5-5zM4 20l2-7 5 5z" fill="currentColor"/></svg><span>両矢印</span></button><button class="libit" data-t="callout" title="吹き出し">${toolIcon('callout')}<span>吹き出し</span></button><button class="libit" data-t="text" title="テキストボックス">${toolIcon('text')}<span>テキスト</span></button></div>`;
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+  pop.style.left = Math.max(10, Math.min(r.right + 8, innerWidth - pw - 10)) + 'px';
+  pop.style.top = Math.max(10, Math.min(r.top - 120, innerHeight - ph - 10)) + 'px';
+  pop.addEventListener('click', e => { const b = e.target.closest('[data-k],[data-t]'); if (!b) return; closeLib(); if (b.dataset.k) { setTool('shape-' + b.dataset.k); toast(SHAPES[b.dataset.k].name + '：図面をドラッグして描く'); } else { opt.arrow2 = b.dataset.t === 'arrow2'; setTool(b.dataset.t === 'arrow2' ? 'arrow' : b.dataset.t); } });
+  pop.addEventListener('keydown', e => { if (e.key === 'Escape') closeLib(); });
+  setTimeout(() => document.addEventListener('pointerdown', libOutside, true), 0);
+}
+
 /* ============ photo edit mode ============ */
 function enterPhotoEdit(id) {
   const ph = byId(id); if (!ph || !ph.asset) return;
@@ -854,7 +1103,7 @@ function exitPhotoEdit() {
 function renderEditbar() {
   const ph = byId(editPhoto); if (!ph) { exitPhotoEdit(); return; }
   const eb = $('#editbar'); eb.hidden = false;
-  eb.innerHTML = `<span><b>写真を編集中</b>「${esc(ph.caption || '無題')}」　左の配線・カメラ・機器・矢印・囲み・文字で描き込めます</span><button class="btn" id="ebDone">編集を終える</button>`;
+  eb.innerHTML = `<span><b>写真を編集中</b>「${esc(ph.caption || '無題')}」　左の配線・カメラ・機器・図形・矢印・囲み・文字で描き込めます</span><button class="btn" id="ebDone">編集を終える</button>`;
   $('#ebDone').onclick = exitPhotoEdit;
 }
 
@@ -869,6 +1118,7 @@ function scaleAll(f, ox, oy, nx, ny) {
   for (const o of doc.objects) {
     if ('x' in o) [o.x, o.y] = m(o.x, o.y);
     if ('w' in o) { o.w = r1(o.w * f); o.h = r1(o.h * f); }
+    if (o.arcs) for (const k2 in o.arcs) o.arcs[k2] = r1(o.arcs[k2] * f);
     if (o.pts) o.pts = o.pts.map(p => m(p[0], p[1]));
     if (o.p1) { o.p1 = m(...o.p1); o.p2 = m(...o.p2); }
     if ('tx' in o) [o.tx, o.ty] = m(o.tx, o.ty);
@@ -918,6 +1168,43 @@ function ortho(prev, p) {
   const dx = p[0] - prev[0], dy = p[1] - prev[1], L = Math.hypot(dx, dy), a = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
   return [Math.round(prev[0] + Math.cos(a) * L), Math.round(prev[1] + Math.sin(a) * L)];
 }
+/* wall-follow snap: put wire points a fixed gap off the nearest wall, and at the inside corner where two walls meet */
+let wallOn = true;
+try { wallOn = localStorage.getItem('camzu-wall') !== '0'; } catch { }
+const wallGap = () => (doc.meta && doc.meta.wallGap) || 8;
+function wallSegs() {
+  const segs = [];
+  for (const o of doc.objects) {
+    if (o.parent) continue;
+    if (o.type === 'line') { const q = hasArcs(o) ? edgePts(o, false) : o.pts; for (let i = 0; i < q.length - 1; i++) segs.push([q[i], q[i + 1]]); }
+    else if (o.type === 'rect') { const c = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]]; for (let i = 0; i < 4; i++) segs.push([c[i], c[(i + 1) % 4]]); }
+    else if (o.type === 'poly') { const q = hasArcs(o) ? edgePts(o, true) : o.pts; for (let i = 0; i < q.length; i++) segs.push([q[i], q[(i + 1) % q.length]]); }
+  }
+  return segs;
+}
+function wallSnap(p, thr, gap = wallGap()) {
+  const cands = [];
+  for (const [a, b] of wallSegs()) {
+    const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; if (L2 < 4) continue;
+    let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2; const L = Math.sqrt(L2), ext = (thr + gap) / L;
+    if (t < -ext || t > 1 + ext) continue;
+    const tc = Math.max(0, Math.min(1, t)), q = [a[0] + dx * tc, a[1] + dy * tc], qi = [a[0] + dx * t, a[1] + dy * t];
+    const dd = Math.hypot(p[0] - qi[0], p[1] - qi[1]); if (dd > thr + gap || dist(p, q) > thr + gap * 2) continue;
+    let nx = -dy / L, ny = dx / L; if ((p[0] - qi[0]) * nx + (p[1] - qi[1]) * ny < 0) { nx = -nx; ny = -ny; }
+    cands.push({ dd: Math.abs(dd - gap), q: qi, nx, ny, a, b, ux: dx / L, uy: dy / L, inside: t >= 0 && t <= 1 });
+  }
+  if (!cands.length) return null;
+  cands.sort((x, y) => (y.inside - x.inside) || (x.dd - y.dd));
+  const c0 = cands[0];
+  for (const c1 of cands.slice(1)) {
+    const cr = c0.ux * c1.uy - c0.uy * c1.ux; if (Math.abs(cr) < 0.3) continue;
+    const p0 = [c0.a[0] + c0.nx * gap, c0.a[1] + c0.ny * gap], p1 = [c1.a[0] + c1.nx * gap, c1.a[1] + c1.ny * gap];
+    const sp2 = ((p1[0] - p0[0]) * c1.uy - (p1[1] - p0[1]) * c1.ux) / cr, X = [p0[0] + c0.ux * sp2, p0[1] + c0.uy * sp2];
+    if (dist(X, p) < (thr + gap) * 1.4) return { pt: [r1(X[0]), r1(X[1])], segs: [c0, c1] };
+  }
+  if (!c0.inside) return null;
+  return { pt: [r1(c0.q[0] + c0.nx * gap), r1(c0.q[1] + c0.ny * gap)], segs: [c0] };
+}
 function snapTarget(p, exceptId) {
   let best = null, bd = 16 * Math.max(1, k());
   for (const o of doc.objects) {
@@ -944,6 +1231,8 @@ const IC = {
   dim: '<path d="M3 12h18M3 8v8M21 8v8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 12l4-2.5v5zM21 12l-4-2.5v5z" fill="currentColor"/>',
   callout: '<path d="M4 5h16a1.5 1.5 0 011.5 1.5v8A1.5 1.5 0 0120 16h-9l-5 4v-4H4a1.5 1.5 0 01-1.5-1.5v-8A1.5 1.5 0 014 5z" fill="none" stroke="currentColor" stroke-width="1.6"/>',
   photo: '<rect x="3" y="5" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 15l4-4 3 3 3-2 4 3" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="7" y="18.5" width="10" height="3" fill="none" stroke="' + BLUE + '" stroke-width="1.3"/>',
+  shapes: '<rect x="2.5" y="11" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16.5" cy="7.5" r="4.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15 14l6 7h-12z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" transform="translate(-1 -1)"/>',
+  lib: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="17.2" cy="6.8" r="3.8" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.8 13.5l4 7h-8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 17.2h7M17.5 13.7v7" stroke="currentColor" stroke-width="1.8"/>',
   arrow: '<path d="M4 19L17 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M20 3l-2 8-6-6z" fill="currentColor"/>',
   mark: '<ellipse cx="12" cy="12" rx="9" ry="6.5" fill="none" stroke="#dc2626" stroke-width="2.4"/>',
   poly: '<path d="M4 20V9l6-5 10 4v12z" fill="#eef1f4" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 20v-5h4v5" fill="none" stroke="currentColor" stroke-width="1.4"/>',
@@ -967,12 +1256,14 @@ const TOOLS = [
   { sep: 1 }, { cap: '配線' },
   ...Object.keys(WIRE).map((kk, i) => ({ id: 'wire-' + kk, name: WIRE[kk].name.replace('配線', ''), key: i === 0 ? 'W' : '', ic: kk })),
   { sep: 1 }, { cap: '機器' },
-  ...Object.keys(DEV).map(kk => ({ id: 'dev-' + kk, name: DEV[kk].tool || DEV[kk].name.replace('貫通・穴あけ', '貫通'), ic: 'dev:' + kk })),
-  { sep: 1 }, { cap: '建具' },
+  ...Object.keys(DEV).filter(kk => DEV[kk].rail).map(kk => ({ id: 'dev-' + kk, name: DEV[kk].tool || DEV[kk].name.replace('貫通・穴あけ', '貫通'), ic: 'dev:' + kk })),
+  { id: 'lib', name: '記号一覧', ic: 'lib' },
+  { sep: 1 }, { cap: '建具・柱' },
   ...Object.keys(SYM).map(kk => ({ id: 'sym-' + kk, name: SYM[kk].tool, ic: 'sym:' + kk, key: kk === 'door1' ? 'D' : kk === 'stair' ? 'K' : '' })),
   { sep: 1 }, { cap: '注記' },
   { id: 'dim', name: '寸法', key: 'M', ic: 'dim' },
   { id: 'callout', name: '吹き出し', key: 'B', ic: 'callout' },
+  { id: 'shapes', name: '図形', key: 'F', ic: 'shapes' },
   { id: 'mark', name: '囲み', key: 'O', ic: 'mark' },
   { id: 'arrow', name: '矢印', key: 'A', ic: 'arrow' },
   { id: 'photo', name: '写真枠', key: 'P', ic: 'photo' },
@@ -980,8 +1271,8 @@ const TOOLS = [
   { id: 'scale', name: '縮尺設定', key: 'S', ic: 'scale' },
 ];
 function toolIcon(ic) {
-  if (ic.startsWith('sym:')) { const kk = ic.slice(4), sz = { door1: [16, 16], door2: [20, 10], slide: [20, 6], window: [20, 5], stair: [20, 11] }[kk]; return `<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="none"/><g transform="translate(12 ${kk === 'door1' ? 12 : 12})" style="color:#111">${symIcon({ kind: kk, w: sz[0], h: sz[1], n: 5, dir: 'none', cut: false }).replace(/#111/g, 'currentColor').replace(/#fff/g, 'none')}</g></svg>`; }
-  if (ic.startsWith('dev:')) { const kk = ic.slice(4); const sc = { pole: .8, nvr: .55, monitor: .6, recorder: .62, panel: .62, box: .72, hub: .62, outlet: .85, vent: .75, hole: 1 }[kk] || .7; return `<svg viewBox="0 0 24 24"><g transform="translate(12 ${kk === 'recorder' ? 13 : kk === 'monitor' ? 13.5 : 12}) scale(${sc})">${devIcon(kk)}</g></svg>`; }
+  if (ic.startsWith('sym:')) { const kk = ic.slice(4), sz = { door1: [16, 16], door2: [20, 10], slide: [20, 6], window: [20, 5], stair: [20, 11], colsq: [14, 14], colrd: [15, 15] }[kk]; return `<svg viewBox="0 0 24 24"><rect width="24" height="24" fill="none"/><g transform="translate(12 ${kk === 'door1' ? 12 : 12})" style="color:#111">${symIcon({ kind: kk, w: sz[0], h: sz[1], n: 5, dir: 'none', cut: false }).replace(/#111/g, 'currentColor').replace(/#fff/g, 'none')}</g></svg>`; }
+  if (ic.startsWith('dev:')) { const kk = ic.slice(4); const sc = { hatch: .8, light: .85, slight: .7, sensor: .75, speaker: .75, siren: .75, intercom: .75, onu: .62, ap: .7, jbox: .9, pbox: .8, sticker: .75, tree: .65, car: .5, bike: .7, pole: .8, nvr: .55, monitor: .6, recorder: .62, panel: .62, box: .72, hub: .62, outlet: .85, vent: .75, hole: 1 }[kk] || .7; return `<svg viewBox="0 0 24 24"><g transform="translate(12 ${kk === 'recorder' ? 13 : kk === 'monitor' ? 13.5 : 12}) scale(${sc})">${devIcon(kk)}</g></svg>`; }
   return `<svg viewBox="0 0 24 24">${IC[ic]}</svg>`;
 }
 function buildTools() {
@@ -994,26 +1285,29 @@ function setTool(id) {
   if (id.startsWith('wire-')) opt.wire = id.slice(5);
   if (id.startsWith('dev-')) opt.device = id.slice(4);
   if (id.startsWith('sym-')) opt.sym = id.slice(4);
+  if (id.startsWith('shape-')) opt.shape = id.slice(6);
   opt.cam = id === 'camera-dome' ? 'dome' : 'bullet';
-  document.querySelectorAll('.tool').forEach(b => b.setAttribute('aria-pressed', b.dataset.tool === id ? 'true' : 'false'));
+  const inLib = id.startsWith('dev-') && !DEV[id.slice(4)].rail;
+  document.querySelectorAll('.tool').forEach(b => b.setAttribute('aria-pressed', (b.dataset.tool === id || (inLib && b.dataset.tool === 'lib') || (id.startsWith('shape-') && b.dataset.tool === 'shapes')) ? 'true' : 'false'));
   stage.classList.toggle('draw', id !== 'select' && id !== 'hand');
   stage.classList.toggle('pan', id === 'hand');
   updateHint();
 }
-function baseTool(t = tool) { return t.startsWith('sym-') ? 'sym' : t.startsWith('wire-') ? 'wire' : t.startsWith('dev-') ? 'device' : t.startsWith('camera') ? 'camera' : t; }
+function baseTool(t = tool) { return t.startsWith('shape-') ? 'shape' : t.startsWith('sym-') ? 'sym' : t.startsWith('wire-') ? 'wire' : t.startsWith('dev-') ? 'device' : t.startsWith('camera') ? 'camera' : t; }
 const HINTS = {
   select: '<b>選択</b>：クリックで選択・ドラッグで移動。空白をドラッグで範囲選択。<kbd>Space</kbd>+ドラッグ／ホイールで画面移動・拡大',
   hand: '<b>移動</b>：ドラッグで画面をスクロール',
   line: '<b>壁・線</b>：クリックで頂点を追加、ダブルクリックか <kbd>Enter</kbd> で確定。<kbd>Shift</kbd> で水平・垂直',
-  poly: '<b>建物</b>：角を順にクリック。最初の点をクリック（またはダブルクリック／<kbd>Enter</kbd>）で閉じる。<kbd>Shift</kbd> で45°単位。地図の下絵をなぞるのに便利',
-  sym: '<b>建具・階段</b>：クリックで配置。丸い取っ手で回転、四角い取っ手で大きさ変更。ドアは壁の線の上をクリック（直線の辺が壁に乗ります）。縮尺設定済みなら実寸に近い大きさで置きます',
+  poly: '<b>建物</b>：角を順にクリック（曲がった辺はあとから「弧に曲げる」で）。最初の点をクリック（またはダブルクリック／<kbd>Enter</kbd>）で閉じる。<kbd>Shift</kbd> で45°単位。地図の下絵をなぞるのに便利',
+  sym: '<b>建具・柱</b>：柱は続けてクリックで連続して置けます（<kbd>Esc</kbd>で終了）。クリックで配置。丸い取っ手で回転、四角い取っ手で大きさ変更。ドアは壁の線の上をクリック（直線の辺が壁に乗ります）。縮尺設定済みなら実寸に近い大きさで置きます',
   arrow: '<b>矢印</b>：始点から終点へドラッグ。撮影方向や配線の向きを示すのに使えます（写真の上では写真に付きます）',
+  shape: '<b>図形</b>：ドラッグで大きさを決めて描く（クリックだけなら標準の大きさ）。<kbd>Shift</kbd>で縦横比を保つ。中に文字も入れられます',
   mark: '<b>囲み</b>：ドラッグで赤い丸囲みを描く（写真の上では写真に付きます）',
   north: '<b>方位</b>：クリックで方位記号を置く。取っ手で向きを調整',
   rect: '<b>部屋</b>：ドラッグで四角を描く。名前は右のパネルで入力',
   text: '<b>文字</b>：クリックした位置に文字を置く',
   camera: '<b>カメラ</b>：クリックで設置（番号は自動）。選択後、丸い取っ手を回して向きを調整',
-  wire: '<b>配線</b>：機器・カメラの近くをクリックすると吸着。ダブルクリックか <kbd>Enter</kbd> で確定。縮尺設定済みなら長さを自動計算',
+  wire: '<b>配線</b>：壁の近くをクリックすると壁から少し離れた位置に沿います（緑の表示）。機器・カメラの近くをクリックすると吸着。ダブルクリックか <kbd>Enter</kbd> で確定。縮尺設定済みなら長さを自動計算',
   device: '<b>機器</b>：クリックで設置',
   dim: '<b>寸法</b>：始点から終点へドラッグ。縮尺設定済みなら「約○m」を自動表示',
   callout: '<b>吹き出し</b>：クリックで配置。先端の丸い取っ手を指したい場所へ',
@@ -1041,14 +1335,15 @@ function nextCamNum() { return doc.objects.filter(o => o.type === 'camera' && !o
 function toolDown(p, e) {
   const bt = baseTool();
   if (editPhoto && !EDIT_TOOLS.includes(bt)) { toast('写真の編集中はこのツールは使えません。「編集を終える」で戻ってください'); setTool('select'); return; }
-  const onPh = ['line', 'wire', 'camera', 'device', 'text', 'callout', 'mark', 'arrow'].includes(bt) ? (editPhoto ? byId(editPhoto) : draft ? (draft.parent ? byId(draft.parent) : null) : photoAt(p.x, p.y)) : null;
+  const onPh = ['line', 'wire', 'camera', 'device', 'text', 'callout', 'mark', 'arrow', 'shape'].includes(bt) ? (editPhoto ? byId(editPhoto) : draft ? (draft.parent ? byId(draft.parent) : null) : photoAt(p.x, p.y)) : null;
   const sp = onPh ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)];
   if (bt === 'line' || bt === 'wire' || bt === 'scale' || bt === 'poly') {
     let q = sp;
-    if (bt === 'wire') { const t = snapTarget([p.x, p.y]); if (t) q = t; }
+    let snapped = false;
+    if (bt === 'wire') { const t = snapTarget([p.x, p.y]); if (t) { q = t; snapped = true; } else if (wallOn && !onPh) { const ws = wallSnap([p.x, p.y], Math.max(8, 14 * k())); if (ws) { q = ws.pt; snapped = true; } } }
     if (!draft) { draft = { type: bt, pts: [q], cur: null, parent: onPh ? onPh.id : null }; render(); return; }
     const last = draft.pts[draft.pts.length - 1];
-    if (e.shiftKey && !(bt === 'wire' && snapTarget([p.x, p.y]))) q = ortho(last, q);
+    if (e.shiftKey && !snapped) q = ortho(last, q);
     if (dist(q, last) < 5 * k()) { if (bt !== 'scale') finishDraft(); return; }
     if (bt === 'poly' && draft.pts.length >= 3 && dist(q, draft.pts[0]) < 12 * k()) { finishDraft(); return; }
     draft.pts.push(q);
@@ -1056,12 +1351,12 @@ function toolDown(p, e) {
     else render();
     return;
   }
-  if (bt === 'rect' || bt === 'dim' || bt === 'mark' || bt === 'arrow') { drag = { kind: bt === 'dim' || bt === 'arrow' ? 'mk-dim' : 'mk-rect', otype: bt, parent: onPh ? onPh.id : null, p0: { x: sp[0], y: sp[1] }, p1: { x: sp[0], y: sp[1] } }; return; }
+  if (bt === 'rect' || bt === 'dim' || bt === 'mark' || bt === 'arrow' || bt === 'shape') { drag = { kind: bt === 'dim' || bt === 'arrow' ? 'mk-dim' : 'mk-rect', otype: bt, parent: onPh ? onPh.id : null, p0: { x: sp[0], y: sp[1] }, p1: { x: sp[0], y: sp[1] } }; return; }
   pushUndo();
   let o;
   if (bt === 'camera') o = { type: 'camera', x: sp[0], y: sp[1], ang: 0, num: nextCamNum(), name: '', kind: opt.cam || 'bullet', cone: true, coneLen: 110, coneAng: 70, lx: 0, ly: 32 };
   else if (bt === 'device') o = { type: 'device', kind: opt.device, x: sp[0], y: sp[1], label: DEV[opt.device].label, lx: 0, ly: { recorder: 36, monitor: 30, nvr: 26, pole: 28 }[opt.device] || 30 };
-  else if (bt === 'sym') { const [w, h] = symSize(opt.sym); o = { type: 'sym', kind: opt.sym, x: sp[0], y: sp[1] - (opt.sym.startsWith('door') ? h / 2 : 0), w, h, rot: 0, flip: false, cut: true, n: 10, dir: 'up' }; }
+  else if (bt === 'sym') { const [w, h] = symSize(opt.sym); o = { type: 'sym', kind: opt.sym, x: sp[0], y: sp[1] - (opt.sym.startsWith('door') ? h / 2 : 0), w, h, rot: 0, flip: false, cut: true, n: 10, dir: 'up', ...(opt.sym.startsWith('col') ? { fillStyle: 'solid' } : {}) }; }
   else if (bt === 'north') o = { type: 'north', x: sp[0], y: sp[1], ang: 0, sz: 1 };
   else if (bt === 'text') o = { type: 'text', x: sp[0], y: sp[1], text: 'テキスト', fs: 16, color: '#111111', bold: false, box: 'none', anchor: 'start' };
   else if (bt === 'callout') o = { type: 'callout', x: sp[0], y: sp[1], w: 130, h: 34, text: '注記', fs: 14, tx: sp[0] - 40, ty: sp[1] + 70 };
@@ -1070,10 +1365,12 @@ function toolDown(p, e) {
   if (o.type === 'camera' && !onPh) { const pl = doc.objects.find(d => d.type === 'device' && d.kind === 'pole' && Math.hypot(d.x - o.x, d.y - o.y) < 16); if (pl) { o.x = pl.x; o.y = pl.y; o.ly = -24; o.lx = 0; } }
   if (onPh) {
     attachTo(o, onPh);
-    if (o.type === 'camera') { o.cone = false; o.sz = 0.8; o.hideLabel = true; o.num = Math.max(1, nextCamNum() - 1); }
+    if (o.type === 'camera') { o.cone = false; o.sz = 0.8; o.hideLabel = true; o.view = o.kind === 'dome' ? 'hang' : 'diag'; o.mount = 'wall'; o.num = Math.max(1, nextCamNum() - 1); }
     if (o.type === 'device') o.label = '';
   }
-  addObj(o); fixKidOrder(); setTool('select'); select([o.id]); render();
+  addObj(o); fixKidOrder();
+  if (o.type === 'sym' && o.kind.startsWith('col')) { sel = new Set([o.id]); refreshPane(); render(); return; }
+  setTool('select'); select([o.id]); render();
   if (o.type === 'text' || o.type === 'callout') focusField('text');
   if (o.type === 'photo') pickPhoto(o.id);
 }
@@ -1099,7 +1396,7 @@ svg.addEventListener('pointerdown', e => {
   if (h && sel.size === 1) {
     const o = byId([...sel][0]); const code = h.dataset.h;
     const before = snapshot();
-    if (code.startsWith('m:')) { const i = +code.slice(2); const a = o.pts[i], b = o.pts[(i + 1) % o.pts.length]; o.pts.splice(i + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]); drag = { kind: 'handle', code: 'v:' + (i + 1), id: o.id, before, orig: clone(o), p0: p, moved: true }; }
+    if (code.startsWith('m:')) { const i = +code.slice(2); const a = o.pts[i], b = o.pts[(i + 1) % o.pts.length]; shiftArcs(o, k => k < i ? k : k === i ? null : k + 1); o.pts.splice(i + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]); drag = { kind: 'handle', code: 'v:' + (i + 1), id: o.id, before, orig: clone(o), p0: p, moved: true }; }
     else drag = { kind: 'handle', code, id: o.id, before, orig: clone(o), p0: p, moved: false, kids: o.type === 'photo' ? kidsOf(o.id).map(clone) : null };
     return;
   }
@@ -1109,12 +1406,14 @@ svg.addEventListener('pointerdown', e => {
   if (g) {
     const o = byId(g.dataset.id);
     if (o && (!o.locked || e.altKey)) {
-      if (e.shiftKey) { sel.has(o.id) ? sel.delete(o.id) : sel.add(o.id); select([...sel]); return; }
-      if (!sel.has(o.id)) select([o.id]);
+      if (e.shiftKey || e.ctrlKey || e.metaKey) { const ids = grpIds(o), has = sel.has(o.id); ids.forEach(i => has ? sel.delete(i) : sel.add(i)); select([...sel]); return; }
+      let drill = null; const gi = grpIds(o);
+      if (!sel.has(o.id)) select(gi);
+      else if (gi.length > 1 && sel.size === gi.length && gi.every(i => sel.has(i))) drill = o.id;
       const part = e.target.closest('[data-part]');
       const before = snapshot();
       if (part && part.dataset.part === 'label' && sel.size === 1) drag = { kind: 'label', id: o.id, before, orig: clone(o), p0: p, moved: false };
-      else { const orig = {}; for (const id of withKids(sel)) { const x = byId(id); if (x && !x.locked) orig[id] = clone(x); } drag = { kind: 'move', before, orig, p0: p, moved: false }; }
+      else { const orig = {}; for (const id of withKids(sel)) { const x = byId(id); if (x && !x.locked) orig[id] = clone(x); } drag = { kind: 'move', before, orig, p0: p, moved: false, drill }; }
       render(); return;
     }
   }
@@ -1125,8 +1424,9 @@ svg.addEventListener('pointermove', e => {
   const p = pt(e);
   if (draft) {
     let q = draft.parent ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)]; draft.snapHit = null;
-    if (draft.type === 'wire') { const t = snapTarget([p.x, p.y]); if (t) { q = t; draft.snapHit = t; } }
-    if (e.shiftKey && draft.pts.length && !draft.snapHit) q = ortho(draft.pts[draft.pts.length - 1], q);
+    draft.wallHit = null;
+    if (draft.type === 'wire') { const t = snapTarget([p.x, p.y]); if (t) { q = t; draft.snapHit = t; } else if (wallOn && !draft.parent) { const ws = wallSnap([p.x, p.y], Math.max(8, 14 * k())); if (ws) { q = ws.pt; draft.wallHit = ws; } } }
+    if (e.shiftKey && draft.pts.length && !draft.snapHit && !draft.wallHit) q = ortho(draft.pts[draft.pts.length - 1], q);
     draft.cur = q; renderOverlay();
   }
   if (!drag) return;
@@ -1143,28 +1443,42 @@ svg.addEventListener('pointermove', e => {
     drag.p1 = p; const x0 = Math.min(drag.p0.x, p.x), x1 = Math.max(drag.p0.x, p.x), y0 = Math.min(drag.p0.y, p.y), y1 = Math.max(drag.p0.y, p.y);
     const s = new Set(drag.base);
     if (x1 - x0 > 3 || y1 - y0 > 3) for (const o of doc.objects) { if (o.locked || (editPhoto && o.parent !== editPhoto)) continue; const b = bbox(o); if (b.x >= x0 && b.y >= y0 && b.x + b.w <= x1 && b.y + b.h <= y1) s.add(o.id); }
+    for (const id of [...s]) { const x = byId(id); if (x) grpIds(x).forEach(i => s.add(i)); }
     sel = s; render(); return;
   }
   if (drag.kind === 'mk-rect' || drag.kind === 'mk-dim') {
     let q = drag.parent ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)];
+    if (drag.kind === 'mk-rect' && drag.otype === 'shape' && e.shiftKey) { const d2 = Math.max(Math.abs(q[0] - drag.p0.x), Math.abs(q[1] - drag.p0.y)); q = [drag.p0.x + Math.sign(q[0] - drag.p0.x || 1) * d2, drag.p0.y + Math.sign(q[1] - drag.p0.y || 1) * d2]; }
     if (drag.kind === 'mk-dim' && e.shiftKey) q = ortho([drag.p0.x, drag.p0.y], q);
     drag.p1 = { x: q[0], y: q[1] }; renderOverlay(); return;
   }
   if (drag.kind === 'handle') {
     const o = byId(drag.id), c = drag.code, O = drag.orig; drag.moved = true;
-    if (c.startsWith('v:')) {
+    if (c.startsWith('b:')) {
+      const i = +c.slice(2), a = o.pts[i], b = o.pts[(i + 1) % o.pts.length], cl = dist(a, b) || 1, nx = -(b[1] - a[1]) / cl, ny = (b[0] - a[0]) / cl;
+      let hh = (p.x - (a[0] + b[0]) / 2) * nx + (p.y - (a[1] + b[1]) / 2) * ny;
+      if (e.shiftKey) hh = Math.sign(hh) * Math.min(Math.abs(hh), cl / 2);
+      o.arcs = o.arcs || {}; if (Math.abs(hh) < 3) delete o.arcs[i]; else o.arcs[i] = Math.round(hh);
+    } else if (c.startsWith('v:')) {
       const i = +c.slice(2); let q = [sn(p.x), sn(p.y)];
-      if (o.type === 'wire') { const t = snapTarget([p.x, p.y], o.id); if (t) q = t; }
-      if (e.shiftKey) { const nb = o.pts[i - 1] || o.pts[i + 1]; if (nb) q = ortho(nb, q); }
+      let vs = false;
+      if (o.type === 'wire') { const t = snapTarget([p.x, p.y], o.id); if (t) { q = t; vs = true; } else if (wallOn && !o.parent) { const ws = wallSnap([p.x, p.y], Math.max(8, 14 * k())); if (ws) { q = ws.pt; vs = true; drag.wallHit = ws; } else drag.wallHit = null; } }
+      if (e.shiftKey && !vs) { const nb = o.pts[i - 1] || o.pts[i + 1]; if (nb) q = ortho(nb, q); }
       o.pts[i] = q;
     } else if (c === 'p1' || c === 'p2') {
       let q = [sn(p.x), sn(p.y)]; const other = c === 'p1' ? o.p2 : o.p1; if (e.shiftKey) q = ortho(other, q); o[c] = q;
     } else if (c === 't') { o.tx = sn(p.x); o.ty = sn(p.y); }
-    else if (c === 'rot') { let a = Math.atan2(p.y - o.y, p.x - o.x) * 180 / Math.PI + (o.type === 'north' || o.type === 'sym' ? 90 : 0); if (a > 180) a -= 360; a = e.shiftKey ? Math.round(a) : Math.round(a / 15) * 15; if (a === -180) a = 180; if (o.type === 'sym') o.rot = a; else o.ang = a; }
+    else if (c === 'rot') { let a = Math.atan2(p.y - o.y, p.x - o.x) * 180 / Math.PI + (o.type === 'north' || o.type === 'sym' || o.type === 'shape' ? 90 : 0); if (a > 180) a -= 360; a = e.shiftKey ? Math.round(a) : Math.round(a / 15) * 15; if (a === -180) a = 180; if (o.type === 'sym' || o.type === 'shape') o.rot = a; else o.ang = a; }
+    else if (c === 'sc') {
+      const ob = bbox(O), cx = O.type === 'text' ? ob.x : O.x, cy = O.type === 'text' ? ob.y : O.y;
+      const f = Math.max(0.2, Math.min(6, dist([p.x, p.y], [cx, cy]) / Math.max(1, dist([drag.p0.x, drag.p0.y], [cx, cy]))));
+      if (o.type === 'text') o.fs = Math.max(6, Math.round(O.fs * f));
+      else { o.sz = Math.round(Math.max(0.3, Math.min(5, (O.sz || 1) * f)) * 100) / 100; const g = o.sz / (O.sz || 1); if (o.type !== 'north') { o.lx = Math.round((O.lx || 0) * g); o.ly = Math.round((O.ly || 0) * g); } }
+    }
     else if (c === 'ss') {
       const r = -(o.rot || 0) * Math.PI / 180, dx2 = p.x - o.x, dy2 = p.y - o.y, lx = dx2 * Math.cos(r) - dy2 * Math.sin(r), ly = dx2 * Math.sin(r) + dy2 * Math.cos(r);
       o.w = Math.max(12, Math.round(2 * Math.abs(lx)));
-      o.h = o.kind === 'door1' ? o.w : o.kind === 'door2' ? Math.round(o.w / 2) : Math.max(6, Math.round(2 * Math.abs(ly)));
+      o.h = o.type === 'shape' ? (e.shiftKey ? Math.max(6, Math.round(o.w * O.h / O.w)) : Math.max(6, Math.round(2 * Math.abs(ly)))) : o.kind === 'door1' || o.kind === 'colrd' ? o.w : o.kind === 'door2' ? Math.round(o.w / 2) : Math.max(6, Math.round(2 * Math.abs(ly)));
     }
     else if (c.startsWith('c:')) {
       const corner = c.slice(2); let x0 = O.x, y0 = O.y, x1 = O.x + O.w, y1 = O.y + O.h; const qx = sn(p.x), qy = sn(p.y);
@@ -1182,7 +1496,12 @@ function endPointer(e) {
   const d = drag; drag = null;
   if (d.kind === 'mk-rect') {
     pushUndo(); let x = Math.min(d.p0.x, d.p1.x), y = Math.min(d.p0.y, d.p1.y), w = Math.abs(d.p1.x - d.p0.x), h = Math.abs(d.p1.y - d.p0.y);
-    if (d.otype === 'mark') {
+    if (d.otype === 'shape') {
+      if (w < 8 || h < 8) { w = 90; h = 60; x -= 45; y -= 30; }
+      const o = { type: 'shape', kind: opt.shape || 'rect', x: Math.round(x + w / 2), y: Math.round(y + h / 2), w: Math.round(w), h: Math.round(h), rot: 0, flip: false, fill: '#ffffff', stroke: '#111111', sw: 1.6, dash: false, text: '', fs: 14 };
+      if (d.parent && byId(d.parent)) { attachTo(o, byId(d.parent)); o.fill = 'none'; o.stroke = RED; o.sw = 2.5; }
+      addObj(o); fixKidOrder(); setTool('select'); select([o.id]);
+    } else if (d.otype === 'mark') {
       if (w < 8 || h < 8) { w = 60; h = 40; x -= 30; y -= 20; }
       const o = { type: 'mark', x, y, w, h, color: RED, sw: 3 }; if (d.parent && byId(d.parent)) attachTo(o, byId(d.parent));
       addObj(o); fixKidOrder(); setTool('select'); select([o.id]);
@@ -1191,10 +1510,12 @@ function endPointer(e) {
     const o = addObj({ type: 'rect', x, y, w, h, label: '', fs: 18, sw: 2, fill: 'none', dash: false }); setTool('select'); select([o.id]); focusField('label');
     }
   } else if (d.kind === 'mk-dim' && d.otype === 'arrow') {
-    if (dist([d.p0.x, d.p0.y], [d.p1.x, d.p1.y]) > 4) { pushUndo(); const o = { type: 'arrow', p1: [d.p0.x, d.p0.y], p2: [d.p1.x, d.p1.y], color: d.parent ? CAM : BLUE, w: d.parent ? 2.5 : 3, dash: false, halo: true }; if (d.parent && byId(d.parent)) attachTo(o, byId(d.parent)); addObj(o); fixKidOrder(); setTool('select'); select([o.id]); }
+    if (dist([d.p0.x, d.p0.y], [d.p1.x, d.p1.y]) > 4) { pushUndo(); const o = { type: 'arrow', p1: [d.p0.x, d.p0.y], p2: [d.p1.x, d.p1.y], color: d.parent ? CAM : BLUE, w: d.parent ? 2.5 : 3, dash: false, halo: true, both: !!opt.arrow2 }; opt.arrow2 = false; if (d.parent && byId(d.parent)) attachTo(o, byId(d.parent)); addObj(o); fixKidOrder(); setTool('select'); select([o.id]); }
   } else if (d.kind === 'mk-dim') {
     if (dist([d.p0.x, d.p0.y], [d.p1.x, d.p1.y]) > 10) { pushUndo(); const o = addObj({ type: 'dim', p1: [d.p0.x, d.p0.y], p2: [d.p1.x, d.p1.y], lenMode: doc.scale ? 'auto' : 'manual', lenText: doc.scale ? '' : '約○m', lx: 0, ly: 0 }); setTool('select'); select([o.id]); if (!doc.scale) focusField('lenText'); }
   } else if (['move', 'label', 'handle'].includes(d.kind) && d.moved) { pushUndo(d.before); save(); refreshPane(true); }
+  else if (d.kind === 'move' && !d.moved && d.drill) { select([d.drill]); toast('グループの中の1つを選択しました'); }
+  else if (d.kind === 'marquee' && sel.size) refreshPane();
   render();
 }
 svg.addEventListener('pointerup', endPointer);
@@ -1203,7 +1524,8 @@ svg.addEventListener('dblclick', e => {
   if (tool !== 'select') return;
   const tgt = document.elementFromPoint(e.clientX, e.clientY) || e.target;
   const h = tgt.closest('[data-h]');
-  if (h && h.dataset.h.startsWith('v:') && sel.size === 1) { const o = byId([...sel][0]); if (o.pts.length > (o.type === 'poly' ? 3 : 2)) { pushUndo(); o.pts.splice(+h.dataset.h.slice(2), 1); render(); save(); } return; }
+  if (h && h.dataset.h.startsWith('b:') && sel.size === 1) { const o = byId([...sel][0]); if (o.arcs && o.arcs[+h.dataset.h.slice(2)]) { pushUndo(); delete o.arcs[+h.dataset.h.slice(2)]; render(); save(); } return; }
+  if (h && h.dataset.h.startsWith('v:') && sel.size === 1) { const o = byId([...sel][0]); if (o.pts.length > (o.type === 'poly' ? 3 : 2)) { pushUndo(); const v = +h.dataset.h.slice(2), n = o.pts.length; shiftArcs(o, k => (k === v || k === v - 1 || (o.type === 'poly' && v === 0 && k === n - 1)) ? null : k > v ? k - 1 : k); o.pts.splice(v, 1); render(); save(); } return; }
   const g = tgt.closest('[data-id]'); if (!g) return;
   const o = byId(g.dataset.id); if (!o) return;
   if (editPhoto && o.parent !== editPhoto) return;
@@ -1225,9 +1547,18 @@ const F = {
   num: (k, label, v, min, max, step = 1) => `<div class="f"><label for="p_${k}">${label}</label><input type="number" id="p_${k}" data-k="${k}" data-t="num" value="${v}" min="${min}" max="${max}" step="${step}"></div>`,
   range: (k, label, v, min, max, step = 1, unit = '') => `<div class="f"><label for="p_${k}">${label}：<b data-out="${k}">${v}${unit}</b></label><input type="range" id="p_${k}" data-k="${k}" data-t="num" data-unit="${unit}" value="${v}" min="${min}" max="${max}" step="${step}"></div>`,
   sel: (k, label, v, opts) => `<div class="f"><label for="p_${k}">${label}</label><select id="p_${k}" data-k="${k}">${Object.entries(opts).map(([a, b]) => `<option value="${esc(a)}" ${String(a) === String(v) ? 'selected' : ''}>${esc(b)}</option>`).join('')}</select></div>`,
+  color: (k, label, v, def, opts = {}) => {
+    const pal = opts.both ? [...LIGHTS, ...PALETTE] : opts.light ? LIGHTS : PALETTE, cur = v || def || '', all = opts.all ? ' data-all="1"' : '';
+    return `<div class="f"><span class="l">${label}</span><div class="swatches">`
+      + (opts.none ? `<button class="sw2 none" data-act="setColor" data-k="${k}" data-v="none"${all} aria-pressed="${cur === 'none'}" title="なし" aria-label="なし"></button>` : '')
+      + pal.map(([c, n]) => `<button class="sw2" data-act="setColor" data-k="${k}" data-v="${c}"${all} aria-pressed="${cur.toLowerCase() === c}" title="${n}" aria-label="${n}" style="background:${c}"></button>`).join('')
+      + `<label class="sw2 pick" title="その他の色"><input type="color" data-k="${k}"${all} value="${/^#[0-9a-f]{6}$/i.test(cur) ? cur : '#111111'}" aria-label="その他の色"></label>`
+      + (def && v ? `<button class="btn" data-act="setColor" data-k="${k}" data-v=""${all} style="padding:3px 8px;font-size:11px;background:var(--panel-2)">標準に戻す</button>` : '')
+      + `</div></div>`;
+  },
   chk: (k, label, v) => `<label class="chk"><input type="checkbox" data-k="${k}" data-t="bool" ${v ? 'checked' : ''}> ${label}</label>`,
 };
-const TYPE_NAME = { arrow: '矢印', sym: '建具・階段', mark: '囲み', poly: '建物', north: '方位記号', line: '壁・線', wire: '配線', rect: '部屋・建物', text: '文字', camera: 'カメラ', device: '機器', dim: '寸法線', callout: '吹き出し', photo: '写真', image: '平面図画像', legend: '凡例' };
+const TYPE_NAME = { shape: '図形', arrow: '矢印', sym: '建具・階段', mark: '囲み', poly: '建物', north: '方位記号', line: '壁・線', wire: '配線', rect: '部屋・建物', text: '文字', camera: 'カメラ', device: '機器', dim: '寸法線', callout: '吹き出し', photo: '写真', image: '平面図画像', legend: '凡例' };
 function lenFields(o) {
   const auto = o.type === 'dim' ? dist(o.p1, o.p2) : polyLen(wirePts(o)); const m = meters(auto);
   return `<div class="f"><span class="l">長さの表示</span><div class="seg" role="group">
@@ -1247,69 +1578,95 @@ function propsHTML() {
     </ol>
     <p class="note"><kbd>Del</kbd> 削除　<kbd>Ctrl</kbd>+<kbd>D</kbd> 複製　<kbd>Ctrl</kbd>+<kbd>Z</kbd> 元に戻す　矢印キーで微調整（<kbd>Shift</kbd>で10倍）　<kbd>Alt</kbd>+クリックで固定中の図形を選択</p>
     <p class="note">作業内容はこのブラウザに自動保存されます。別のPCで続けるときは「保存」で .json を書き出してください。</p>`;
-  if (sel.size > 1) return `<h2>${sel.size}個を選択中</h2><p class="note">ドラッグでまとめて移動できます。</p>${actionsHTML(true)}`;
+  if (sel.size > 1) {
+    const xs = [...sel].map(byId).filter(Boolean), g0 = xs[0].grp, grouped = g0 && xs.every(x => x.grp === g0);
+    const AI = (v, t, d) => `<button class="btn alb" data-act="align" data-v="${v}" title="${t}" aria-label="${t}"><svg viewBox="0 0 20 20">${d}</svg></button>`, r = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1" fill="currentColor"/>`, l = d => `<path d="${d}" stroke="var(--accent)" stroke-width="1.6"/>`;
+    return `<h2>${sel.size}個を選択中${grouped ? '（グループ）' : ''}</h2>
+      <h3>配置（選択範囲に揃える）</h3>
+      <div class="algrid">${AI('l', '左揃え', l('M3 2V18') + r(5, 4, 10, 4) + r(5, 11, 6, 4))}${AI('c', '左右中央揃え', l('M10 2V18') + r(4, 4, 12, 4) + r(6.5, 11, 7, 4))}${AI('r', '右揃え', l('M17 2V18') + r(5, 4, 10, 4) + r(9, 11, 6, 4))}${AI('dh', '左右に等間隔で整列（3つ以上）', r(2, 6, 3, 8) + r(8.5, 6, 3, 8) + r(15, 6, 3, 8))}
+      ${AI('t', '上揃え', l('M2 3H18') + r(4, 5, 4, 10) + r(11, 5, 4, 6))}${AI('m', '上下中央揃え', l('M2 10H18') + r(4, 4, 4, 12) + r(11, 6.5, 4, 7))}${AI('b', '下揃え', l('M2 17H18') + r(4, 5, 4, 10) + r(11, 9, 4, 6))}${AI('dv', '上下に等間隔で整列（3つ以上）', r(6, 2, 8, 3) + r(6, 8.5, 8, 3) + r(6, 15, 8, 3))}</div>
+      ${F.color('__color', '色（まとめて変更）', '', '', { all: true })}
+      ${xs.some(x => x.type === 'wire') ? '<button class="btn" data-act="tidyWire" style="justify-self:start;background:var(--panel-2)">選んだ配線を壁に沿わせて整える</button>' : ''}
+      <div class="row"><button class="btn" data-act="sameSize" style="background:var(--panel-2)" title="最初に選んだものと同じ大きさにする">大きさをそろえる</button>${grouped ? '<button class="btn" data-act="ungroup" style="background:var(--panel-2)">グループ解除</button>' : '<button class="btn" data-act="group" style="background:var(--panel-2)">グループ化</button>'}</div>
+      <p class="note"><kbd>Shift</kbd>／<kbd>Ctrl</kbd>+クリックで選択に追加・解除、空白をドラッグで範囲選択。グループはクリック1回でまとめて選択、もう1回クリックで中の1つを選択できます（<kbd>Ctrl</kbd>+<kbd>G</kbd>でグループ化）。</p>
+      ${actionsHTML(true)}`;
+  }
   const o = byId([...sel][0]); if (!o) return '';
   let s = `<h2>${TYPE_NAME[o.type]}</h2>`;
   switch (o.type) {
     case 'camera':
+      { const vs = CAMVIEWS[o.kind === 'dome' ? 'dome' : 'bullet'], cv = camView(o);
       s += `<div class="row">${F.num('num', '番号', o.num, 1, 99)}${F.sel('kind', '種類', o.kind, { bullet: 'バレット(屋外)', dome: 'ドーム' })}</div>`
+        + `<div class="f"><span class="l">見た目</span><div class="camviews">${Object.entries(vs).map(([k2, n]) => `<button class="cvb" data-act="camView" data-v="${k2}" aria-pressed="${cv === k2}" title="${n}"><svg viewBox="-38 -36 76 72"><g transform="rotate(${k2 === 'plan' ? -30 : 0})">${camIcon({ kind: o.kind, view: k2, mount: o.mount, color: o.color })}</g></svg><span>${n}</span></button>`).join('')}</div></div>`
+        + (cv !== 'plan' && o.kind !== 'dome' ? `<div class="row"><div class="seg" role="group" style="flex:1">${[['wall', '壁付け'], ['ceil', '天井付け']].map(([k2, n]) => `<button data-act="camMount" data-v="${k2}" aria-pressed="${(o.mount || 'wall') === k2}">${n}</button>`).join('')}</div>${cv !== 'front' ? '<button class="btn" data-act="camFlip" style="background:var(--panel-2)">左右反転</button>' : ''}</div>` : '')
+        + (cv !== 'plan' ? `<p class="note">写真の中のカメラの向きに合わせて選んでください。${cv === 'front' ? '正面はレンズがこちらを向いた見た目です。' : o.kind === 'dome' ? '向きの取っ手でレンズの向きが変わります。' : '向き（傾き）は丸い取っ手で調整、反対向きは「左右反転」。'}</p>` : '')
         + F.text('name', '表示名', o.name, camLabel({ ...o, name: '' }) + '（自動）')
-        + F.range('ang', '向き', o.ang, -180, 180, 5, '°') + F.range('sz', '大きさ', o.sz || 1, 0.4, 2.5, 0.1)
+        + F.range('ang', '向き', o.ang, -180, 180, 5, '°') + F.range('sz', '大きさ', o.sz || 1, 0.4, 2.5, 0.1) + F.color('color', '色', o.color, CAM)
         + F.chk('hideLabel', '名前（カメラ①など）を隠す', o.hideLabel)
         + F.chk('cone', '撮影範囲を表示', o.cone)
         + (o.cone ? F.range('coneAng', '画角', o.coneAng, 20, 140, 5, '°') + F.range('coneLen', '範囲の長さ', o.coneLen, 30, 400, 10) : '')
-        + `<button class="btn" data-act="renum" style="justify-self:start;background:var(--panel-2)">カメラ番号を配置順に振り直す</button>`;
+        + `<button class="btn" data-act="renum" style="justify-self:start;background:var(--panel-2)">カメラ番号を配置順に振り直す</button>`; }
       break;
     case 'device':
-      s += F.sel('kind', '種類', o.kind, Object.fromEntries(Object.entries(DEV).map(([a, b]) => [a, b.name]))) + F.text('label', 'ラベル', o.label, 'なし') + (o.kind === 'pole' ? `<p class="note">例：「ポール H=4.5m」「新設ポール」「既設電柱」。カメラをポールの位置に重ねて置くと取付位置がわかりやすくなります。</p>` : '');
+      s += F.sel('kind', '種類', o.kind, Object.fromEntries(Object.entries(DEV).map(([a, b]) => [a, b.name]))) + F.range('sz', '大きさ', o.sz || 1, 0.3, 4, 0.1) + F.color('color', '色', o.color, (DEV[o.kind] || {}).c) + F.text('label', 'ラベル', o.label, 'なし') + (o.kind === 'pole' ? `<p class="note">例：「ポール H=4.5m」「新設ポール」「既設電柱」。カメラをポールの位置に重ねて置くと取付位置がわかりやすくなります。</p>` : '');
       break;
     case 'wire':
       s += `<div class="f"><span class="l">配線の種類</span><div class="seg" role="group">${Object.entries(WIRE).map(([a, b]) => `<button data-act="style" data-v="${a}" aria-pressed="${o.style === a}">${b.name.replace('配線', '')}</button>`).join('')}</div></div>`
-        + F.chk('smooth', '曲線にする', o.smooth) + F.chk('showLen', '長さを図に表示', o.showLen) + lenFields(o)
+        + `<div class="f"><span class="l">壁沿い（壁から離す距離）</span><div class="seg" role="group">${[[5, '狭い'], [8, '標準'], [12, '広い'], [18, 'もっと広い']].map(([g, n]) => `<button data-act="wallGap" data-v="${g}" aria-pressed="${wallGap() === g}">${n}</button>`).join('')}</div></div>`
+        + `<button class="btn" data-act="tidyWire" style="justify-self:start;background:var(--panel-2)" title="壁の近くにある曲がり角を、壁から一定の距離に揃えます">この配線を壁に沿わせて整える</button>`
+        + F.color('color', '色（色ごとに凡例が分かれます）', o.color, (WIRE[o.style] || WIRE.exposed).color) + F.chk('smooth', '曲線にする', o.smooth) + F.chk('showLen', '長さを図に表示', o.showLen) + lenFields(o)
         + `<p class="note">頂点をドラッグで変形、辺の中央の○をドラッグで頂点追加、頂点をダブルクリックで削除。長さの文字はドラッグで位置調整。</p>`;
       break;
     case 'line':
-      s += `<div class="row">${F.num('w', '線の太さ', o.w, 0.5, 12, 0.5)}${F.sel('color', '色', o.color, COLORS)}</div>` + F.chk('dash', '破線', o.dash);
+      s += `<div class="row">${F.num('w', '線の太さ', o.w, 0.5, 12, 0.5)}${F.color('color', '色', o.color, '#111111')}</div>` + F.chk('dash', '破線', o.dash) + `<div class="f"><span class="l">辺の中央の取っ手をドラッグすると</span><div class="seg" role="group"><button data-act="edgeMode" data-v="vertex" aria-pressed="${edgeMode === 'vertex'}">角を追加</button><button data-act="edgeMode" data-v="arc" aria-pressed="${edgeMode === 'arc'}">弧に曲げる</button></div></div>` + (hasArcs(o) ? '<button class="btn" data-act="clearArcs" style="justify-self:start;background:var(--panel-2)">弧をすべて直線に戻す</button>' : '');
       break;
     case 'rect':
       s += F.area('label', '名前（改行可）', o.label) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
-        + F.sel('fill', '塗り', o.fill, { none: 'なし', '#ffffff': '白', '#eef1f4': '薄いグレー', '#e3f1f6': '薄い水色' }) + F.chk('dash', '破線', o.dash);
+        + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('fill', '塗り', o.fill, '', { light: true, none: true }) + F.chk('dash', '破線', o.dash);
       break;
     case 'poly':
       s += F.area('label', '名前（改行可）', o.label) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
-        + F.sel('fill', '塗り', o.fill, { none: 'なし', '#ffffff': '白', '#eef1f4': '薄いグレー', '#e3f1f6': '薄い水色', '#fdf2d6': '薄い黄色' }) + F.chk('dash', '破線', o.dash)
+        + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('fill', '塗り', o.fill, '', { light: true, none: true }) + F.chk('dash', '破線', o.dash)
         + F.chk('showEdges', '各辺の長さを表示' + (doc.scale ? '' : '（縮尺の設定が必要）'), o.showEdges)
-        + `<p class="note">角をドラッグで修正、辺の中央の○で角を追加、角をダブルクリックで削除。名前はドラッグで位置調整。</p>`;
+        + `<div class="f"><span class="l">辺の中央の取っ手をドラッグすると</span><div class="seg" role="group"><button data-act="edgeMode" data-v="vertex" aria-pressed="${edgeMode === 'vertex'}">角を追加</button><button data-act="edgeMode" data-v="arc" aria-pressed="${edgeMode === 'arc'}">弧に曲げる</button></div></div>` + (hasArcs(o) ? '<button class="btn" data-act="clearArcs" style="justify-self:start;background:var(--panel-2)">弧をすべて直線に戻す</button>' : '')
+        + `<p class="note">${edgeMode === 'arc' ? '<b>弧に曲げる：</b>辺の中央のオレンジの◆を外側・内側へドラッグすると、その辺が弧になります。<kbd>Shift</kbd>で半円まで。◆をダブルクリックで直線に戻ります。' : '角をドラッグで修正、辺の中央の○で角を追加、角をダブルクリックで削除。'}名前はドラッグで位置調整。</p>`;
       break;
     case 'sym': {
       const mm = v => doc.scale ? ` <span class="note">(約${(v / doc.scale).toFixed(2)}m)</span>` : '';
       s += F.sel('kind', '種類', o.kind, Object.fromEntries(Object.entries(SYM).map(([a, b]) => [a, b.name])))
         + `<div class="row">${F.num('w', '幅', o.w, 6, 2000)}${o.kind === 'door1' || o.kind === 'door2' ? '' : F.num('h', '奥行き', o.h, 4, 2000)}</div>`
         + `<p class="note" style="margin:0">幅${mm(o.w)}　奥行き${mm(o.h)}</p>`
-        + F.range('rot', '回転', o.rot || 0, -180, 180, 15, '°')
+        + F.range('rot', '回転', o.rot || 0, -180, 180, 15, '°') + F.color('color', o.kind.startsWith('col') ? '色' : '線の色', o.color, o.kind.startsWith('col') ? '#3f3f46' : '#111111')
         + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="symFlip" style="background:var(--panel-2)">左右反転</button></div>`
-        + (o.kind === 'stair' ? `<div class="row">${F.num('n', '段数', o.n || 10, 2, 40)}${F.sel('dir', '矢印', o.dir || 'up', { up: 'UP（上り）', dn: 'DN（下り）', none: 'なし' })}</div>` : F.chk('cut', '壁を白抜きにする（開口部）', o.cut !== false));
+        + (o.kind === 'stair' ? `<div class="row">${F.num('n', '段数', o.n || 10, 2, 40)}${F.sel('dir', '矢印', o.dir || 'up', { up: 'UP（上り）', dn: 'DN（下り）', none: 'なし' })}</div>` : o.kind.startsWith('col') ? F.sel('fillStyle', '塗り', o.fillStyle || 'solid', { solid: '塗りつぶし', x: '×印', white: '白抜き' }) : F.chk('cut', '壁を白抜きにする（開口部）', o.cut !== false));
       break;
     }
+    case 'shape':
+      s += F.sel('kind', '形', o.kind, Object.fromEntries(Object.entries(SHAPES).map(([a, b]) => [a, b.name])))
+        + F.area('text', '中の文字（改行可）', o.text || '') + `<div class="row">${F.num('fs', '文字サイズ', o.fs || 14, 6, 80)}${F.num('sw', '線の太さ', o.sw ?? 1.6, 0, 12, 0.5)}</div>`
+        + F.color('fill', '塗り', o.fill, '', { none: true, both: true }) + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('color', '文字の色', o.color, '#111111')
+        + `<div class="row">${F.num('w', '幅', o.w, 6, 3000)}${F.num('h', '高さ', o.h, 6, 3000)}</div>`
+        + F.range('rot', '回転', o.rot || 0, -180, 180, 15, '°') + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="symFlip" style="background:var(--panel-2)">左右反転</button></div>` + F.chk('dash', '破線', o.dash);
+      break;
     case 'arrow':
-      s += `<div class="row">${F.sel('color', '色', o.color, { ...COLORS, [CAM]: '水色', '#f59e0b': 'オレンジ', '#ffffff': '白' })}${F.num('w', '太さ', o.w || 3, 1, 12, 0.5)}</div>` + F.chk('dash', '破線', o.dash) + F.chk('halo', '白いふちどり（写真の上で見やすく）', o.halo !== false);
+      s += `<div class="row">${F.color('color', '色', o.color, CAM)}${F.num('w', '太さ', o.w || 3, 1, 12, 0.5)}</div>` + F.chk('both', '両矢印', o.both) + F.chk('dash', '破線', o.dash) + F.chk('halo', '白いふちどり（写真の上で見やすく）', o.halo !== false);
       break;
     case 'mark':
-      s += `<div class="row">${F.sel('color', '色', o.color, COLORS)}${F.num('sw', '線の太さ', o.sw, 1, 12, 0.5)}</div>`;
+      s += `<div class="row">${F.color('color', '色', o.color, '#111111')}${F.num('sw', '線の太さ', o.sw, 1, 12, 0.5)}</div>`;
       break;
     case 'north':
-      s += F.range('ang', '向き', o.ang, -180, 180, 1, '°') + F.range('sz', '大きさ', o.sz || 1, 0.5, 3, 0.1);
+      s += F.range('ang', '向き', o.ang, -180, 180, 1, '°') + F.range('sz', '大きさ', o.sz || 1, 0.5, 3, 0.1) + F.color('color', '色', o.color, '#111111');
       break;
     case 'text':
-      s += F.area('text', '文字（改行可）', o.text) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 80)}${F.sel('color', '色', o.color, COLORS)}</div>`
+      s += F.area('text', '文字（改行可）', o.text) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 80)}${F.color('color', '色', o.color, '#111111')}</div>`
         + `<div class="row">${F.sel('box', '枠線', o.box, { none: 'なし', [BLUE]: '青枠', [RED]: '赤枠', '#111111': '黒枠' })}${F.sel('anchor', '揃え', o.anchor, { start: '左', middle: '中央' })}</div>` + F.chk('bold', '太字', o.bold);
       break;
     case 'callout':
-      s += F.area('text', '文字（改行可）', o.text) + F.num('fs', '文字サイズ', o.fs, 8, 40) + `<button class="btn" data-act="fitCallout" style="justify-self:start;background:var(--panel-2)">枠を文字に合わせる</button>`;
+      s += F.area('text', '文字（改行可）', o.text) + F.num('fs', '文字サイズ', o.fs, 8, 40) + F.color('color', '文字の色', o.color, '#111111') + F.color('stroke', '枠の色', o.stroke, '#333333') + F.color('fill', '塗り', o.fill, '#ffffff', { light: true }) + `<button class="btn" data-act="fitCallout" style="justify-self:start;background:var(--panel-2)">枠を文字に合わせる</button>`;
       break;
     case 'photo':
       s += (o.asset ? `<button class="btn primary" data-act="photoEdit" style="justify-self:start">写真をアップにして描き込む</button><button class="btn" data-act="pick" style="justify-self:start;background:var(--panel-2)">写真を差し替え</button>` : `<button class="btn primary" data-act="pick" style="justify-self:start">写真を選択</button>`)
-        + F.text('caption', 'キャプション', o.caption, 'カメラ①設置場所') + `<div class="row">${F.sel('ccol', '枠の色', o.ccol, { [BLUE]: '青', [RED]: '赤', '#111111': '黒' })}${F.num('cfs', '文字サイズ', o.cfs, 8, 30)}</div>`
+        + F.text('caption', 'キャプション', o.caption, 'カメラ①設置場所') + `<div class="row">${F.color('ccol', '枠の色', o.ccol, BLUE)}${F.num('cfs', '文字サイズ', o.cfs, 8, 30)}</div>`
         + (o.asset ? `<div class="row"><button class="btn" data-act="fitPhoto" style="background:var(--panel-2)">写真の比率に合わせる</button><button class="btn danger" data-act="unphoto" style="background:var(--panel-2)">写真を外す</button></div>` : '')
         + `<p class="note"><b>写真への描き込み：</b>「写真をアップにして描き込む」（または写真をダブルクリック）で写真を大きく表示して描き込めます。写真の上に直接描いてもかまいません。写真を動かしたり拡大縮小したりすると一緒に付いてきます。${kidsOf(o.id).length ? `（描き込み ${kidsOf(o.id).length} 個）` : ''}</p>`;
       break;
@@ -1323,17 +1680,19 @@ function propsHTML() {
         + `<button class="btn" data-act="fitPage" style="justify-self:start;background:var(--panel-2)">用紙の作図範囲に合わせる</button>`;
       break;
     case 'dim':
-      s += lenFields(o);
+      s += lenFields(o) + F.color('color', '色', o.color, '#111111');
       break;
     case 'legend':
-      s += `<p class="note">図面で使っている配線の種類とカメラを自動で一覧にします。</p>`;
+      s += `<p class="note">図面で使っている配線の種類とカメラを自動で一覧にします。</p>` + F.chk('devs', '機器・記号も凡例に載せる', o.devs);
       break;
   }
   if (attached(o)) { const ph = byId(o.parent); s += `<p class="note">写真「${esc(ph.caption || '無題')}」に描き込み中（写真と一緒に動きます。数量集計には含めません）</p><button class="btn" data-act="detach" style="justify-self:start;background:var(--panel-2)">写真から切り離す</button>`; }
   return s + actionsHTML(false);
 }
+const SCALABLE = ['camera', 'device', 'north', 'text', 'callout', 'sym', 'shape', 'mark', 'photo'];
 function actionsHTML(multi) {
-  return `<div class="actions"><button class="btn" data-act="dup">複製</button><button class="btn" data-act="front">前面へ</button><button class="btn" data-act="back">背面へ</button><button class="btn" data-act="lock">${[...sel].every(id => byId(id)?.locked) ? '固定を解除' : '固定'}</button><button class="btn danger" data-act="del">削除</button></div>`;
+  const canScale = [...sel].some(id => SCALABLE.includes(byId(id)?.type));
+  return `<div class="actions">${canScale ? '<button class="btn" data-act="scale" data-v="0.9" title="選択したものを10%小さく">縮小</button><button class="btn" data-act="scale" data-v="1.1" title="選択したものを10%大きく">拡大</button>' : ''}<button class="btn" data-act="dup">複製</button><button class="btn" data-act="front">前面へ</button><button class="btn" data-act="back">背面へ</button><button class="btn" data-act="lock">${[...sel].every(id => byId(id)?.locked) ? '固定を解除' : '固定'}</button><button class="btn danger" data-act="del">削除</button></div>`;
 }
 function metaHTML() {
   const m = doc.meta, imgs = doc.objects.filter(o => o.type === 'image');
@@ -1346,6 +1705,9 @@ function metaHTML() {
     <ol class="help" style="font-size:11.5px"><li>「作業データを保存」で <b>.json</b> を書き出す（全ページ・写真・縮尺込み）</li><li>メールや共有フォルダで .json を渡す</li><li>別のパソコンでこのツールを開き、「作業データを開く」で .json を選ぶ（図面へドラッグでも可）</li></ol>
     <div class="row"><button class="btn primary" data-act="saveJson">作業データを保存</button><button class="btn" data-act="openJson" style="background:var(--panel-2)">作業データを開く</button></div>
     <p class="note">このブラウザには自動保存されますが、別のブラウザ・パソコンには引き継がれません。区切りのよいところで .json を保存しておくと安心です。</p>
+    <h3>配線の壁沿い</h3>
+    <div class="seg" role="group">${[[5, '狭い'], [8, '標準'], [12, '広い'], [18, 'もっと広い']].map(([g, n]) => `<button data-act="wallGap" data-v="${g}" aria-pressed="${wallGap() === g}">${n}</button>`).join('')}</div>
+    <p class="note">配線を描くとき、壁の近くをクリックすると壁からこの距離だけ離して沿わせます。下の「壁沿い」のチェックで切り替え。</p>
     <h3>用紙</h3>
     ${F.sel('m.paper', '用紙サイズ（書き出しもこのサイズ）', doc.paper, Object.fromEntries(Object.entries(PAPERS).map(([a, b]) => [a, b.name])))}
     <h3>表題欄</h3>
@@ -1375,7 +1737,7 @@ function summary() {
   const bullet = cams.filter(c => c.kind !== 'dome').length, dome = cams.length - bullet;
   if (bullet) rows.push(['防犯カメラ（バレット）', bullet, '台']);
   if (dome) rows.push(['防犯カメラ（ドーム）', dome, '台']);
-  for (const kk of Object.keys(DEV)) if (devs[kk] && !['vent', 'hole'].includes(kk)) rows.push([DEV[kk].name, devs[kk], kk === 'recorder' ? '式' : kk === 'pole' ? '本' : '台']);
+  for (const kk of Object.keys(DEV)) if (devs[kk] && DEV[kk].count !== false) rows.push([DEV[kk].name, devs[kk], DEV[kk].unit || '台']);
   if (devs.hole) rows.push(['貫通・穴あけ', devs.hole, '箇所']);
   if (devs.vent) rows.push(['換気口使用', devs.vent, '箇所']);
   for (const kk of Object.keys(WIRE)) if (kk in wires) rows.push([WIRE[kk].name, wires[kk], 'm']);
@@ -1413,6 +1775,10 @@ $('#pane').addEventListener('input', e => {
   if (!editing) { pushUndo(); editing = true; }
   let v = el.dataset.t === 'num' ? parseFloat(el.value) : el.dataset.t === 'bool' ? el.checked : el.value;
   if (el.dataset.t === 'num' && isNaN(v)) return;
+  if (el.type === 'color') {
+    for (const x of (el.dataset.all ? [...sel].map(byId) : [byId([...sel][0])])) if (x) setColorOn(x, key, v);
+    render(); save(); return;
+  }
   if (key.startsWith('m.')) {
     const mk = key.slice(2);
     if (mk === 'paper') { editing = false; undoStack.pop(); el.value = doc.paper; changePaper(v); return; }
@@ -1423,7 +1789,7 @@ $('#pane').addEventListener('input', e => {
     if (key === 'locked') { editing = false; undoStack.pop(); if (v) { o.type === 'image' ? lockImages([o]) : (pushUndo(), o.locked = true, select([]), save()); } else { pushUndo(); o.locked = false; render(); refreshPane(); save(); } return; }
     o[key] = v;
     if (o.type === 'sym' && key === 'kind') { [o.w, o.h] = symSize(v); refreshPane(); }
-    if (o.type === 'sym' && key === 'w') { if (o.kind === 'door1') o.h = v; if (o.kind === 'door2') o.h = Math.round(v / 2); }
+    if (o.type === 'sym' && key === 'w') { if (o.kind === 'door1' || o.kind === 'colrd') o.h = v; if (o.kind === 'door2') o.h = Math.round(v / 2); }
     if (o.type === 'device' && key === 'kind') { if (!o.label || o.label === (DEV[old] || {}).label) o.label = DEV[v].label; refreshPane(); }
     if (o.type === 'image' && key === 'rot' && o.isMap) doc.objects.filter(n => n.type === 'north').forEach(n => n.ang = v);
   }
@@ -1455,6 +1821,19 @@ $('#pane').addEventListener('click', e => {
     case 'loadPlan': photoTarget = '__plan'; $('#fImg').multiple = false; $('#fImg').click(); break;
     case 'selImg': select([b.dataset.v]); break;
     case 'pgRen': renamePage(doc.cur); break;
+    case 'wallGap': mut(() => { doc.meta.wallGap = +b.dataset.v; }); toast('壁からの距離を変えました。「壁に沿わせて整える」で既存の配線にも反映できます'); break;
+    case 'tidyWire': { let n = 0; mut(() => { for (const id of sel) { const w = byId(id); if (!w || w.type !== 'wire' || w.parent) continue; w.pts = w.pts.map(pt => { if (snapTarget(pt, w.id) && dist(snapTarget(pt, w.id), pt) < 1) return pt; const ws = wallSnap(pt, 26); if (ws) { n++; return ws.pt; } return pt; }); } }); toast(n ? `${n}か所を壁沿いに揃えました` : '壁の近くに曲がり角が見つかりませんでした'); break; }
+    case 'edgeMode': edgeMode = b.dataset.v; render(); refreshPane(); if (edgeMode === 'arc') toast('辺の中央の◆をドラッグして弧に曲げてください'); break;
+    case 'clearArcs': mut(() => { delete o.arcs; }); break;
+    case 'camView': mut(() => { o.view = b.dataset.v; if (o.view !== 'plan') { if (o.ang > 90 || o.ang < -90) { o.flip = !o.flip; o.ang = o.ang > 0 ? 180 - o.ang : -180 - o.ang; } if (!o.mount) o.mount = 'wall'; } }); break;
+    case 'camMount': mut(() => { o.mount = b.dataset.v; }); break;
+    case 'camFlip': mut(() => { o.flip = !o.flip; }); break;
+    case 'setColor': mut(() => { const k = b.dataset.k, v = b.dataset.v; for (const x of (k === '__color' ? [...sel].map(byId) : [o])) if (x) setColorOn(x, k, v); }); break;
+    case 'align': alignSel(b.dataset.v); break;
+    case 'scale': mut(() => scaleSel(+b.dataset.v)); break;
+    case 'group': groupSel(); break;
+    case 'ungroup': mut(() => [...sel].forEach(id => { const x = byId(id); if (x) delete x.grp; })); toast('グループを解除しました'); break;
+    case 'sameSize': mut(() => sameSizeSel()); break;
     case 'saveJson': saveJson(); break;
     case 'openJson': $('#fJson').click(); break;
     case 'pgAdd': addPage(); break;
@@ -1475,10 +1854,63 @@ $('#pane').addEventListener('click', e => {
     case 'mapModal': openMapModal(); break;
   }
 });
+function setColorOn(o, k, v) {
+  if (k === '__color') k = ['rect', 'poly', 'callout', 'shape'].includes(o.type) ? 'stroke' : o.type === 'photo' ? 'ccol' : o.type === 'image' || o.type === 'legend' ? null : 'color';
+  if (!k) return;
+  if (v === '') { if (k === 'ccol') o.ccol = BLUE; else delete o[k]; } else o[k] = v;
+}
+function shiftObj(o, dx, dy) { if (!dx && !dy) return; moveObj(o, clone(o), dx, dy); if (o.type === 'photo') kidsOf(o.id).forEach(c => { if (!sel.has(c.id)) moveObj(c, clone(c), dx, dy); }); }
+function alignSel(v) {
+  const xs = [...sel].map(byId).filter(o => o && !o.locked && !(o.parent && sel.has(o.parent)));
+  if (xs.length < 2) return;
+  if ((v === 'dh' || v === 'dv') && xs.length < 3) { toast('等間隔の整列は3つ以上選んでください'); return; }
+  pushUndo();
+  // treat each group as one block
+  const blocks = []; const seen = new Set();
+  for (const o of xs) { if (seen.has(o.id)) continue; const mem = o.grp ? xs.filter(x => x.grp === o.grp) : [o]; mem.forEach(m => seen.add(m.id)); const bs = mem.map(bbox); const x0 = Math.min(...bs.map(b => b.x)), y0 = Math.min(...bs.map(b => b.y)); blocks.push({ mem, b: { x: x0, y: y0, w: Math.max(...bs.map(b => b.x + b.w)) - x0, h: Math.max(...bs.map(b => b.y + b.h)) - y0 } }); }
+  if (blocks.length < 2) { undoStack.pop(); toast('グループ1つだけでは揃えられません'); return; }
+  const U = { x: Math.min(...blocks.map(k => k.b.x)), y: Math.min(...blocks.map(k => k.b.y)) }; U.w = Math.max(...blocks.map(k => k.b.x + k.b.w)) - U.x; U.h = Math.max(...blocks.map(k => k.b.y + k.b.h)) - U.y;
+  const mv = (k, dx, dy) => k.mem.forEach(o => shiftObj(o, Math.round(dx), Math.round(dy)));
+  if (v === 'dh' || v === 'dv') {
+    const H2 = v === 'dh', key = H2 ? 'x' : 'y', sz = H2 ? 'w' : 'h';
+    blocks.sort((a, b) => (a.b[key] + a.b[sz] / 2) - (b.b[key] + b.b[sz] / 2));
+    const total = (U[key] + U[sz]) - U[key], sum = blocks.reduce((a, k) => a + k.b[sz], 0), gap = (total - sum) / (blocks.length - 1);
+    let cur = blocks[0].b[key] + blocks[0].b[sz] + gap;
+    for (let i = 1; i < blocks.length - 1; i++) { const k = blocks[i], d = cur - k.b[key]; H2 ? mv(k, d, 0) : mv(k, 0, d); cur += k.b[sz] + gap; }
+  } else for (const k of blocks) {
+    const b = k.b;
+    if (v === 'l') mv(k, U.x - b.x, 0); if (v === 'c') mv(k, U.x + U.w / 2 - (b.x + b.w / 2), 0); if (v === 'r') mv(k, U.x + U.w - (b.x + b.w), 0);
+    if (v === 't') mv(k, 0, U.y - b.y); if (v === 'm') mv(k, 0, U.y + U.h / 2 - (b.y + b.h / 2)); if (v === 'b') mv(k, 0, U.y + U.h - (b.y + b.h));
+  }
+  render(); save();
+  toast({ l: '左揃え', c: '左右中央揃え', r: '右揃え', t: '上揃え', m: '上下中央揃え', b: '下揃え', dh: '左右に等間隔', dv: '上下に等間隔' }[v] + 'にしました');
+}
+function scaleOne(o, f) {
+  if (o.locked) return;
+  if (['camera', 'device', 'north'].includes(o.type)) { const ns = Math.max(0.3, Math.min(5, (o.sz || 1) * f)); const g = ns / (o.sz || 1); o.sz = Math.round(ns * 100) / 100; if (o.type !== 'north') { o.lx = Math.round((o.lx || 0) * g); o.ly = Math.round((o.ly || 0) * g); } }
+  else if (o.type === 'text') o.fs = Math.max(6, Math.round(o.fs * f));
+  else if (o.type === 'sym' || o.type === 'shape') { if (o.type === 'shape') o.fs = Math.max(6, Math.round((o.fs || 14) * f)); o.w = Math.max(6, Math.round(o.w * f)); o.h = Math.max(4, Math.round(o.h * f)); }
+  else if (['callout', 'mark', 'photo'].includes(o.type)) { const O = clone(o), cx = o.x + o.w / 2, cy = o.y + o.h / 2; o.w = Math.round(o.w * f); o.h = Math.round(o.h * f); o.x = Math.round(cx - o.w / 2); o.y = Math.round(cy - o.h / 2); if (o.type === 'callout') o.fs = Math.max(6, Math.round(o.fs * f)); if (o.type === 'photo') kidsOf(o.id).forEach(c => { const src = clone(c); mapChild(c, src, O, o); }); }
+}
+function scaleSel(f) { for (const id of sel) { const o = byId(id); if (o && !(o.parent && sel.has(o.parent))) scaleOne(o, f); } }
+function sameSizeSel() {
+  const xs = [...sel].map(byId).filter(Boolean), ref = xs[0];
+  for (const o of xs.slice(1)) {
+    if (o.type !== ref.type || o.locked) continue;
+    if ('sz' in ref || ['camera', 'device', 'north'].includes(ref.type)) o.sz = ref.sz || 1;
+    if (o.type === 'text') o.fs = ref.fs;
+    if ('w' in ref && 'w' in o) { const cx = o.type === 'sym' ? o.x : o.x + o.w / 2, cy = o.type === 'sym' ? o.y : o.y + o.h / 2; o.w = ref.w; o.h = ref.h; if (o.type !== 'sym') { o.x = Math.round(cx - o.w / 2); o.y = Math.round(cy - o.h / 2); } }
+  }
+  toast('最初に選んだものと同じ大きさにしました（同じ種類のみ）');
+}
+function groupSel() {
+  const xs = [...sel].map(byId).filter(o => o && !attached(o)); if (xs.length < 2) return;
+  pushUndo(); const g = uid(); xs.forEach(o => o.grp = g); render(); refreshPane(); save(); toast('グループ化しました。まとめて動かせます');
+}
 function duplicate() {
-  if (!sel.size) return; pushUndo(); const ids = [];
+  if (!sel.size) return; pushUndo(); const ids = []; const dupTag = Date.now().toString(36);
   for (const id of sel) {
-    const src = byId(id); const c = clone(src); c.id = uid(); moveObj(c, clone(c), 20, 20); if (c.type === 'camera' && !attached(c)) c.num = nextCamNum(), c.name = ''; doc.objects.push(c); ids.push(c.id);
+    const src = byId(id); const c = clone(src); c.id = uid(); if (c.grp) c.grp = c.grp + '_d' + dupTag; moveObj(c, clone(c), 20, 20); if (c.type === 'camera' && !attached(c)) c.num = nextCamNum(), c.name = ''; doc.objects.push(c); ids.push(c.id);
     if (src.type === 'photo') for (const k0 of kidsOf(id)) { if (sel.has(k0.id)) continue; const kc = clone(k0); kc.id = uid(); kc.parent = c.id; moveObj(kc, clone(kc), 20, 20); doc.objects.push(kc); }
   }
   select(ids); save();
@@ -1645,6 +2077,7 @@ document.addEventListener('keydown', e => {
   if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
   if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); return; }
   if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); duplicate(); return; }
+  if (mod && e.key.toLowerCase() === 'g') { e.preventDefault(); if (e.shiftKey) { if (sel.size) { pushUndo(); [...sel].forEach(id => { const x = byId(id); if (x) delete x.grp; }); refreshPane(); save(); toast('グループを解除しました'); } } else groupSel(); return; }
   if (mod && e.key.toLowerCase() === 'a') { e.preventDefault(); select(doc.objects.filter(o => !o.locked).map(o => o.id)); return; }
   if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveJson(); return; }
   if (mod) return;
@@ -1655,7 +2088,7 @@ document.addEventListener('keydown', e => {
     e.preventDefault(); const st = e.shiftKey ? 10 : 1; const dx = e.key === 'ArrowLeft' ? -st : e.key === 'ArrowRight' ? st : 0, dy = e.key === 'ArrowUp' ? -st : e.key === 'ArrowDown' ? st : 0;
     if (!e.repeat) pushUndo(); for (const id of withKids(sel)) { const o = byId(id); if (o && !o.locked) moveObj(o, clone(o), dx, dy); } render(); save(); return;
   }
-  const t = TOOLS.find(t => t.key && t.key.toLowerCase() === e.key.toLowerCase()); if (t) setTool(t.id);
+  const t = TOOLS.find(t => t.key && t.key.toLowerCase() === e.key.toLowerCase()); if (t) { if (t.id === 'shapes') setTool('shape-' + (opt.shape || 'rect')); else if (t.id !== 'lib' && t.id !== 'map') setTool(t.id); }
 });
 document.addEventListener('keyup', e => { if (e.code === 'Space') { spaceDown = false; stage.classList.toggle('pan', tool === 'hand'); } if (e.key === 'Alt') document.body.classList.remove('alt'); });
 window.addEventListener('blur', () => { spaceDown = false; document.body.classList.remove('alt'); });
@@ -1703,10 +2136,10 @@ const XL = (() => {
       + String(text).split('\n').map(l => `<a:p><a:pPr algn="${o.algn || 'ctr'}"/>${l ? `<a:r>${rpr}<a:t>${esc(l)}</a:t></a:r>` : ''}<a:endParaRPr lang="ja-JP" sz="${sz}"/></a:p>`).join('') + '</xdr:txBody>';
   };
   const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); const x = Math.min(...xs), y = Math.min(...ys); return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }; };
-  const xfrm = (b, rot) => `<a:xfrm${rot ? ` rot="${Math.round(rot * 60000)}"` : ''}><a:off x="${E(b.x)}" y="${E(b.y)}"/><a:ext cx="${Math.max(1, E(b.w))}" cy="${Math.max(1, E(b.h))}"/></a:xfrm>`;
+  const xfrm = (b, rot, flip) => `<a:xfrm${rot ? ` rot="${Math.round(rot * 60000)}"` : ''}${flip ? ' flipH="1"' : ''}><a:off x="${E(b.x)}" y="${E(b.y)}"/><a:ext cx="${Math.max(1, E(b.w))}" cy="${Math.max(1, E(b.h))}"/></a:xfrm>`;
   function sp(name, b, geom, f, l, t, o = {}) {
     const i = ++id;
-    return { b, xml: `<xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="${i}" name="${esc(name)} ${i}"/><xdr:cNvSpPr${o.box ? ' txBox="1"' : ''}/></xdr:nvSpPr><xdr:spPr>${xfrm(b, o.rot)}${geom}${f}${l}</xdr:spPr>${t || ''}</xdr:sp>` };
+    return { b, xml: `<xdr:sp macro="" textlink=""><xdr:nvSpPr><xdr:cNvPr id="${i}" name="${esc(name)} ${i}"/><xdr:cNvSpPr${o.box ? ' txBox="1"' : ''}/></xdr:nvSpPr><xdr:spPr>${xfrm(b, o.rot, o.flip)}${geom}${f}${l}</xdr:spPr>${t || ''}</xdr:sp>` };
   }
   const prst = (p, av = '') => `<a:prstGeom prst="${p}"><a:avLst>${av}</a:avLst></a:prstGeom>`;
   function geomPath(cmds, b, filled) {
@@ -1751,52 +2184,73 @@ const XL = (() => {
   }
   const DASH = { concealed: 'dash', aerial: 'lgDashDot' };
 
+  function primsXL(prims, T, z) {
+    const k = [];
+    for (const p of prims) {
+      const opt = { fill: p.fill || null, fa: p.fa, stroke: p.stroke || null, w: (p.sw || 1) * z, cap: p.cap ? 'rnd' : '' };
+      if (p.t === 'rect') k.push(poly('部品', [[p.x, p.y], [p.x + p.w, p.y], [p.x + p.w, p.y + p.h], [p.x, p.y + p.h]].map(q => T(...q)), { ...opt, closed: true }));
+      else if (p.t === 'circ') { const ry = p.ry ?? p.r; if (ry === p.r) { const c0 = T(p.cx || 0, p.cy || 0); k.push(ell('部品', c0[0], c0[1], p.r * z, p.r * z, opt)); } else k.push(poly('部品', arcPts(p.cx || 0, p.cy || 0, 1, 0, 360, 20).map(q => T((p.cx || 0) + (q[0] - (p.cx || 0)) * p.r, (p.cy || 0) + (q[1] - (p.cy || 0)) * ry)), { ...opt, closed: true })); }
+      else if (p.t === 'line') k.push(poly('線', p.pts.map(q => T(...q)), opt));
+      else if (p.t === 'poly') k.push(poly('部品', p.pts.map(q => T(...q)), { ...opt, closed: true }));
+    }
+    return k;
+  }
   function camEl(o, withLabel = true) {
+    if (camView(o) !== 'plan') {
+      const z = o.sz || 1, rot = o.kind === 'dome' ? 0 : (o.ang || 0), T = RT(o.x, o.y, rot, z, !!o.flip), { origin, prims } = camPrims(o), k = [];
+      if (o.cone && origin != null) { const a = (o.coneAng || 60) * Math.PI / 360, L = o.coneLen || 110, fan = [[origin, 0]]; for (let i = 0; i <= 14; i++) { const t = -a + 2 * a * i / 14; fan.push([origin + L * Math.cos(t), L * Math.sin(t)]); } k.push(poly('撮影範囲', fan.map(q => T(...q)), { closed: true, fill: CAM, fa: .22, stroke: CAM, a: .6, w: 1 })); }
+      k.push(...primsXL(prims, T, z));
+      if (withLabel && !o.hideLabel) k.push(label('カメラ名', camLabel(o), o.x + (o.lx || 0), o.y + (o.ly || 0) + 5, 14, { bg: '#ffffff' }));
+      return group(withLabel ? camLabel(o) : 'カメラ', k);
+    }
     const T = RT(o.x, o.y, o.ang || 0, o.sz || 1), P = pts => pts.map(p => T(...p)), k = [], s = o.sz || 1;
-    if (o.cone) { const a = (o.coneAng || 60) * Math.PI / 360, L = o.coneLen || 110, fan = [[0, 0]]; for (let i = 0; i <= 14; i++) { const t = -a + 2 * a * i / 14; fan.push([L * Math.cos(t), L * Math.sin(t)]); } k.push(poly('撮影範囲', P(fan), { closed: true, fill: CAM, fa: .2, stroke: CAM, a: .55, w: 1 })); }
-    if (o.kind === 'dome') { k.push(ell('ドーム', o.x, o.y, 13 * s, 13 * s, { fill: '#e8f8fc', stroke: CAMD, w: 1.6 })); k.push(ell('レンズ', o.x, o.y, 7 * s, 7 * s, { fill: CAM, stroke: CAMD, w: 1.2 })); }
+    if (o.cone) { const a = (o.coneAng || 60) * Math.PI / 360, L = o.coneLen || 110, fan = [[0, 0]]; for (let i = 0; i <= 14; i++) { const t = -a + 2 * a * i / 14; fan.push([L * Math.cos(t), L * Math.sin(t)]); } k.push(poly('撮影範囲', P(fan), { closed: true, fill: o.color || CAM, fa: .2, stroke: o.color || CAM, a: .55, w: 1 })); }
+    if (o.kind === 'dome') { k.push(ell('ドーム', o.x, o.y, 13 * s, 13 * s, { fill: '#e8f8fc', stroke: CAMD, w: 1.6 })); k.push(ell('レンズ', o.x, o.y, 7 * s, 7 * s, { fill: o.color || CAM, stroke: CAMD, w: 1.2 })); }
     else {
       const R4 = (x, y, w, h) => [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
       k.push(poly('取付金具', P(R4(-26, -5, 5, 10)), { closed: true, fill: '#94a3b8', stroke: CAMD, w: 1 }));
       k.push(poly('アーム', P([[-21, 0], [-15, 0]]), { stroke: CAMD, w: 2 }));
-      k.push(poly('本体', P(R4(-15, -8.5, 22, 17)), { closed: true, fill: CAM, stroke: CAMD, w: 1.6 }));
+      k.push(poly('本体', P(R4(-15, -8.5, 22, 17)), { closed: true, fill: o.color || CAM, stroke: CAMD, w: 1.6 }));
       k.push(poly('レンズ', P([[7, -6], [15, -9.5], [15, 9.5], [7, 6]]), { closed: true, fill: CAMD }));
     }
     if (withLabel && !o.hideLabel) k.push(label('カメラ名', camLabel(o), o.x + (o.lx || 0), o.y + (o.ly || 0) + 5, 14, { bg: '#ffffff' }));
     return group(withLabel ? camLabel(o) : 'カメラ', k);
   }
   function devEl(o) {
-    const x = o.x, y = o.y, k = [];
-    const R = (n, a, b, w, h, opt) => k.push(rect(n, x + a, y + b, w, h, opt)), Ln = (n, pts, opt) => k.push(poly(n, pts.map(p => [x + p[0], y + p[1]]), opt)), C = (n, cx, cy, r, opt, ry) => k.push(ell(n, x + cx, y + cy, r, ry ?? r, opt));
-    switch (o.kind) {
-      case 'recorder': R('モニター', -17, -22, 34, 23, { fill: '#1e293b', stroke: '#0f172a', w: 1.4 }); R('画面', -14, -19, 28, 17, { fill: CAM }); Ln('スタンド', [[0, 1], [0, 7]], { stroke: '#0f172a', w: 2.5 }); R('レコーダー', -19, 8, 38, 11, { fill: '#334155', stroke: '#0f172a', w: 1.2 }); C('LED', 13, 13.5, 1.8, { fill: '#4ade80' }); break;
-      case 'nvr': R('レコーダー', -20, -9, 40, 18, { fill: '#334155', stroke: '#0f172a', w: 1.4 }); Ln('線', [[-15, -3], [3, -3]], { stroke: '#64748b', w: 1.6 }); Ln('線', [[-15, 2], [3, 2]], { stroke: '#64748b', w: 1.6 }); C('LED', 10, 0, 2, { fill: '#4ade80' }); C('LED', 15, 0, 2, { fill: '#fbbf24' }); break;
-      case 'monitor': R('モニター', -19, -20, 38, 26, { fill: '#1e293b', stroke: '#0f172a', w: 1.4 }); R('画面', -16, -17, 32, 20, { fill: CAM }); Ln('スタンド', [[0, 6], [0, 12]], { stroke: '#0f172a', w: 2.5 }); Ln('台', [[-9, 13], [9, 13]], { stroke: '#0f172a', w: 3, cap: 'rnd' }); break;
-      case 'panel': R('分電盤', -10, -16, 20, 32, { fill: RED, stroke: '#7f1d1d', w: 1.5 }); Ln('線', [[-6, -10], [6, -10]], { stroke: '#fecaca', w: 1.5 }); Ln('線', [[-6, -4], [6, -4]], { stroke: '#fecaca', w: 1.5 }); break;
-      case 'box': R('盤BOX', -14, -12, 28, 24, { fill: '#f1f5f9', stroke: '#334155', w: 1.6, text: 'BOX', fs: 9, bold: true, color: '#334155' }); break;
-      case 'hub': R('HUB', -17, -8, 34, 16, { fill: '#e2e8f0', stroke: '#334155', w: 1.5 }); [-10, -4, 2, 8].forEach(a => R('ポート', a, -3, 4, 5, { fill: '#334155' })); break;
-      case 'outlet': C('コンセント', 0, 0, 10, { fill: '#ffffff', stroke: '#111111', w: 1.6 }); Ln('刃', [[-3.5, -4], [-3.5, 4]], { stroke: '#111111', w: 2 }); Ln('刃', [[3.5, -4], [3.5, 4]], { stroke: '#111111', w: 2 }); break;
-      case 'vent': C('換気口', 0, 0, 15, { fill: '#cbd5e1', stroke: '#334155', w: 1.5 }, 9); [[-9, -3, 9], [-10, 0, 10], [-9, 3, 9]].forEach(([a, b, c]) => Ln('線', [[a, b], [c, b]], { stroke: '#64748b', w: 1 })); break;
-      case 'hole': C('貫通', 0, 0, 7.5, { fill: '#ffffff', stroke: RED, w: 2.6 }); break;
-      case 'pole': C('ポール', 0, 0, 11, { fill: '#ffffff', stroke: '#111111', w: 2 }); C('ポール芯', 0, 0, 5.5, { fill: '#111111' }); break;
+    const x = o.x, y = o.y, z = o.sz || 1, k = [], f = DEVP[o.kind];
+    const P = (px, py) => [x + px * z, y + py * z];
+    if (f) for (const p of f(o.color || (DEV[o.kind] && DEV[o.kind].c) || '#111111')) {
+      const opt = { fill: p.fill || null, stroke: p.stroke || null, w: (p.sw || 1) * z, dash: p.dash ? 'sysDash' : '', cap: p.cap ? 'rnd' : '' };
+      if (p.t === 'rect') k.push(rect('部品', x + p.x * z, y + p.y * z, p.w * z, p.h * z, opt));
+      else if (p.t === 'circ') k.push(ell('部品', ...P(p.cx || 0, p.cy || 0), p.r * z, (p.ry ?? p.r) * z, opt));
+      else if (p.t === 'line') k.push(poly('線', p.pts.map(q => P(...q)), opt));
+      else if (p.t === 'poly') k.push(poly('部品', p.pts.map(q => P(...q)), { ...opt, closed: true }));
+      else if (p.t === 'text') k.push(label('文字', p.s, ...P(p.x, p.y), p.fs * z, { bold: p.bold, color: p.fill }));
     }
     if (o.label) k.push(label('ラベル', o.label, x + (o.lx || 0), y + (o.ly || 0) + 5, 13, { bg: '#ffffff' }));
     return group(DEV[o.kind] ? DEV[o.kind].name : '機器', k);
   }
   function symEl(o) {
+    const ink = o.color || '#111111';
     const T = RT(o.x, o.y, o.rot || 0, 1, o.flip), P = pts => pts.map(p => T(...p)), w = o.w, h = o.h, X = -w / 2, Y = -h / 2, cut = o.cut !== false, k = [];
-    const L = (a, b, sw = 1.4, col = '#111111', ex = {}) => k.push(poly('線', P([a, b]), { stroke: col, w: sw, ...ex }));
-    const arc = (cx, cy, r, a0, a1) => { const pts = []; for (let i = 0; i <= 16; i++) { const t = (a0 + (a1 - a0) * i / 16) * Math.PI / 180; pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]); } k.push(poly('開き', P(pts), { stroke: '#111111', w: 1 })); };
+    const L = (a, b, sw = 1.4, col = ink, ex = {}) => k.push(poly('線', P([a, b]), { stroke: col, w: sw, ...ex }));
+    const arc = (cx, cy, r, a0, a1) => { const pts = []; for (let i = 0; i <= 16; i++) { const t = (a0 + (a1 - a0) * i / 16) * Math.PI / 180; pts.push([cx + r * Math.cos(t), cy + r * Math.sin(t)]); } k.push(poly('開き', P(pts), { stroke: ink, w: 1 })); };
     const B = (x, y, ww, hh, opt) => k.push(poly('枠', P([[x, y], [x + ww, y], [x + ww, y + hh], [x, y + hh]]), { closed: true, ...opt }));
     switch (o.kind) {
       case 'door1': if (cut) L([X, -Y], [-X, -Y], 8, '#ffffff'); L([X, -Y], [X, Y], 2.2); arc(X, -Y, w, 0, -90); L([X, -Y - 4], [X, -Y + 4], 2); L([-X, -Y - 4], [-X, -Y + 4], 2); break;
       case 'door2': if (cut) L([X, -Y], [-X, -Y], 8, '#ffffff'); L([X, -Y], [X, Y], 2.2); L([-X, -Y], [-X, Y], 2.2); arc(X, -Y, w / 2, 0, -90); arc(-X, -Y, w / 2, 180, 270); L([X, -Y - 4], [X, -Y + 4], 2); L([-X, -Y - 4], [-X, -Y + 4], 2); break;
-      case 'slide': { const pw = w * 0.56; if (cut) B(X, Y - 2, w, h + 4, { fill: '#ffffff' }); B(X, Y, pw, h / 2, { fill: '#ffffff', stroke: '#111111', w: 1.3 }); B(-X - pw, 0, pw, h / 2, { fill: '#ffffff', stroke: '#111111', w: 1.3 }); L([X, Y - 3], [X, -Y + 3], 2.2); L([-X, Y - 3], [-X, -Y + 3], 2.2); break; }
+      case 'slide': { const pw = w * 0.56; if (cut) B(X, Y - 2, w, h + 4, { fill: '#ffffff' }); B(X, Y, pw, h / 2, { fill: '#ffffff', stroke: ink, w: 1.3 }); B(-X - pw, 0, pw, h / 2, { fill: '#ffffff', stroke: ink, w: 1.3 }); L([X, Y - 3], [X, -Y + 3], 2.2); L([-X, Y - 3], [-X, -Y + 3], 2.2); break; }
       case 'window': if (cut) B(X, Y - 2, w, h + 4, { fill: '#ffffff' }); L([X, Y], [-X, Y], 1.2); L([X, -Y], [-X, -Y], 1.2); L([X, 0], [-X, 0], 1); L([X, Y - 2], [X, -Y + 2], 2.2); L([-X, Y - 2], [-X, -Y + 2], 2.2); break;
+      case 'colsq': case 'colrd': {
+        const stl = o.fillStyle || 'solid', f = stl === 'solid' ? (o.color || '#3f3f46') : '#ffffff';
+        if (o.kind === 'colsq') B(X, Y, w, h, { fill: f, stroke: ink, w: 1.6 }); else k.push(ell('丸柱', o.x, o.y, w / 2, h / 2, { fill: f, stroke: ink, w: 1.6 }));
+        if (stl === 'x') { const k2 = o.kind === 'colrd' ? 0.7071 : 1; L([X * k2, Y * k2], [-X * k2, -Y * k2], 1.2); L([-X * k2, Y * k2], [X * k2, -Y * k2], 1.2); }
+        break;
+      }
       case 'stair': {
-        const n = Math.max(2, o.n || 8); B(X, Y, w, h, { fill: '#ffffff', stroke: '#111111', w: 1.6 });
+        const n = Math.max(2, o.n || 8); B(X, Y, w, h, { fill: '#ffffff', stroke: ink, w: 1.6 });
         for (let i = 1; i < n; i++) { const x = X + w * i / n; L([x, Y], [x, -Y], 1); }
-        if (o.dir !== 'none') { L([X + 8, 0], [-X - 4, 0], 1.4, '#111111', { tail: 'triangle' }); const d = T(X + 8, 0); k.push(ell('始点', d[0], d[1], 2.6, 2.6, { fill: '#111111' })); const t = T(X + 12, Y - 5); k.push(label('UP/DN', o.dir === 'dn' ? 'DN' : 'UP', t[0], t[1], 12, { bold: true, algn: 'l' })); }
+        if (o.dir !== 'none') { L([X + 8, 0], [-X - 4, 0], 1.4, ink, { tail: 'triangle' }); const d = T(X + 8, 0); k.push(ell('始点', d[0], d[1], 2.6, 2.6, { fill: ink })); const t = T(X + 12, Y - 5); k.push(label('UP/DN', o.dir === 'dn' ? 'DN' : 'UP', t[0], t[1], 12, { bold: true, algn: 'l' })); }
         break;
       }
     }
@@ -1804,15 +2258,15 @@ const XL = (() => {
   }
   function emit(o, ctx) {
     switch (o.type) {
-      case 'line': return path('壁・線', cmdsOf(o.pts, false), { stroke: o.color, w: o.w, dash: o.dash ? 'dash' : '' });
+      case 'line': return path('壁・線', cmdsOf(hasArcs(o) ? edgePts(o, false) : o.pts, false), { stroke: o.color, w: o.w, dash: o.dash ? 'dash' : '' });
       case 'wire': {
-        const st = WIRE[o.style] || WIRE.exposed, cm = cmdsOf(o.pts, o.smooth), k = [];
+        const st0 = WIRE[o.style] || WIRE.exposed, st = { ...st0, color: o.color || st0.color }, cm = cmdsOf(o.pts, o.smooth), k = [];
         if (o.parent) k.push(path('ふちどり', cm, { stroke: '#ffffff', a: .85, w: 6.5, cap: 'rnd' }));
         k.push(path(st.name, cm, { stroke: st.color, w: 3, dash: DASH[o.style], cap: 'rnd' }));
         const lab = o.showLen ? lenLabel(o) : ''; if (lab) { const m = pointAt(wirePts(o), 0.5); k.push(label('長さ', lab, m[0] + (o.lx || 0), m[1] + (o.ly || 0) + 5, 14, { bg: '#ffffff' })); }
         return group(st.name, k);
       }
-      case 'rect': return rect(o.label ? '部屋 ' + o.label.replace(/\n/g, ' ') : '四角', o.x, o.y, o.w, o.h, { fill: o.fill === 'none' ? null : o.fill, stroke: '#111111', w: o.sw, dash: o.dash ? 'dash' : '', text: o.label, fs: o.fs });
+      case 'rect': return rect(o.label ? '部屋 ' + o.label.replace(/\n/g, ' ') : '四角', o.x, o.y, o.w, o.h, { fill: o.fill === 'none' ? null : o.fill, stroke: o.stroke || '#111111', w: o.sw, dash: o.dash ? 'dash' : '', text: o.label, fs: o.fs });
       case 'text': {
         const b = textBox(o), al = o.anchor === 'middle' ? 'ctr' : 'l';
         return o.box !== 'none' ? rect('文字', b.x - 6, b.y - 5, b.w + 12, b.h + 10, { fill: '#ffffff', stroke: o.box, w: 1.6, text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: al, ins: 6, box: true })
@@ -1822,11 +2276,11 @@ const XL = (() => {
       case 'device': return devEl(o);
       case 'sym': return symEl(o);
       case 'poly': {
-        const n = o.pts.length, k = [poly(o.label ? '建物 ' + o.label : '建物', o.pts, { closed: true, fill: o.fill === 'none' ? null : o.fill, stroke: '#111111', w: o.sw, dash: o.dash ? 'dash' : '' })];
+        const n = o.pts.length, k = [poly(o.label ? '建物 ' + o.label : '建物', hasArcs(o) ? edgePts(o, true) : o.pts, { closed: true, fill: o.fill === 'none' ? null : o.fill, stroke: o.stroke || '#111111', w: o.sw, dash: o.dash ? 'dash' : '' })];
         const cx = o.pts.reduce((a, p) => a + p[0], 0) / n, cy = o.pts.reduce((a, p) => a + p[1], 0) / n;
         if (o.showEdges && doc.scale) for (let i = 0; i < n; i++) {
-          const a = o.pts[i], b = o.pts[(i + 1) % n], L = dist(a, b); if (L < 30) continue;
-          let nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L; const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+          const a = o.pts[i], b = o.pts[(i + 1) % n], ai = o.arcs && o.arcs[i] ? arcInfo(a, b, o.arcs[i]) : null, L = ai ? ai.len : dist(a, b); if (L < 30) continue;
+          const cl = dist(a, b) || 1; let nx = -(b[1] - a[1]) / cl, ny = (b[0] - a[0]) / cl; const mx = ai ? ai.mid[0] : (a[0] + b[0]) / 2, my = ai ? ai.mid[1] : (a[1] + b[1]) / 2;
           if ((mx + nx - cx) ** 2 + (my + ny - cy) ** 2 < (mx - cx) ** 2 + (my - cy) ** 2) { nx = -nx; ny = -ny; }
           k.push(label('辺の長さ', '約' + (L / doc.scale).toFixed(1) + 'm', mx + nx * 15, my + ny * 15 + 4, 12, { bg: '#ffffff' }));
         }
@@ -1835,22 +2289,24 @@ const XL = (() => {
       }
       case 'dim': {
         const [x1, y1] = o.p1, [x2, y2] = o.p2, L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L, nx = -uy, ny = ux;
-        const k = [poly('寸法線', [o.p1, o.p2], { stroke: '#111111', w: 1.3, head: 'triangle', tail: 'triangle' }),
-          poly('端', [[x1 + nx * 9, y1 + ny * 9], [x1 - nx * 9, y1 - ny * 9]], { stroke: '#111111', w: 1.3 }), poly('端', [[x2 + nx * 9, y2 + ny * 9], [x2 - nx * 9, y2 - ny * 9]], { stroke: '#111111', w: 1.3 })];
+        const k = [poly('寸法線', [o.p1, o.p2], { stroke: (o.color || '#111111'), w: 1.3, head: 'triangle', tail: 'triangle' }),
+          poly('端', [[x1 + nx * 9, y1 + ny * 9], [x1 - nx * 9, y1 - ny * 9]], { stroke: (o.color || '#111111'), w: 1.3 }), poly('端', [[x2 + nx * 9, y2 + ny * 9], [x2 - nx * 9, y2 - ny * 9]], { stroke: (o.color || '#111111'), w: 1.3 })];
         const lab = lenLabel(o);
         if (lab) { const side = (ny > 0 || (Math.abs(ny) < 1e-6 && nx > 0)) ? -1 : 1; k.push(label('寸法', lab, (x1 + x2) / 2 + nx * side * (Math.abs(ux) > 0.7 ? 14 : 26) + (o.lx || 0), (y1 + y2) / 2 + ny * side * 14 + (o.ly || 0) + 5, 14, { bg: '#ffffff' })); }
         return group('寸法', k);
       }
       case 'arrow': {
         const k = [], w = o.w || 3;
-        if (o.halo !== false) k.push(poly('ふちどり', [o.p1, o.p2], { stroke: '#ffffff', a: .85, w: w + 3.5, cap: 'rnd', tail: 'triangle' }));
-        k.push(poly('矢印', [o.p1, o.p2], { stroke: o.color, w, dash: o.dash ? 'dash' : '', cap: 'rnd', tail: 'triangle' }));
+        const hd = o.both ? 'triangle' : '';
+        if (o.halo !== false) k.push(poly('ふちどり', [o.p1, o.p2], { stroke: '#ffffff', a: .85, w: w + 3.5, cap: 'rnd', tail: 'triangle', head: hd }));
+        k.push(poly('矢印', [o.p1, o.p2], { stroke: o.color, w, dash: o.dash ? 'dash' : '', cap: 'rnd', tail: 'triangle', head: hd }));
         return group('矢印', k);
       }
       case 'callout': {
         const cx = o.x + o.w / 2, cy = o.y + o.h / 2, av = `<a:gd name="adj1" fmla="val ${Math.round((o.tx - cx) / o.w * 100000)}"/><a:gd name="adj2" fmla="val ${Math.round((o.ty - cy) / o.h * 100000)}"/><a:gd name="adj3" fmla="val 16667"/>`;
-        return rect('吹き出し', o.x, o.y, o.w, o.h, { prst: 'wedgeRoundRectCallout', av, fill: '#ffffff', stroke: '#333333', w: 1.4, text: o.text, fs: o.fs });
+        return rect('吹き出し', o.x, o.y, o.w, o.h, { prst: 'wedgeRoundRectCallout', av, fill: o.fill || '#ffffff', stroke: o.stroke || '#333333', w: 1.4, text: o.text, fs: o.fs, color: o.color });
       }
+      case 'shape': return rect(SHAPES[o.kind] ? SHAPES[o.kind].name : '図形', o.x - o.w / 2, o.y - o.h / 2, o.w, o.h, { prst: (SHAPES[o.kind] || SHAPES.rect).prst, fill: !o.fill || o.fill === 'none' ? null : o.fill, stroke: (o.sw ?? 1.6) > 0 ? (o.stroke || '#111111') : null, w: o.sw ?? 1.6, dash: o.dash ? 'dash' : '', text: o.text, fs: o.fs || 14, color: o.color, rot: o.rot || 0, flip: !!o.flip });
       case 'mark': return ell('囲み', o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, { stroke: o.color, w: o.sw });
       case 'photo': {
         const k = [];
@@ -1869,16 +2325,17 @@ const XL = (() => {
       }
       case 'north': {
         const T = RT(o.x, o.y, o.ang || 0, o.sz || 1), s = o.sz || 1, P = pts => pts.map(p => T(...p)), t = T(0, -35);
-        return group('方位', [ell('円', o.x, o.y, 22 * s, 22 * s, { fill: '#ffffff', stroke: '#111111', w: 1.5 }),
-          poly('矢', P([[0, -30], [9, 12], [0, 5]]), { closed: true, fill: '#ffffff', stroke: '#111111', w: 1.4 }), poly('矢', P([[0, -30], [-9, 12], [0, 5]]), { closed: true, fill: '#111111', stroke: '#111111', w: 1.4 }),
+        return group('方位', [ell('円', o.x, o.y, 22 * s, 22 * s, { fill: '#ffffff', stroke: (o.color || '#111111'), w: 1.5 }),
+          poly('矢', P([[0, -30], [9, 12], [0, 5]]), { closed: true, fill: '#ffffff', stroke: (o.color || '#111111'), w: 1.4 }), poly('矢', P([[0, -30], [-9, 12], [0, 5]]), { closed: true, fill: (o.color || '#111111'), stroke: (o.color || '#111111'), w: 1.4 }),
           label('N', 'N', t[0], t[1], 15 * s, { bold: true })]);
       }
       case 'legend': {
-        const items = legendItems(), b = bbox(o), k = [rect('凡例枠', o.x, o.y, b.w, b.h, { fill: '#ffffff', stroke: '#111111', w: 1.4 }), poly('線', [[o.x, o.y + 28], [o.x + b.w, o.y + 28]], { stroke: '#111111', w: 1 }), label('凡例', '凡　例', o.x + b.w / 2, o.y + 19, 14, { bold: true })];
+        const items = legendItems(o), b = bbox(o), k = [rect('凡例枠', o.x, o.y, b.w, b.h, { fill: '#ffffff', stroke: '#111111', w: 1.4 }), poly('線', [[o.x, o.y + 28], [o.x + b.w, o.y + 28]], { stroke: '#111111', w: 1 }), label('凡例', '凡　例', o.x + b.w / 2, o.y + 19, 14, { bold: true })];
         items.forEach((it, i) => {
           const y = o.y + 30 + i * 24 + 12;
-          if (it.k === 'cam') k.push(camEl({ x: o.x + 44, y, ang: 0, sz: it.kind === 'dome' ? .7 : .75, kind: it.kind }, false));
-          else { const st = WIRE[it.k]; k.push(poly(st.name, [[o.x + 14, y], [o.x + 74, y]], { stroke: st.color, w: 3, dash: DASH[it.k] })); }
+          if (it.k === 'cam') k.push(camEl({ x: o.x + 44, y, ang: 0, sz: it.kind === 'dome' ? .7 : .75, kind: it.kind, color: it.color }, false));
+          else if (it.k === 'dev') k.push(devEl({ kind: it.kind, x: o.x + 44, y, sz: .62, color: it.color }));
+          else { const st = WIRE[it.k]; k.push(poly(st.name, [[o.x + 14, y], [o.x + 74, y]], { stroke: it.color || st.color, w: 3, dash: DASH[it.k] })); }
           k.push(label('凡例名', it.name, o.x + 88, y + 5, 13, { algn: 'l' }));
         });
         return group('凡例', k);
@@ -2041,7 +2498,9 @@ $('#zIn').onclick = () => zoomAt(1 / 1.25); $('#zOut').onclick = () => zoomAt(1.
 $('#selPaper').onchange = e => changePaper(e.target.value);
 $('#cGrid').onchange = e => { gridOn = e.target.checked; render(); };
 $('#cSnap').onchange = e => { snapOn = e.target.checked; };
-$('#tools').addEventListener('click', e => { const b = e.target.closest('[data-tool]'); if (!b) return; if (b.dataset.tool === 'map') { openMapModal(); return; } setTool(b.dataset.tool); });
+$('#cWall').checked = wallOn;
+$('#cWall').onchange = e => { wallOn = e.target.checked; try { localStorage.setItem('camzu-wall', wallOn ? '1' : '0'); } catch { } toast(wallOn ? '配線を壁に沿わせます' : '壁沿いをオフにしました'); };
+$('#tools').addEventListener('click', e => { const b = e.target.closest('[data-tool]'); if (!b) return; if (b.dataset.tool === 'map') { openMapModal(); return; } if (b.dataset.tool === 'lib') { openLib(b); return; } if (b.dataset.tool === 'shapes') { openShapes(b); return; } setTool(b.dataset.tool); });
 
 /* ============ boot ============ */
 buildTools(); setTool('select');

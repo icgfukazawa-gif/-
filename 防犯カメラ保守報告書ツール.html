@@ -1,0 +1,733 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>防犯カメラ保守報告書ツール</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: sticky toolbar, then a two-column workbench — input form left, live A4 paper stack right (stacks on phones) */
+:root{
+  --bg:#ECEFF3; --surface:#FFFFFF; --surface-2:#F5F7FA; --line:#D2D8DF; --fg:#17202A; --muted:#5A6672;
+  --accent:#1D4E89; --accent-soft:#E2EBF6; --accent-fg:#FFFFFF; --seal:#B3322A; --ok:#2C7A4B; --ok-soft:#E1F1E7;
+  --stage:#D9DFE6; --paper:#FFFFFF; --ink:#111111;
+  --ui:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  --doc:"Noto Sans JP","MS PGothic","Hiragino Kaku Gothic ProN",sans-serif;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151B; --surface:#18202A; --surface-2:#1E2833; --line:#2C3743; --fg:#E5EAF0; --muted:#94A1AE;
+  --accent:#86B4EA; --accent-soft:#1E3550; --accent-fg:#0B1622; --seal:#E36A60; --ok:#72C595; --ok-soft:#1B3527;
+  --stage:#0B0F14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151B; --surface:#18202A; --surface-2:#1E2833; --line:#2C3743; --fg:#E5EAF0; --muted:#94A1AE;
+  --accent:#86B4EA; --accent-soft:#1E3550; --accent-fg:#0B1622; --seal:#E36A60; --ok:#72C595; --ok-soft:#1B3527;
+  --stage:#0B0F14; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--ui);font-size:14px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* toolbar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.brand{display:flex;flex-direction:column;min-width:0;margin-right:auto}
+.brand b{font-size:15px;letter-spacing:.04em}
+.brand span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.inc{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer;background:var(--surface);user-select:none}
+.chip input{margin:0;accent-color:var(--accent)}
+.chip:has(input:checked){background:var(--accent-soft);border-color:var(--accent)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.btn.sm{padding:4px 9px;font-size:12.5px}
+.btn.warn{color:var(--seal)}
+.btn:disabled{opacity:.5;cursor:progress}
+
+/* workbench */
+.wrap{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:20px;align-items:start;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1500px;margin:0 auto}
+@media (max-width:980px){.wrap{grid-template-columns:minmax(0,1fr)}}
+.form{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px 16px;min-width:0}
+.sec>h2{margin:0 0 12px;font-size:13px;letter-spacing:.08em;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap;white-space:nowrap}
+.sec>h2 .sp{flex-wrap:wrap}
+@media (max-width:600px){.bar{position:static}.pv{top:0}}
+.sec>h2 .tag{font-size:11px;font-weight:500;letter-spacing:0;border:1px solid var(--line);border-radius:4px;padding:0 6px;color:var(--muted)}
+.sec>h2 .sp{margin-left:auto;display:flex;gap:6px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.grid .full{grid-column:1/-1}
+@media (max-width:520px){.grid{grid-template-columns:minmax(0,1fr)}}
+label.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+label.f>span{font-size:12px;color:var(--muted)}
+.inp{width:100%;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2);padding:7px 9px;min-width:0}
+.inp:focus{background:var(--surface);border-color:var(--accent);outline:none}
+textarea.inp{resize:vertical;min-height:70px;line-height:1.6}
+.hint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:5px 10px;cursor:pointer;font-size:12.5px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+
+/* cameras */
+.cams{display:flex;flex-direction:column;gap:6px}
+.cam{display:grid;grid-template-columns:minmax(0,1.1fr) auto minmax(0,1fr) auto;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface-2)}
+@media (max-width:560px){.cam{grid-template-columns:minmax(0,1fr) auto}.cam .tg{grid-column:1/-1;order:3}.cam .img{order:2}}
+.cam .inp{background:var(--surface)}
+.tg{display:flex;gap:4px;flex-wrap:wrap}
+.tog{border:1px solid var(--line);background:var(--surface);border-radius:4px;padding:3px 7px;font-size:12px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.tog::before{content:"";width:10px;height:10px;border:1.5px solid var(--muted);border-radius:2px}
+.tog[aria-pressed="true"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.tog[aria-pressed="true"]::before{background:var(--ok);border-color:var(--ok);box-shadow:inset 0 0 0 1.5px var(--ok-soft)}
+.cam .img.bad{border-color:var(--seal);color:var(--seal)}
+.x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:16px;padding:2px 6px;border-radius:4px}
+.x:hover{color:var(--seal)}
+
+/* photos */
+.ppage{display:flex;flex-direction:column;gap:8px}
+.ppage+.ppage{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.ppage .ph{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.slot{display:flex;flex-direction:column;gap:5px;min-width:0}
+.drop{position:relative;aspect-ratio:4/3;max-width:100%;border:1.5px dashed var(--line);border-radius:var(--r);background:var(--surface-2);display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden;color:var(--muted);font-size:12px;text-align:center;padding:6px}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop.has{border-style:solid;padding:0;background:#000}
+.drop img{width:100%;height:100%;object-fit:contain}
+.drop .rm{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:0;border-radius:4px;font-size:12px;padding:2px 7px;cursor:pointer}
+.slot .no{font-size:11px;color:var(--muted)}
+
+/* preview */
+.pv{position:sticky;top:calc(env(safe-area-inset-top,0px) + 74px);min-width:0}
+@media (max-width:980px){.pv{position:static}}
+.pvhead{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.pvhead b{font-size:13px;letter-spacing:.06em;color:var(--muted)}
+.pvhead .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.stage{background:var(--stage);border-radius:8px;padding:16px;max-height:calc(100vh - 150px);overflow:auto;display:flex;flex-direction:column;align-items:center;gap:16px}
+@media (max-width:980px){.stage{max-height:none}}
+.pgw{position:relative;flex:none;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 18px rgba(0,0,0,.08)}
+.pgw .pg{position:absolute;top:0;left:0;transform-origin:0 0}
+.pgw .lbl{position:absolute;left:0;top:-1px;transform:translateY(-100%);font-size:11px;color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:9px 16px;border-radius:999px;font-size:13px;z-index:20;max-width:calc(100% - 32px)}
+details.co summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:700;letter-spacing:.08em}
+details.co[open] summary{margin-bottom:12px}
+
+/* ===== paper (always white, black ink) ===== */
+.pg{width:210mm;height:297mm;background:var(--paper);color:var(--ink);font-family:var(--doc);font-size:11pt;line-height:1.5;overflow:hidden;position:relative}
+.pg *{box-sizing:border-box}
+/* cover */
+.cv{padding:20mm 22mm 18mm 24mm;display:flex;flex-direction:column}
+.cv-title{text-align:center;font-size:19pt;font-weight:700;letter-spacing:.35em;margin-top:2mm}
+.cv-date{text-align:right;margin-top:10mm;font-size:11.5pt}
+.cv-to{margin-top:6mm;font-size:15pt;border-bottom:.3mm solid var(--ink);width:95mm;padding:0 1mm 1mm;display:flex;justify-content:space-between;gap:4mm;min-height:10mm;align-items:flex-end}
+.cv-from{margin-left:auto;margin-top:6mm;width:72mm;font-size:10.5pt;line-height:1.65}
+.cv-from .nm{font-size:12pt;font-weight:700}
+.cv-msg{margin-top:16mm;text-align:center;font-size:11.5pt;line-height:1.9}
+.cv-ki{text-align:center;margin:10mm 0 8mm;font-size:12pt}
+.cv-tbl{width:100%;border-collapse:collapse;font-size:11.5pt}
+.cv-tbl td{padding:3mm 0;vertical-align:top}
+.cv-tbl td.k{width:34mm;text-align-last:justify;padding-right:10mm;white-space:nowrap}
+.cv-tbl td.v{border-bottom:.2mm dotted #777}
+.cv-tbl .lines div{border-bottom:.2mm dotted #777;padding:1.2mm 0;min-height:8mm}
+.cv-tbl .lines div:first-child{padding-top:0}
+.cv-end{text-align:right;margin-top:8mm;font-size:11.5pt}
+/* photos */
+.pp{padding:14mm 16mm 12mm}
+.pp-h{text-align:center;font-weight:700;font-size:14pt;line-height:1.35}
+.pp-s{text-align:center;font-weight:700;font-size:12pt}
+.pp-g{display:grid;grid-template-columns:1fr 1fr;gap:7mm 8mm;margin-top:6mm}
+.pp-box{height:66mm;border:.3mm solid #333;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff}
+.pp-box img{max-width:100%;max-height:100%;display:block}
+.pp-box .em{font-size:9pt;color:#999}
+.pp-cap{border:.3mm solid #333;border-top:0;text-align:center;font-weight:700;font-size:10.5pt;padding:1.2mm 1mm;min-height:7.5mm}
+/* inspection record */
+.rc{padding:9mm 13mm 11mm 16mm;display:flex;flex-direction:column}
+.rc-top{display:flex;justify-content:flex-end;align-items:center;gap:3mm;font-weight:700;font-size:11pt}
+.rc-top .who{border-bottom:.3mm solid var(--ink);min-width:55mm;text-align:right;padding-right:10mm;letter-spacing:.4em}
+.maru{display:inline-flex;width:8mm;height:8mm;border:.3mm solid var(--ink);border-radius:50%;align-items:center;justify-content:center;font-size:10.5pt}
+.rc-frame{flex:1;border:.3mm dashed #666;margin-top:3mm;padding:7mm 9mm 8mm;display:flex;flex-direction:column}
+.rc-date{text-align:right}
+.rc-title{text-align:center;font-size:22pt;letter-spacing:.12em;margin-top:4mm}
+.rc-mid{display:flex;justify-content:space-between;align-items:flex-end;gap:6mm;margin-top:8mm}
+.rc-to{font-size:15pt;border-bottom:.3mm solid var(--ink);width:82mm;display:flex;justify-content:space-between;align-items:flex-end;padding:0 1mm 1mm;min-height:10mm;gap:3mm}
+.rc-co{font-size:9.5pt;line-height:1.55;width:62mm}
+.rc-tbl{width:100%;border-collapse:collapse;margin-top:9mm;font-size:9.5pt;table-layout:fixed}
+.rc-tbl td{border:.3mm solid var(--ink);padding:0 2mm;vertical-align:middle}
+.rc-tbl td.nm{text-align:center;width:26%;word-break:break-all;line-height:1.25}
+.rc-tbl td.kd{text-align:center;width:11%}
+.rc-tbl td.ct{white-space:nowrap;overflow:hidden}
+.cb{display:inline-block;width:3.2mm;height:3.2mm;border:.3mm solid var(--ink);vertical-align:-.5mm;margin-right:.8mm;position:relative}
+.cb.on::after{content:"";position:absolute;left:.85mm;top:.05mm;width:1.1mm;height:2.1mm;border:solid var(--ink);border-width:0 .5mm .5mm 0;transform:rotate(45deg)}
+.ci{margin-right:3.5mm}
+.rc-rm{border:.3mm solid var(--ink);border-top:0;padding:1.5mm 2.5mm;font-size:9.5pt}
+.rc-rm .t{white-space:pre-wrap;line-height:1.5;margin-top:1mm;overflow:hidden}
+.rc-sg{width:100%;border-collapse:collapse;margin-top:0;font-size:10pt;table-layout:fixed}
+.rc-sg td{border:.3mm solid var(--ink);border-top:0;height:10.5mm;text-align:center;vertical-align:middle}
+.rc-sg td.in{color:#aaa;width:13%;font-size:9pt}
+.rc-sg td.lb{width:30%}
+.rc-sg tr:first-child td{border-top:.3mm solid var(--ink)}
+.exporting .em{visibility:hidden}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="bar">
+  <div class="brand"><b>防犯カメラ保守報告書</b><span id="subTitle">—</span></div>
+  <div class="inc" role="group" aria-label="出力する書類">
+    <label class="chip"><input type="checkbox" id="incCover" checked>報告書</label>
+    <label class="chip"><input type="checkbox" id="incPhotos" checked>写真</label>
+    <label class="chip"><input type="checkbox" id="incRecord" checked>点検記録（控2枚）</label>
+  </div>
+  <div class="acts">
+    <button class="btn pri" id="btnPdf">PDFを出力</button>
+    <button class="btn pri" id="btnXlsx">Excelを出力</button>
+    <button class="btn" id="btnSave">案件ファイル保存</button>
+    <button class="btn" id="btnLoad">読込</button>
+    <input type="file" id="fileLoad" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="form" id="form">
+
+    <section class="sec">
+      <h2>連携シートから入力<span class="sp">
+        <button class="btn sm" id="linkSample">サンプルを入れる</button>
+        <button class="btn sm" id="linkClear">クリア</button></span></h2>
+      <textarea class="inp" id="linkText" rows="4" aria-label="連携シートの貼り付け欄" placeholder="「現調・完了図書作成アプリ用　連携シート」をそのまま貼り付けてください"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn sm pri" id="linkApply">フォームに反映</button><span class="hint" id="linkResult" style="margin:0"></span></div>
+      <p class="hint">貼り付けると自動で反映します。顧客名→宛先、物件名→物件名、物件住所→実施場所、工事名→業務名、顧客担当者名→立会者、受付No→出力ファイル名。空欄の項目は今の入力を残します。</p>
+    </section>
+
+    <section class="sec">
+      <h2>物件・宛先<span class="sp">
+        <select class="inp" id="siteSel" style="width:auto;padding:4px 8px;font-size:12.5px" aria-label="登録済み物件"></select>
+        <button class="btn sm" id="siteSave">物件を登録</button>
+        <button class="btn sm warn" id="siteDel" hidden>削除</button>
+      </span></h2>
+      <div class="grid">
+        <label class="f full"><span>宛先（お客様名）</span><input class="inp" id="customer" placeholder="例）〇〇マンション管理組合"></label>
+        <label class="f"><span>物件名（写真ページ見出し）</span><input class="inp" id="site"></label>
+        <label class="f"><span>点検種別</span><select class="inp" id="kindSel"><option>定期点検</option><option>故障対応</option><option>故障対応＋定期点検</option><option>設備不備対応</option><option>臨時点検</option><option>年次点検</option><option value="__other">その他（手入力）</option></select><input class="inp" id="kind" placeholder="点検種別を入力" hidden></label>
+        <label class="f"><span>業務名</span><input class="inp" id="jobName"></label>
+        <label class="f"><span>実施場所</span><input class="inp" id="place" placeholder="住所・設置場所"></label>
+      </div>
+      
+      <p class="hint">「物件を登録」で宛先・物件名・カメラ構成を保存し、次回はプルダウンから呼び出せます（このブラウザ内に保存）。</p>
+    </section>
+
+    <section class="sec">
+      <h2>日付<span class="sp"><span class="seg" role="group" aria-label="日付表記">
+        <button type="button" data-ds="seireki">西暦</button><button type="button" data-ds="wareki">和暦</button></span></span></h2>
+      <div class="grid">
+        <label class="f"><span>報告日（提出日）</span><input class="inp" type="date" id="reportDate"></label>
+        <label class="f"><span>実施日</span><input class="inp" type="date" id="workDate"></label>
+        <label class="f"><span>録画期間 開始</span><input class="inp" type="date" id="recFrom"></label>
+        <label class="f"><span>録画期間 終了</span><input class="inp" type="date" id="recTo"></label>
+      </div>
+      <p class="hint" id="recHint"></p>
+    </section>
+
+    <section class="sec">
+      <h2>実施内容<span class="tag">報告書</span></h2>
+      <textarea class="inp" id="tasks" rows="5" aria-label="実施内容（1行に1項目）"></textarea>
+      <p class="hint">1行に1項目。報告書の「実施内容」欄にそのまま並びます。</p>
+    </section>
+
+    <section class="sec">
+      <h2>カメラ点検<span class="tag">点検記録</span><span class="sp">
+        <button class="btn sm" id="camAllOk">全台 清掃済・良好</button>
+        <button class="btn sm" id="camAdd">＋ 追加</button></span></h2>
+      <div class="cams" id="cams"></div>
+      <datalist id="imgList"><option>良好</option><option>要調整</option><option>不良</option><option>映像なし</option><option>録画不良</option></datalist>
+      <p class="hint">最大12台まで。「画像」が良好以外のときは赤で表示されます。</p>
+    </section>
+
+    <section class="sec">
+      <h2>写真<span class="tag">写真報告</span><span class="sp">
+        <button class="btn sm" id="phBulk">まとめて追加</button>
+        <button class="btn sm" id="phAddPage">＋ ページ</button></span></h2>
+      <input type="file" id="phBulkInput" accept="image/*" multiple hidden>
+      <input type="file" id="phOneInput" accept="image/*" hidden>
+      <div id="photos"></div>
+      <p class="hint">枠をクリックするか写真をドラッグ。まとめて追加は空いている枠に順番に入ります。写真は長辺1600pxに縮小して取り込みます。</p>
+    </section>
+
+    <section class="sec">
+      <h2>備考・担当<span class="tag">点検記録</span></h2>
+      <div class="grid">
+        <label class="f full"><span>備考</span><textarea class="inp" id="remarks" rows="3"></textarea></label>
+        <label class="f"><span>点検担当者</span><input class="inp" id="inspector"></label>
+        <label class="f"><span>立会者</span><input class="inp" id="witness"></label>
+      </div>
+    </section>
+
+    <section class="sec">
+      <details class="co">
+        <summary>自社情報（差出人）</summary>
+        <div class="grid">
+          <label class="f full"><span>会社名</span><input class="inp" id="coName"></label>
+          <label class="f"><span>郵便番号</span><input class="inp" id="coZip"></label>
+          <label class="f"><span>住所</span><input class="inp" id="coAddr"></label>
+          <label class="f"><span>TEL</span><input class="inp" id="coTel"></label>
+          <label class="f"><span>FAX</span><input class="inp" id="coFax"></label>
+        </div>
+      </details>
+      <div class="row" style="margin-top:12px">
+        <button class="btn sm warn" id="btnNew">新規作成（入力をクリア）</button>
+        <span class="hint" id="newHint" style="margin:0"></span>
+      </div>
+    </section>
+  </div>
+
+  <aside class="pv" aria-label="印刷プレビュー">
+    <div class="pvhead"><b>プレビュー（A4）</b><span class="cnt" id="pgCount"></span></div>
+    <div class="stage" id="stage"></div>
+  </aside>
+</main>
+<div class="toast" id="toast" hidden></div>
+<div id="exportStage" style="position:fixed;left:-20000px;top:0;pointer-events:none" aria-hidden="true"></div>
+
+<script>
+(function(){
+"use strict";
+const DRAFT_KEY="cam-maint-draft-v1", SITES_KEY="cam-maint-sites-v1";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const FW="０１２３４５６７８９";
+const fw=n=>String(n).replace(/\d/g,d=>FW[d]);
+const uid=()=>Math.random().toString(36).slice(2,10);
+const DEFAULT_CAPS=["カメラ全景","録画日数","時刻補正","画像確認","清掃完了","録画画像"];
+
+function newCam(i){return{name:"カメラ"+fw(i+1),lens:true,body:true,housing:false,image:"良好"}}
+function newPhotos(){return Array.from({length:6},(_,i)=>({id:uid(),caption:DEFAULT_CAPS[i],autoRec:false,src:null,w:0,h:0}))}
+function defaults(){
+  return{
+    company:{name:"株式会社アイベリー",zip:"〒552-0003",addr:"大阪市港区三先1丁目15-15",tel:"06-6577-8989",fax:"06-6577-7997"},
+    dateStyle:"seireki",
+    reportDate:"2025-04-01",workDate:"2025-03-21",recFrom:"2025-03-04",recTo:"2025-03-21",
+    customer:"",site:"",kind:"定期点検",jobName:"防犯カメラ保守管理業務",place:"",
+    tasks:"防犯カメラの設置状況確認。\n画角確認、ピント調整。\n録画状況確認。\nレンズ・本体清掃。\n時刻補正。",
+    cameras:Array.from({length:6},(_,i)=>newCam(i)),
+    photos:newPhotos(true),
+    remarks:"",inspector:"",witness:"",receptNo:"",
+    include:{cover:true,photos:true,record:true}
+  };
+}
+let S=defaults();
+const urls=new Map(); // photo id -> blob url for preview
+
+/* ---------- storage ---------- */
+function lsGet(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+let saveTimer=null,photoWarned=false;
+function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{
+  if(!lsSet(DRAFT_KEY,S)){
+    const lite=JSON.parse(JSON.stringify(S));lite.photos.forEach(p=>{p.src=null});
+    lsSet(DRAFT_KEY,lite);
+    if(!photoWarned){photoWarned=true;toast("写真が多いため下書きには写真を含めていません。「案件ファイル保存」で保存してください")}
+  }},700)}
+
+/* ---------- dates ---------- */
+function pd(s){if(!s)return null;const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(s);return m?{y:+m[1],m:+m[2],d:+m[3]}:null}
+function era(y,m,d){const v=y*10000+m*100+d;if(v>=20190501)return["令和",y-2018];if(v>=19890108)return["平成",y-1988];return["昭和",y-1925]}
+function fmtLong(s,sp){const p=pd(s);if(!p)return"";const g=sp?" ":"";
+  if(S.dateStyle==="wareki"){const[e,n]=era(p.y,p.m,p.d);return`${e}${n===1?"元":n}年${g}${p.m}月${g}${p.d}日`}
+  return`${p.y}年${g}${p.m}月${g}${p.d}日`}
+function fmtShort(s){const p=pd(s);return p?`${p.m}月${p.d}日`:""}
+function recDays(){const a=pd(S.recFrom),b=pd(S.recTo);if(!a||!b)return null;
+  return Math.round((Date.UTC(b.y,b.m-1,b.d)-Date.UTC(a.y,a.m-1,a.d))/864e5)+1}
+function recCaption(){return"録画日数"}
+function capOf(p){return p.autoRec?recCaption():p.caption}
+
+/* ---------- form binding ---------- */
+const simple=["customer","site","kind","jobName","place","reportDate","workDate","recFrom","recTo","tasks","remarks","inspector","witness"];
+const co={coName:"name",coZip:"zip",coAddr:"addr",coTel:"tel",coFax:"fax"};
+function syncKind(){const sel=$("kindSel");const hit=[...sel.options].some(o=>o.value===S.kind&&o.value!=="__other");
+  sel.value=hit?S.kind:"__other";$("kind").hidden=hit}
+$("kindSel").addEventListener("change",e=>{const v=e.target.value;
+  if(v==="__other"){$("kind").hidden=false;$("kind").value="";S.kind="";$("kind").focus()}else{$("kind").hidden=true;$("kind").value=v;S.kind=v}changed()});
+function fillForm(){
+  simple.forEach(k=>{$(k).value=S[k]??""});syncKind();
+  Object.entries(co).forEach(([id,k])=>{$(id).value=S.company[k]??""});
+  $("incCover").checked=S.include.cover;$("incPhotos").checked=S.include.photos;$("incRecord").checked=S.include.record;
+  document.querySelectorAll("[data-ds]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.ds===S.dateStyle)));
+  renderCams();renderPhotoForm();renderSites();
+}
+simple.forEach(k=>$(k).addEventListener("input",e=>{S[k]=e.target.value;changed(k.startsWith("rec")||k==="site")}));
+Object.entries(co).forEach(([id,k])=>$(id).addEventListener("input",e=>{S.company[k]=e.target.value;changed()}));
+[["incCover","cover"],["incPhotos","photos"],["incRecord","record"]].forEach(([id,k])=>$(id).addEventListener("change",e=>{S.include[k]=e.target.checked;changed()}));
+document.querySelectorAll("[data-ds]").forEach(b=>b.addEventListener("click",()=>{S.dateStyle=b.dataset.ds;
+  document.querySelectorAll("[data-ds]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));changed()}));
+
+let rT=null;
+function changed(refreshPhotoCaps){scheduleSave();clearTimeout(rT);rT=setTimeout(renderPreview,120);
+  if(refreshPhotoCaps)syncAutoCaps();updateHeader()}
+function updateHeader(){
+  $("subTitle").textContent=[S.site||"物件名未入力",S.workDate?fmtLong(S.workDate)+"実施":""].filter(Boolean).join("　");
+  const n=recDays();$("recHint").textContent=n&&n>0?`録画日数 ${n}日間（確認用。書類には記載されません）`:"録画期間は日数の確認用です。書類には記載されません。"}
+
+/* ---------- cameras ---------- */
+function renderCams(){
+  const box=$("cams");
+  box.innerHTML=S.cameras.map((c,i)=>`<div class="cam" data-i="${i}">
+    <input class="inp nm" value="${esc(c.name)}" aria-label="カメラ名${i+1}">
+    <div class="tg">${[["lens","レンズ清掃"],["body","本体清掃"],["housing","ハウジング"]].map(([k,t])=>`<button type="button" class="tog" data-k="${k}" aria-pressed="${c[k]}">${t}</button>`).join("")}</div>
+    <input class="inp img${c.image&&c.image!=="良好"?" bad":""}" list="imgList" value="${esc(c.image)}" aria-label="画像 ${esc(c.name)}" placeholder="画像">
+    <button type="button" class="x" title="このカメラを削除" aria-label="${esc(c.name)}を削除">×</button></div>`).join("");
+  $("camAdd").disabled=S.cameras.length>=12;
+}
+$("cams").addEventListener("input",e=>{const row=e.target.closest(".cam");if(!row)return;const c=S.cameras[+row.dataset.i];
+  if(e.target.classList.contains("nm"))c.name=e.target.value;
+  if(e.target.classList.contains("img")){c.image=e.target.value;e.target.classList.toggle("bad",!!c.image&&c.image!=="良好")}
+  changed()});
+$("cams").addEventListener("click",e=>{const row=e.target.closest(".cam");if(!row)return;const i=+row.dataset.i;
+  const t=e.target.closest(".tog");
+  if(t){const k=t.dataset.k;S.cameras[i][k]=!S.cameras[i][k];t.setAttribute("aria-pressed",String(S.cameras[i][k]));changed()}
+  if(e.target.closest(".x")){if(S.cameras.length<=1){toast("カメラは1台以上必要です");return}S.cameras.splice(i,1);renderCams();changed()}});
+$("camAdd").addEventListener("click",()=>{if(S.cameras.length>=12)return;S.cameras.push(newCam(S.cameras.length));renderCams();changed()});
+$("camAllOk").addEventListener("click",()=>{S.cameras.forEach(c=>{c.lens=true;c.body=true;c.image="良好"});renderCams();changed()});
+
+/* ---------- photos ---------- */
+function ensureUrl(p){if(!p.src)return null;if(urls.has(p.id))return urls.get(p.id);
+  try{const[h,b]=p.src.split(",");const bin=atob(b);const a=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)a[i]=bin.charCodeAt(i);
+    const u=URL.createObjectURL(new Blob([a],{type:(h.match(/data:([^;]+)/)||[])[1]||"image/jpeg"}));urls.set(p.id,u);return u}catch(e){return p.src}}
+function dropUrl(p){if(urls.has(p.id)){URL.revokeObjectURL(urls.get(p.id));urls.delete(p.id)}}
+function renderPhotoForm(){
+  const pages=Math.ceil(S.photos.length/6);let h="";
+  for(let pg=0;pg<pages;pg++){
+    h+=`<div class="ppage"><div class="ph">写真 ${pg+1}ページ目${pages>1&&pg===pages-1?` <button type="button" class="btn sm warn" data-delpage="${pg}">このページを削除</button>`:""}</div><div class="slots">`;
+    for(let j=0;j<6;j++){const i=pg*6+j,p=S.photos[i];const u=ensureUrl(p);
+      h+=`<div class="slot" data-i="${i}">
+        <div class="drop${u?" has":""}" tabindex="0" role="button" aria-label="写真${i+1}を選択">${u?`<img src="${u}" alt=""><button type="button" class="rm">外す</button>`:`クリックまたは<br>ドラッグで追加`}</div>
+        <input class="inp cap" value="${esc(capOf(p))}" placeholder="写真の説明" aria-label="写真${i+1}の説明"></div>`}
+    h+=`</div></div>`}
+  $("photos").innerHTML=h;
+}
+function syncAutoCaps(){document.querySelectorAll("#photos .slot").forEach(el=>{const p=S.photos[+el.dataset.i];
+  if(p.autoRec){const inp=el.querySelector(".cap");if(document.activeElement!==inp)inp.value=recCaption()}})}
+let pickIdx=-1;
+$("photos").addEventListener("click",e=>{
+  const dp=e.target.closest("[data-delpage]");
+  if(dp){const pg=+dp.dataset.delpage;S.photos.splice(pg*6,6).forEach(dropUrl);renderPhotoForm();changed();return}
+  const slot=e.target.closest(".slot");if(!slot)return;const i=+slot.dataset.i;
+  if(e.target.closest(".rm")){const p=S.photos[i];dropUrl(p);p.src=null;p.w=p.h=0;renderPhotoForm();changed();return}
+  if(e.target.closest(".drop")){pickIdx=i;$("phOneInput").value="";$("phOneInput").click()}});
+$("photos").addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("drop")){e.preventDefault();e.target.click()}});
+$("photos").addEventListener("input",e=>{if(!e.target.classList.contains("cap"))return;const p=S.photos[+e.target.closest(".slot").dataset.i];
+  p.caption=e.target.value;p.autoRec=false;changed()});
+$("photos").addEventListener("dragover",e=>{const d=e.target.closest(".drop");if(d){e.preventDefault();d.classList.add("over")}});
+$("photos").addEventListener("dragleave",e=>{const d=e.target.closest(".drop");if(d)d.classList.remove("over")});
+$("photos").addEventListener("drop",async e=>{const d=e.target.closest(".drop");if(!d)return;e.preventDefault();d.classList.remove("over");
+  const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith("image/"));if(!files.length)return;
+  await placeFiles(files,+d.closest(".slot").dataset.i)});
+$("phOneInput").addEventListener("change",async e=>{const f=e.target.files[0];if(f&&pickIdx>=0)await placeFiles([f],pickIdx)});
+$("phBulk").addEventListener("click",()=>{$("phBulkInput").value="";$("phBulkInput").click()});
+$("phBulkInput").addEventListener("change",async e=>{const files=[...e.target.files];if(!files.length)return;
+  let empties=S.photos.map((p,i)=>p.src?-1:i).filter(i=>i>=0);
+  while(empties.length<files.length){const start=S.photos.length;S.photos.push(...newPhotos(false));for(let j=0;j<6;j++)empties.push(start+j)}
+  await placeFiles(files,null,empties)});
+$("phAddPage").addEventListener("click",()=>{S.photos.push(...newPhotos(false));renderPhotoForm();changed()});
+
+function loadImg(src){return new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=rej;im.src=src})}
+async function shrink(file){
+  const u=URL.createObjectURL(file);
+  try{const im=await loadImg(u);const max=1600;let w=im.naturalWidth,h=im.naturalHeight;const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);
+    const c=document.createElement("canvas");c.width=w;c.height=h;const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
+    return{src:c.toDataURL("image/jpeg",.85),w,h}}finally{URL.revokeObjectURL(u)}}
+async function placeFiles(files,start,targets){
+  let n=0;
+  for(let k=0;k<files.length;k++){
+    let i=targets?targets[k]:start+k;
+    if(i>=S.photos.length){S.photos.push(...newPhotos(false))}
+    try{const r=await shrink(files[k]);const p=S.photos[i];dropUrl(p);Object.assign(p,r);n++}catch(e){toast(`${files[k].name} を読み込めませんでした`)}
+  }
+  renderPhotoForm();changed();if(n>1)toast(`${n}枚の写真を追加しました`);
+}
+
+/* ---------- sites (masters) ---------- */
+function sites(){return lsGet(SITES_KEY)||[]}
+function renderSites(){const list=sites();
+  $("siteSel").innerHTML=`<option value="">登録済み物件から呼び出し…</option>`+list.map((s,i)=>`<option value="${i}">${esc(s.site||s.customer)}${s.customer&&s.site?"（"+esc(s.customer)+"）":""}</option>`).join("");
+  $("siteDel").hidden=true}
+$("siteSel").addEventListener("change",e=>{const v=e.target.value;$("siteDel").hidden=v==="";if(v==="")return;const s=sites()[+v];if(!s)return;
+  ["customer","site","kind","jobName","place","witness"].forEach(k=>{if(s[k]!=null)S[k]=s[k]});
+  if(Array.isArray(s.cameras)&&s.cameras.length)S.cameras=s.cameras.map((n,i)=>({...newCam(i),name:n}));
+  simple.forEach(k=>{$(k).value=S[k]??""});syncKind();renderCams();changed(true);toast(`「${s.site||s.customer}」を読み込みました`)});
+$("siteSave").addEventListener("click",()=>{if(!S.site&&!S.customer){toast("物件名か宛先を入力してから登録してください");return}
+  const list=sites();const rec={customer:S.customer,site:S.site,kind:S.kind,jobName:S.jobName,place:S.place,witness:S.witness,cameras:S.cameras.map(c=>c.name)};
+  const i=list.findIndex(s=>s.site===rec.site&&s.customer===rec.customer);if(i>=0)list[i]=rec;else list.push(rec);
+  list.sort((a,b)=>(a.site||a.customer).localeCompare(b.site||b.customer,"ja"));
+  if(lsSet(SITES_KEY,list)){renderSites();toast(i>=0?"物件情報を更新しました":"物件を登録しました")}else toast("このブラウザでは物件を保存できませんでした")});
+let delArm=false;
+$("siteDel").addEventListener("click",()=>{const v=$("siteSel").value;if(v==="")return;
+  if(!delArm){delArm=true;$("siteDel").textContent="本当に削除";setTimeout(()=>{delArm=false;$("siteDel").textContent="削除"},3000);return}
+  const list=sites();list.splice(+v,1);lsSet(SITES_KEY,list);delArm=false;$("siteDel").textContent="削除";renderSites();toast("登録を削除しました")});
+
+/* ---------- new ---------- */
+let newArm=false;
+$("btnNew").addEventListener("click",()=>{
+  if(!newArm){newArm=true;$("newHint").textContent="もう一度押すと入力をクリアします（自社情報は残ります）";setTimeout(()=>{newArm=false;$("newHint").textContent=""},4000);return}
+  newArm=false;$("newHint").textContent="";const keep={company:S.company,dateStyle:S.dateStyle,include:S.include};
+  S.photos.forEach(dropUrl);const d=defaults();
+  S={...d,...keep,customer:"",site:"",place:"",witness:"",remarks:"",receptNo:"",reportDate:"",workDate:"",recFrom:"",recTo:""};
+  fillForm();changed(true);toast("新しい報告書を開始しました")});
+
+/* ---------- document pages ---------- */
+const cb=on=>`<span class="cb${on?" on":""}"></span>`;
+function coverHTML(){
+  const lines=S.tasks.split("\n").map(s=>s.trim()).filter(Boolean);
+  return`<div class="pg cv">
+  <div class="cv-title">メンテナンス報告書</div>
+  <div class="cv-date">${esc(fmtLong(S.reportDate,true))||"&nbsp;"}</div>
+  <div class="cv-to"><span>${esc(S.customer)}</span><span>様</span></div>
+  <div class="cv-from">${esc(S.company.zip)}<br>${esc(S.company.addr)}<br><span class="nm">${esc(S.company.name)}</span><br>TEL ${esc(S.company.tel)}　FAX ${esc(S.company.fax)}</div>
+  <div class="cv-msg">「${esc(S.jobName)}」に於けるメンテナンス作業について、<br>下記のとおり報告いたします。</div>
+  <div class="cv-ki">記</div>
+  <table class="cv-tbl">
+    <tr><td class="k">業務名</td><td class="v">${esc(S.jobName)}</td></tr>
+    <tr><td class="k">実施日</td><td class="v">${esc(fmtLong(S.workDate))}</td></tr>
+    <tr><td class="k">実施場所</td><td class="v">${esc(S.place)||"&nbsp;"}</td></tr>
+    <tr><td class="k">実施内容</td><td class="lines">${(lines.length?lines:[""]).map(l=>`<div>${esc(l)||"&nbsp;"}</div>`).join("")}</td></tr>
+  </table>
+  <div class="cv-end">以上</div></div>`}
+function photoPagesHTML(){
+  const out=[];
+  for(let pg=0;pg*6<S.photos.length;pg++){
+    const cells=S.photos.slice(pg*6,pg*6+6).map(p=>{const u=ensureUrl(p);
+      return`<div><div class="pp-box">${u?`<img src="${u}" alt="">`:`<span class="em">写真未登録</span>`}</div><div class="pp-cap">${esc(capOf(p))||"&nbsp;"}</div></div>`}).join("");
+    out.push(`<div class="pg pp"><div class="pp-h">${esc(S.site)||"&nbsp;"}</div><div class="pp-s">${esc(S.kind)||"&nbsp;"}</div><div class="pp-g">${cells}</div></div>`)}
+  return out}
+function recordHTML(who){
+  const n=S.cameras.length;const rh=n<=6?7.6:n<=8?6.6:n<=10?5.6:4.9;
+  const rmH=n<=6?34:n<=8?26:n<=10?20:15;
+  const rows=S.cameras.map(c=>`<tr style="height:${rh}mm"><td class="nm" rowspan="2">${esc(c.name)}</td><td class="kd">本体</td>
+    <td class="ct"><span class="ci">${cb(c.lens)}レンズ清掃</span><span class="ci">${cb(c.body)}本体清掃</span><span class="ci">${cb(c.housing)}ハウジング</span></td></tr>
+    <tr style="height:${rh}mm"><td class="kd">画像</td><td class="ct">${esc(c.image)}</td></tr>`).join("");
+  return`<div class="pg rc">
+  <div class="rc-top"><span class="who">${who}</span><span class="maru">控</span></div>
+  <div class="rc-frame">
+    <div class="rc-date">${esc(fmtLong(S.reportDate,true))||"&nbsp;"}</div>
+    <div class="rc-title">防犯カメラ　点検記録</div>
+    <div class="rc-mid">
+      <div class="rc-to"><span>${esc(S.customer)}</span><span>様</span></div>
+      <div class="rc-co">${esc(S.company.name)}<br>${esc(S.company.zip)}<br>${esc(S.company.addr)}<br>TEL　${esc(S.company.tel)}<br>FAX　${esc(S.company.fax)}</div>
+    </div>
+    <table class="rc-tbl">${rows}</table>
+    <div class="rc-rm">備考<div class="t" style="height:${rmH}mm">${esc(S.remarks)}</div></div>
+    <table class="rc-sg">
+      <tr><td class="lb">点検担当者</td><td>${esc(S.inspector)}</td><td class="in">印</td></tr>
+      <tr><td class="lb">立会者</td><td>${esc(S.witness)}</td><td class="in">印</td></tr>
+    </table>
+  </div></div>`}
+function pagesList(){
+  const p=[];
+  if(S.include.cover)p.push({lbl:"メンテナンス報告書",html:coverHTML()});
+  if(S.include.photos)photoPagesHTML().forEach((h,i,a)=>p.push({lbl:"写真報告"+(a.length>1?` ${i+1}/${a.length}`:""),html:h}));
+  if(S.include.record){p.push({lbl:"点検記録（お客様控）",html:recordHTML("お客様")});p.push({lbl:"点検記録（弊社控）",html:recordHTML("弊社")})}
+  return p}
+
+const MM=96/25.4, PW=210*MM, PH=297*MM;
+function renderPreview(){
+  const st=$("stage");const pages=pagesList();
+  const avail=Math.max(200,st.clientWidth-32);const k=Math.min(1,avail/PW);
+  st.innerHTML=pages.length?pages.map(p=>`<div class="pgw" style="width:${PW*k}px;height:${PH*k}px;margin-top:14px"><span class="lbl">${p.lbl}</span>${p.html.replace('<div class="pg','<div style="transform:scale('+k+')" class="pg')}</div>`).join("")
+    :`<p style="color:var(--muted);margin:40px 0">出力する書類が選ばれていません。上のチェックから選んでください。</p>`;
+  $("pgCount").textContent=pages.length?`${pages.length}ページ`:"";
+}
+window.addEventListener("resize",()=>{clearTimeout(rT);rT=setTimeout(renderPreview,120)});
+
+/* ---------- file save ---------- */
+let dl=null;
+async function saveFile(filename,data){
+  try{if(!dl&&window.claude&&window.claude.use)dl=await window.claude.use("downloads")}catch(e){dl=null}
+  if(dl){try{await dl.save({filename,data});toast(`${filename} を保存しました`);return}
+    catch(e){if(e&&e.code==="declined"){toast("保存をキャンセルしました");return}
+      if(e&&(e.code==="rate_limited")){toast("保存の確認が開いています。少し待ってからもう一度押してください");return}
+      if(e&&e.code==="too_large"){toast("ファイルが大きすぎて保存できません。写真の枚数を減らしてください");return}}}
+  const blob=data instanceof Blob?data:new Blob([data]);const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);toast(`${filename} を出力しました`)}
+function baseName(){const d=(S.workDate||S.reportDate||"").replace(/-/g,"");return[S.receptNo?"No"+S.receptNo:"",d,S.site||S.customer||"報告書"].filter(Boolean).join("_").replace(/[\\/:*?"<>|]/g,"_")}
+
+$("btnSave").addEventListener("click",()=>saveFile(baseName()+"_保守報告.json",JSON.stringify({app:"cam-maint",v:1,data:S})));
+$("btnLoad").addEventListener("click",()=>{$("fileLoad").value="";$("fileLoad").click()});
+$("fileLoad").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;
+  try{const j=JSON.parse(await f.text());const d=j&&j.data?j.data:j;if(!d||!Array.isArray(d.cameras))throw 0;
+    S.photos.forEach(dropUrl);S={...defaults(),...d,company:{...defaults().company,...(d.company||{})},include:{...defaults().include,...(d.include||{})}};
+    S.photos=(S.photos&&S.photos.length?S.photos:newPhotos(true)).map(p=>({id:p.id||uid(),caption:p.caption||"",autoRec:!!p.autoRec,src:p.src||null,w:p.w||0,h:p.h||0}));
+    fillForm();changed(true);toast("案件ファイルを読み込みました")}catch(err){toast("このファイルは読み込めませんでした。保存した案件ファイル（.json）を選んでください")}});
+
+/* ---------- libs ---------- */
+const libs={};
+function loadLib(src){if(libs[src])return libs[src];return libs[src]=new Promise((res,rej)=>{const s=document.createElement("script");s.src=src;s.onload=res;s.onerror=()=>{delete libs[src];rej(new Error("load"))};document.head.appendChild(s)})}
+function busy(btn,on,txt){btn.disabled=on;if(on){btn.dataset.t=btn.textContent;btn.textContent=txt}else if(btn.dataset.t)btn.textContent=btn.dataset.t}
+
+/* ---------- PDF ---------- */
+$("btnPdf").addEventListener("click",async()=>{
+  const pages=pagesList();if(!pages.length){toast("出力する書類を選んでください");return}
+  const btn=$("btnPdf");busy(btn,true,"PDF作成中…");
+  try{
+    await Promise.all([loadLib("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"),loadLib("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")]);
+    try{await document.fonts.ready}catch(e){}
+    const pdf=new window.jspdf.jsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true});
+    const stage=$("exportStage");stage.className="exporting";
+    for(let i=0;i<pages.length;i++){
+      btn.textContent=`PDF作成中… ${i+1}/${pages.length}`;
+      stage.innerHTML=pages[i].html;const el=stage.firstElementChild;
+      await Promise.all([...el.querySelectorAll("img")].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r})));
+      const c=await window.html2canvas(el,{scale:2.4,backgroundColor:"#ffffff",logging:false,useCORS:true});
+      if(i)pdf.addPage();pdf.addImage(c.toDataURL("image/jpeg",.9),"JPEG",0,0,210,297,undefined,"FAST");
+    }
+    stage.innerHTML="";
+    await saveFile(baseName()+"_保守報告書.pdf",pdf.output("blob"));
+  }catch(e){console.error(e);toast("PDFを作れませんでした。通信状態を確認してもう一度お試しください")}
+  finally{busy(btn,false)}});
+
+/* ---------- Excel ---------- */
+$("btnXlsx").addEventListener("click",async()=>{
+  if(!S.include.cover&&!S.include.photos&&!S.include.record){toast("出力する書類を選んでください");return}
+  const btn=$("btnXlsx");busy(btn,true,"Excel作成中…");
+  try{await loadLib("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js");
+    const buf=await buildXlsx();
+    await saveFile(baseName()+"_保守報告書.xlsx",new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  }catch(e){console.error(e);toast("Excelを作れませんでした。通信状態を確認してもう一度お試しください")}
+  finally{busy(btn,false)}});
+
+async function buildXlsx(){
+  const wb=new ExcelJS.Workbook();wb.creator=S.company.name;wb.created=new Date();
+  const FN="ＭＳ Ｐゴシック";
+  const thin={style:"thin"},hair={style:"hair"},dot={style:"dotted"};
+  const put=(ws,addr,v,o={})=>{const c=ws.getCell(addr);c.value=v;c.font={name:FN,size:o.size||11,bold:!!o.bold,color:o.color?{argb:o.color}:undefined};
+    c.alignment={horizontal:o.h||"left",vertical:o.v||"middle",wrapText:!!o.wrap,shrinkToFit:!!o.shrink};return c};
+  const box=(ws,r1,c1,r2,c2,b=thin)=>{for(let r=r1;r<=r2;r++)for(let c=c1;c<=c2;c++){const cell=ws.getCell(r,c);const o={...(cell.border||{})};
+    if(r===r1)o.top=b;if(r===r2)o.bottom=b;if(c===c1)o.left=b;if(c===c2)o.right=b;cell.border=o}};
+  const under=(ws,r,c1,c2,b=thin)=>{for(let c=c1;c<=c2;c++){const cell=ws.getCell(r,c);cell.border={...(cell.border||{}),bottom:b}}};
+  const setup=(ws,last,lastCol,fitH)=>{ws.pageSetup={paperSize:9,orientation:"portrait",fitToPage:true,fitToWidth:1,fitToHeight:fitH,horizontalCentered:true,
+    margins:{left:.5,right:.4,top:.5,bottom:.4,header:.2,footer:.2},printArea:`A1:${lastCol}${last}`};ws.views=[{showGridLines:false}]};
+  const COL="ABCDEFGHIJKLM";
+
+  /* 報告書 */
+  if(S.include.cover){
+    const ws=wb.addWorksheet("報告書");
+    [13,4,13,13,13,13,15].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    for(let r=1;r<=40;r++)ws.getRow(r).height=20;
+    ws.getRow(1).height=36;ws.mergeCells("A1:G1");put(ws,"A1","メンテナンス報告書",{size:16,bold:true,h:"center"});
+    ws.mergeCells("E2:G2");put(ws,"E2",fmtLong(S.reportDate,true),{size:12,h:"right"});
+    ws.getRow(4).height=28;ws.mergeCells("A4:C4");put(ws,"A4",S.customer,{size:14});put(ws,"D4","様",{size:14,h:"right"});under(ws,4,1,4);
+    ws.getRow(5).height=78;ws.mergeCells("E5:G5");
+    put(ws,"E5",`${S.company.zip}\n${S.company.addr}\n${S.company.name}\nTEL ${S.company.tel}　FAX ${S.company.fax}`,{wrap:true,v:"top",size:10.5});
+    ws.getRow(7).height=44;ws.mergeCells("A7:G7");put(ws,"A7",`「${S.jobName}」に於けるメンテナンス作業について、\n下記のとおり報告いたします。`,{wrap:true,h:"center",size:12});
+    ws.mergeCells("A9:G9");put(ws,"A9","記",{h:"center",size:12});
+    const field=(r,label,val)=>{ws.getRow(r).height=24;put(ws,`A${r}`,label,{size:12,h:"distributed"});ws.mergeCells(`C${r}:G${r}`);put(ws,`C${r}`,val,{size:12});under(ws,r,3,7,dot)};
+    field(11,"業務名",S.jobName);field(13,"実施日",fmtLong(S.workDate));field(15,"実施場所",S.place);
+    const lines=S.tasks.split("\n").map(s=>s.trim()).filter(Boolean);let r=17;
+    (lines.length?lines:[""]).forEach((l,i)=>{if(i===0)field(r,"実施内容",l);else{ws.getRow(r).height=24;ws.mergeCells(`C${r}:G${r}`);put(ws,`C${r}`,l,{size:12});under(ws,r,3,7,dot)}r++});
+    put(ws,`G${r+1}`,"以上",{h:"right",size:12});
+    setup(ws,r+1,"G",1);
+  }
+
+  /* 写真 */
+  if(S.include.photos){
+    const ws=wb.addWorksheet("写真");
+    const widths=[2,9,9,9,9,9,2,9,9,9,9,9,2];widths.forEach((w,i)=>ws.getColumn(i+1).width=w);
+    const PHR=14,ROWPT=16,PAGE=3+3*(PHR+2);
+    const colPx=Math.floor((9*7+5)/7*256)/256*7, rowPx=ROWPT*96/72;
+    const pages=Math.ceil(S.photos.length/6);
+    for(let pg=0;pg<pages;pg++){
+      const b=pg*PAGE+1;
+      ws.getRow(b).height=22;ws.mergeCells(b,2,b,12);put(ws,`B${b}`,S.site,{size:14,bold:true,h:"center"});
+      ws.getRow(b+1).height=20;ws.mergeCells(b+1,2,b+1,12);put(ws,`B${b+1}`,S.kind,{size:12,bold:true,h:"center"});
+      ws.getRow(b+2).height=8;
+      for(let blk=0;blk<3;blk++){
+        const s=b+3+blk*(PHR+2);
+        for(let r=s;r<s+PHR;r++)ws.getRow(r).height=ROWPT;
+        ws.getRow(s+PHR).height=20;ws.getRow(s+PHR+1).height=8;
+        [[2,6],[8,12]].forEach(([c1,c2],side)=>{
+          const p=S.photos[pg*6+blk*2+side];
+          ws.mergeCells(s,c1,s+PHR-1,c2);box(ws,s,c1,s+PHR-1,c2);
+          ws.mergeCells(s+PHR,c1,s+PHR,c2);put(ws,`${COL[c1-1]}${s+PHR}`,p?capOf(p):"",{bold:true,h:"center",shrink:true});box(ws,s+PHR,c1,s+PHR,c2);
+          if(p&&p.src){
+            const bw=5*colPx-6,bh=PHR*rowPx-6;const k=Math.min(bw/p.w,bh/p.h);const iw=p.w*k,ih=p.h*k;
+            const id=wb.addImage({base64:p.src,extension:"jpeg"});
+            const L=(c1-1)+(3+(bw-iw)/2)/colPx, T=(s-1)+(3+(bh-ih)/2)/rowPx;
+            ws.addImage(id,{tl:{col:L,row:T},br:{col:L+iw/colPx,row:T+ih/rowPx},editAs:"oneCell"});
+          }});
+      }
+      if(pg<pages-1)ws.getRow(b+PAGE-1).addPageBreak();
+    }
+    setup(ws,pages*PAGE,"M",0);
+  }
+
+  /* 点検記録 */
+  if(S.include.record){
+    const ws=wb.addWorksheet("点検記録");
+    [2,9,8,7,13,13,13,9,6,2].forEach((w,i)=>ws.getColumn(i+1).width=w);
+    const n=S.cameras.length;const rh=n<=6?18:n<=8?16:n<=10?14:12.5;
+    const block=(st,who)=>{
+      for(let r=st;r<st+60;r++)ws.getRow(r).height=18;
+      ws.mergeCells(st+1,6,st+1,8);put(ws,`F${st+1}`,`${who}　　　`,{bold:true,h:"right"});under(ws,st+1,6,8);put(ws,`I${st+1}`,"(控)",{bold:true,h:"center"});
+      ws.mergeCells(st+3,6,st+3,9);put(ws,`F${st+3}`,fmtLong(S.reportDate,true),{h:"right"});
+      ws.mergeCells(st+5,3,st+6,8);put(ws,`C${st+5}`,"防犯カメラ　点検記録",{size:22,h:"center"});
+      ws.mergeCells(st+9,2,st+10,4);put(ws,`B${st+9}`,S.customer,{size:15,shrink:true});put(ws,`E${st+10}`,"様",{size:15,h:"left"});
+      under(ws,st+10,2,5);
+      [S.company.name,S.company.zip,S.company.addr,"TEL　"+S.company.tel,"FAX　"+S.company.fax].forEach((t,i)=>{ws.mergeCells(st+8+i,7,st+8+i,9);put(ws,`G${st+8+i}`,t,{size:10})});
+      let r=st+15;
+      S.cameras.forEach(c=>{
+        ws.getRow(r).height=rh;ws.getRow(r+1).height=rh;
+        ws.mergeCells(r,2,r+1,3);put(ws,`B${r}`,c.name,{h:"center",shrink:true});box(ws,r,2,r+1,3);
+        put(ws,`D${r}`,"本体",{h:"center"});box(ws,r,4,r,4);put(ws,`D${r+1}`,"画像",{h:"center"});box(ws,r+1,4,r+1,4);
+        ws.mergeCells(r,5,r,9);put(ws,`E${r}`,`${c.lens?"☑":"□"}レンズ清掃　${c.body?"☑":"□"}本体清掃　${c.housing?"☑":"□"}ハウジング`);box(ws,r,5,r,9);
+        ws.mergeCells(r+1,5,r+1,9);put(ws,`E${r+1}`,c.image);box(ws,r+1,5,r+1,9);
+        r+=2});
+      const rmRows=n<=6?6:n<=9?4:3;
+      put(ws,`B${r}`,"備考",{h:"center"});ws.mergeCells(r+1,2,r+rmRows,9);put(ws,`B${r+1}`,S.remarks,{wrap:true,v:"top"});box(ws,r,2,r+rmRows,9);
+      r+=rmRows+1;
+      [["点検担当者",S.inspector],["立会者",S.witness]].forEach(([l,v])=>{
+        ws.mergeCells(r,2,r+1,4);put(ws,`B${r}`,l,{h:"center"});box(ws,r,2,r+1,4);
+        ws.mergeCells(r,5,r+1,8);put(ws,`E${r}`,v,{h:"center"});box(ws,r,5,r+1,8);
+        ws.mergeCells(r,9,r+1,9);put(ws,`I${r}`,"印",{h:"center",color:"FFAAAAAA"});box(ws,r,9,r+1,9);r+=2});
+      box(ws,st+2,1,r,10,{style:"dashed"});
+      return r+1};
+    const end1=block(1,"お客様");
+    ws.getRow(end1).addPageBreak();
+    const end2=block(end1+1,"弊社");
+    setup(ws,end2,"J",0);
+  }
+  return wb.xlsx.writeBuffer();
+}
+
+/* ---------- 連携シート ---------- */
+const LINK_SAMPLE="■現調・完了図書作成アプリ用　連携シート\t\n受付No指定\t1234\n\t\n受付日\t2025/9/10\n請負会社\tアイベリー\n営業担当者\t山田\n工事担当\tパートナー\n顧客名\tサンプル台ハイツ管理組合\n物件名\tサンプル台ハイツ\n物件住所\t港区〇〇町1-2-3\n案件分類\t保守点検\n工事名\t防犯カメラ保守管理業務\n顧客担当者名\t佐藤　一郎";
+const LINK_MAP=[["受付No","receptNo"],["顧客担当者","witness"],["顧客名","customer"],["物件住所","place"],["物件名","site"],["工事名","jobName"]];
+const LINK_LABEL={receptNo:"受付No",witness:"立会者",customer:"宛先",place:"実施場所",site:"物件名",jobName:"業務名"};
+function parseLink(text){const out={};
+  text.split(/\r?\n/).forEach(line=>{const m=/^\s*([^\t]+?)\s*(?:\t+|\s{2,}|　{1,})(.*)$/.exec(line);if(!m)return;
+    const label=m[1].replace(/[\s　]/g,""),val=m[2].replace(/\t/g," ").trim();if(!val)return;
+    const hit=LINK_MAP.find(([k])=>label.startsWith(k));if(hit&&!(hit[1] in out))out[hit[1]]=val});
+  return out}
+function applyLink(){const r=parseLink($("linkText").value);const keys=Object.keys(r);
+  if(!keys.length){$("linkResult").textContent="読み取れる項目がありませんでした。「項目名」と「値」がタブ区切りのまま貼り付けてください。";return}
+  keys.forEach(k=>{S[k]=r[k]});simple.forEach(k=>{$(k).value=S[k]??""});syncKind();changed(true);
+  $("linkResult").textContent="反映："+keys.map(k=>LINK_LABEL[k]).join("・");toast(`${keys.length}項目を反映しました`)}
+$("linkApply").addEventListener("click",applyLink);
+$("linkText").addEventListener("paste",()=>setTimeout(applyLink,0));
+$("linkSample").addEventListener("click",()=>{$("linkText").value=LINK_SAMPLE;applyLink()});
+$("linkClear").addEventListener("click",()=>{$("linkText").value="";$("linkResult").textContent=""});
+
+/* ---------- toast ---------- */
+let tT=null;
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(tT);tT=setTimeout(()=>{t.hidden=true},3200)}
+
+/* ---------- boot ---------- */
+const draft=lsGet(DRAFT_KEY);
+if(draft&&Array.isArray(draft.cameras)){const d=defaults();S={...d,...draft,company:{...d.company,...(draft.company||{})},include:{...d.include,...(draft.include||{})}};
+  S.photos=(S.photos&&S.photos.length?S.photos:newPhotos(true)).map(p=>({id:p.id||uid(),caption:p.caption||"",autoRec:!!p.autoRec,src:p.src||null,w:p.w||0,h:p.h||0}))}
+fillForm();updateHeader();renderPreview();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(renderPreview);
+window.__app={get S(){return S},buildXlsx,pagesList};
+})();
+</script>
+
+</body></html>

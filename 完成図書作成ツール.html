@@ -66,6 +66,30 @@
   /* photo entries — 2-up grid (前後 横並び) */
   #locs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   @media(max-width:680px){#locs{grid-template-columns:1fr}}
+  .ltools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+  .seg button{font:inherit;font-size:13px;font-weight:600;border:none;background:#fff;color:var(--ink-soft);padding:9px 14px;cursor:pointer}
+  .seg button+button{border-left:1px solid var(--line)}
+  .seg button.on{background:var(--ink);color:#fff}
+  .ltools-hint{font-size:12px;color:var(--ink-soft)}
+  button.badge{border:none;cursor:pointer;font:inherit;font-weight:700;font-size:12.5px}
+  button.badge:hover{background:var(--accent)}
+  #locs.compact{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:9px}
+  .pgsep{grid-column:1/-1;display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--ink-soft);margin-top:4px}
+  .pgsep::after{content:"";flex:1;border-top:1px dashed var(--line)}
+  .pgsep:first-child{margin-top:0}
+  .mini{background:var(--surface);border:1px solid var(--line-soft);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;cursor:grab;user-select:none;position:relative}
+  .mini:active{cursor:grabbing}
+  .mini.dragging{opacity:.35}
+  .mini.drop-target{outline:3px solid var(--accent);outline-offset:-1px}
+  .mini .th{aspect-ratio:4/3;background:var(--field);display:grid;place-items:center;overflow:hidden}
+  .mini .th img{width:100%;height:100%;object-fit:contain;background:#fff;pointer-events:none}
+  .mini .th span{font-size:11px;color:var(--ink-soft)}
+  .mini .mi{display:flex;align-items:center;gap:5px;padding:5px 6px}
+  .mini .badge{font-size:11px;padding:2px 6px}
+  .mini .kd{font-size:11px;font-weight:700;color:var(--ink)}
+  .mini .kd.before{color:var(--before)} .mini .kd.after{color:var(--after)}
+  .mini .pl{padding:0 6px 6px;font-size:10.5px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pcard{background:var(--surface);border:1px solid var(--line-soft);border-radius:12px;box-shadow:var(--shadow);
     display:flex;flex-direction:column;gap:9px;padding:12px 13px}
   .pcard.dragging{opacity:.4}
@@ -137,6 +161,21 @@
   .add-loc{flex:1;min-width:200px;border:1.5px dashed var(--line);background:transparent;color:var(--ink);
     border-radius:12px;padding:14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
   .add-loc:hover{border-color:var(--accent);color:var(--accent);background:#fff}
+  .bulk{display:flex;align-items:center;gap:14px;flex-wrap:wrap;border:1.5px dashed var(--line);border-radius:12px;background:var(--surface);padding:14px 16px;margin:14px 0}
+  .bulk.over{border-color:var(--accent);background:#FFF4F0;border-style:solid}
+  .bulk-txt{flex:1;min-width:240px;display:flex;flex-direction:column;gap:3px}
+  .bulk-txt b{font-size:14px}
+  .bulk-txt span{font-size:12.5px;color:var(--ink-soft)}
+  .bulk-opt{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .bulk-opt label{font-size:12px;color:var(--ink-soft);display:flex;align-items:center;gap:6px}
+  .bulk-opt select{width:auto;padding:7px 9px;font-size:13px}
+  .bulk-set{flex-basis:100%;border-top:1px solid var(--line-soft);padding-top:11px;display:flex;flex-direction:column;gap:8px}
+  .bs-h{font-size:12px;font-weight:700;color:var(--ink)}
+  .bs-row{display:flex;gap:10px;flex-wrap:wrap}
+  .bulk-set label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:600;color:var(--ink-soft)}
+  .bulk-set label[hidden]{display:none}
+  .bulk-set input,.bulk-set select{background:#fff;font-size:13px;padding:7px 9px}
+  .bs-kind{width:210px} .bs-label{width:160px} .bs-place{flex:1;min-width:180px}
   .add-loc.sub{flex:0 0 auto;min-width:0;color:var(--ink-soft);font-weight:500;font-size:13px;padding:14px 18px}
   .add-loc:disabled{opacity:.5;cursor:default}
   .add-loc .plus{font-size:18px;line-height:1}
@@ -357,6 +396,45 @@
       <span class="hint">場所ごとに 施工前／施工後 の写真を登録</span>
     </div>
     <p class="lead">既定は 施工前（左）／施工後（右）の横並びです。写真ごとに区分（施工前／施工中／施工後／自由入力）と場所を設定でき、ハンドル（≡）のドラッグや↑↓で順番も変更できます。1ページ6枚で、枚数の上限はありません（必要なページ数だけ自動で増えます）。番号はExcelと同じ並びで自動採番されます。</p>
+    <div class="bulk" id="bulkZone">
+      <div class="bulk-txt"><b>写真をまとめて追加</b><span>複数の写真を選ぶか、ここにまとめてドラッグ＆ドロップ。空いている枠から順に入り、足りない分は 施工前・施工後 の順で自動で追加されます。</span></div>
+      <div class="bulk-opt">
+        <label>並び順
+          <select id="bulkOrder">
+            <option value="name">ファイル名順</option>
+            <option value="date">撮影（更新）日時順</option>
+            <option value="pick">選んだ順</option>
+          </select>
+        </label>
+        <button class="btn small" id="bulkPick" type="button">写真をまとめて選ぶ</button>
+      </div>
+      <div class="bulk-set">
+        <div class="bs-h">まとめて設定（追加する写真すべてに同じ内容を入れます）</div>
+        <div class="bs-row">
+          <label class="bs-kind">区分
+            <select id="bulkKind">
+              <option value="auto">自動（施工前・施工後を交互）</option>
+              <option value="before">施工前</option>
+              <option value="during">施工中</option>
+              <option value="after">施工後</option>
+              <option value="custom">自由入力</option>
+            </select>
+          </label>
+          <label class="bs-label" id="bulkLabelWrap" hidden>見出し<input type="text" id="bulkLabel" placeholder="例）是正前"></label>
+          <label class="bs-place">場所<input type="text" id="bulkPlace" placeholder="空欄なら入れません"></label>
+        </div>
+        <label class="bs-cmt">コメント<input type="text" id="bulkCmt" placeholder="空欄なら入れません"></label>
+      </div>
+      <input type="file" id="bulkFile" accept="image/*" multiple style="display:none">
+    </div>
+    <div class="ltools">
+      <div class="seg" id="viewSeg">
+        <button type="button" data-view="detail" class="on">詳細表示</button>
+        <button type="button" data-view="compact">並べ替え表示（小さく一覧）</button>
+      </div>
+      <button type="button" class="btn small alt" id="interleaveBtn" title="施工前と施工後を 前1・後1・前2・後2… の順に並べ替えます">前後を交互に並べる</button>
+      <span class="ltools-hint" id="viewHint">No.を押すと番号を指定して移動できます</span>
+    </div>
     <div id="locs"></div>
     <div class="addrow">
       <button class="add-loc" id="addPair"><span class="plus">＋</span> 前後ペアを追加（施工前・施工後）</button>
@@ -398,11 +476,14 @@
         <div class="help-h">3. 現場写真</div>
         <ul>
           <li><b>追加</b>：「前後ペアを追加」で施工前＋施工後の2枚、「1枚だけ追加」で1枚を追加。</li>
+          <li><b>まとめて追加</b>：「写真をまとめて選ぶ」で複数選択、または点線の枠へまとめてドラッグ＆ドロップ。空いている枠から順に入り、足りない分は施工前・施工後の順で枠が自動で増えます。並び順はファイル名順／撮影（更新）日時順／選んだ順から選べます。「まとめて設定」で区分・場所・コメントを指定すると、追加する写真すべてに同じ内容が入ります（区分「自動」は施工前・施工後を交互、場所・コメントは空欄なら入れません）。</li>
           <li><b>写真</b>：枠をクリックまたはドラッグ&ドロップで登録。640×640以内に自動縮小・鮮鋭化されます（縮小専用と同じ設定。事前の縮小は不要です）。</li>
           <li><b>区分</b>：施工前／施工中／施工後／自由入力から選択。Excelの見出しに反映されます。</li>
           <li><b>場所</b>：空欄のときは「場所：」の表記も出ません。</li>
           <li><b>コメント</b>：写真ごとに入力可。写真は一律サイズのまま、コメント欄が内容に応じて伸縮し、左右で高さが揃います。</li>
-          <li><b>並べ替え</b>：ハンドル（≡）をドラッグ、または↑↓で順番変更。番号は自動採番されます。</li>
+          <li><b>並べ替え</b>：ハンドル（≡）のドラッグ、↑↓、またはNo.を押して移動先の番号を入力。番号は自動採番されます。</li>
+          <li><b>並べ替え表示</b>：「並べ替え表示（小さく一覧）」に切り替えると、写真がサムネイルで一覧になり、写真ごとドラッグで動かせます（ページの区切りも表示）。ダブルクリックでその写真の詳細へ戻ります。</li>
+          <li><b>前後を交互に並べる</b>：施工前・施工後をまとめて追加したあとに押すと、「前1・後1・前2・後2…」の順に自動で並べ替えます。施工中・自由入力の写真は最後にまとめます。</li>
           <li><b>改ページ</b>：各写真の上の「この写真から新しいページにする」をオンにすると、その写真から新しいページが始まります（ページ途中でも区切れます）。</li>
           <li>写真のない枠・空きページは印刷範囲から自動で除外されます。枚数の上限はなく、必要なページ数だけ自動で増えます（1ページ最大6枚）。</li>
         </ul>
@@ -604,8 +685,63 @@ function processImage(file){
 // ---------- render photos ----------
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}
 
+let viewMode='detail';
+function moveByNumber(i){
+  const v=prompt(`No.${i+1} をどの番号へ移動しますか？（1〜${photos.length}）`, String(i+1));
+  if(v===null) return;
+  const n=parseInt(String(v).replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0)),10);
+  if(!n||n<1||n>photos.length){ setStatus('1〜'+photos.length+' の番号を入力してください','err'); return; }
+  move(i,n-1); setStatus(`No.${i+1} を No.${n} へ移動しました`,'ok');
+}
+function renderCompact(root){
+  root.className='compact';
+  // ページ区切り（出力と同じルール：写真/場所のある枠を最大6枚ずつ、改ページ指定で区切る）
+  let cnt=0, page=0;
+  photos.forEach((p,i)=>{
+    if(meaningful(p)){
+      if(cnt===0 || p.pageBreak || cnt>=6){ page++; cnt=0; root.appendChild(elc('div','pgsep',page+'ページ目')); }
+      cnt++;
+    }
+    const el=document.createElement('div'); el.className='mini'; el.dataset.idx=i; el.draggable=true;
+    const kind = p.kind==='custom' ? (p.label||'自由入力') : (KIND_LABEL[p.kind]||'');
+    el.innerHTML=`<div class="th">${p.img?`<img src="${p.img.url}" alt="">`:'<span>写真なし</span>'}</div>
+      <div class="mi"><button class="badge" type="button" title="番号を指定して移動">No.${i+1}</button><span class="kd ${p.kind}">${esc(kind)}</span></div>
+      <div class="pl">${p.place?esc(p.place):'&nbsp;'}</div>`;
+    el.querySelector('.badge').addEventListener('click',e=>{ e.stopPropagation(); moveByNumber(i); });
+    el.addEventListener('dblclick',()=>{ setView('detail'); const c=document.querySelector(`#locs .pcard[data-idx="${i}"]`); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); });
+    el.addEventListener('dragstart',e=>{ dragFrom=i; el.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; try{e.dataTransfer.setData('text/plain',String(i));}catch(_){} });
+    el.addEventListener('dragend',()=>{ el.classList.remove('dragging'); document.querySelectorAll('.mini.drop-target').forEach(c=>c.classList.remove('drop-target')); dragFrom=null; });
+    el.addEventListener('dragover',e=>{ if(dragFrom===null) return; e.preventDefault(); e.dataTransfer.dropEffect='move'; el.classList.add('drop-target'); });
+    el.addEventListener('dragleave',()=>el.classList.remove('drop-target'));
+    el.addEventListener('drop',e=>{ if(dragFrom===null) return; e.preventDefault(); el.classList.remove('drop-target'); const to=i; const fr=dragFrom; dragFrom=null; if(fr!==to) move(fr,to); });
+    root.appendChild(el);
+  });
+}
+function setView(v){
+  viewMode=v;
+  document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+  $('viewHint').textContent = v==='compact' ? '写真をドラッグして移動／No.を押すと番号指定で移動／ダブルクリックで詳細へ' : 'No.を押すと番号を指定して移動できます';
+  render();
+}
+function interleavePhotos(){
+  const bs=photos.filter(p=>p.kind==='before'), as=photos.filter(p=>p.kind==='after'), others=photos.filter(p=>p.kind!=='before'&&p.kind!=='after');
+  if(!bs.length||!as.length){ setStatus('施工前と施工後の写真が両方必要です','err'); return; }
+  let msg=`施工前 ${bs.length}枚・施工後 ${as.length}枚 を「前1・後1・前2・後2…」の順に並べ替えます。`;
+  if(others.length) msg+=`\n施工中・自由入力の ${others.length}枚 は最後にまとめて並べます。`;
+  if(bs.length!==as.length) msg+=`\n※枚数が違うため、余った分は後ろに並びます。`;
+  if(!confirm(msg+'\nよろしいですか？')) return;
+  const out=[]; const n=Math.max(bs.length,as.length);
+  for(let k=0;k<n;k++){ if(bs[k]) out.push(bs[k]); if(as[k]) out.push(as[k]); }
+  photos=out.concat(others);
+  render(); updateCounts(); scheduleAutosave();
+  setStatus('施工前・施工後を交互に並べ替えました','ok');
+}
 function render(){
   const root=$('locs'); root.innerHTML='';
+  const full=photos.length>=MAX_PHOTOS;
+  $('addPair').disabled = full; $('addOne').disabled = full;
+  if(viewMode==='compact'){ renderCompact(root); return; }
+  root.className='';
   photos.forEach((p,i)=>{
     const no=i+1;
     const el=document.createElement('div'); el.className='pcard'+((p.pageBreak&&i>0)?' brk':''); el.dataset.idx=i;
@@ -618,7 +754,7 @@ function render(){
       ${i>0?`<label class="brkrow"><input type="checkbox" data-act="break" ${p.pageBreak?'checked':''}>この写真から新しいページにする</label>`:''}
       <div class="ptop">
         <div class="handle" title="ドラッグで並べ替え" draggable="true">≡</div>
-        <span class="badge">No.${no}</span>
+        <button class="badge" type="button" data-act="moveto" title="番号を指定して移動">No.${no}</button>
         <span class="sp"></span>
         <div class="ptools">
           <button class="icon-btn" data-act="up" ${i===0?'disabled':''} title="前へ">↑</button>
@@ -646,6 +782,7 @@ function render(){
     const lab=el.querySelector('[data-act="label"]'); if(lab) lab.addEventListener('input',e=>{p.label=e.target.value;scheduleAutosave();});
     el.querySelector('[data-act="place"]').addEventListener('input',e=>{p.place=e.target.value;updateCounts();});
     el.querySelector('[data-act="cmt"]').addEventListener('input',e=>{p.cmt=e.target.value;scheduleAutosave();});
+    el.querySelector('[data-act="moveto"]').addEventListener('click',()=>moveByNumber(i));
     el.querySelector('[data-act="up"]').addEventListener('click',()=>move(i,i-1));
     el.querySelector('[data-act="down"]').addEventListener('click',()=>move(i,i+1));
     el.querySelector('[data-act="remove"]').addEventListener('click',()=>{photos.splice(i,1);render();updateCounts();});
@@ -654,9 +791,6 @@ function render(){
     wireDrag(el,i);
     root.appendChild(el);
   });
-  const full=photos.length>=MAX_PHOTOS;
-  $('addPair').disabled = full;
-  $('addOne').disabled = full;
   $('addPair').innerHTML = '<span class="plus">＋</span> 前後ペアを追加（施工前・施工後）';
 }
 
@@ -837,6 +971,33 @@ function wireDrop(drop,p){
 
 function mkPhoto(kind){ return {kind:kind||'before',label:'',place:'',cmt:'',img:null,imgBase:null,annos:[],pageBreak:false}; }
 function addPair(){ if(photos.length>=MAX_PHOTOS) return; photos.push(mkPhoto('before')); if(photos.length<MAX_PHOTOS) photos.push(mkPhoto('after')); render(); updateCounts(); }
+async function addPhotosBulk(fileList){
+  let files=[...fileList].filter(f=>f.type.startsWith('image/')||/\.(jpe?g|png|gif|bmp|webp|heic)$/i.test(f.name));
+  if(!files.length){ setStatus('画像ファイルが見つかりませんでした','err'); return; }
+  const order=$('bulkOrder').value;
+  const bulkKind=$('bulkKind').value, bulkLabel=$('bulkLabel').value.trim(), bulkPlace=$('bulkPlace').value.trim(), bulkCmt=$('bulkCmt').value.trim();
+  if(order==='name') files.sort((a,b)=>a.name.localeCompare(b.name,'ja',{numeric:true}));
+  else if(order==='date') files.sort((a,b)=>(a.lastModified||0)-(b.lastModified||0));
+  let ok=0, ng=0;
+  for(let i=0;i<files.length;i++){
+    setStatus(`写真を取り込み中…（${i+1} / ${files.length}）`);
+    let im;
+    try{ im=await processImage(files[i]); }catch(e){ ng++; continue; }
+    // 空いている枠（写真なし）を先頭から使う。なければ新しい枠を追加（左=施工前／右=施工後）
+    let slot=photos.find(p=>!p.img);
+    if(!slot){
+      if(photos.length>=MAX_PHOTOS){ ng+=files.length-i; break; }
+      slot=mkPhoto(photos.length%2===0?'before':'after'); photos.push(slot);
+    }
+    slot.img=im; slot.imgBase=im; slot.annos=[];
+    if(bulkKind!=='auto'){ slot.kind=bulkKind; if(bulkKind==='custom') slot.label=bulkLabel; }
+    if(bulkPlace) slot.place=bulkPlace;
+    if(bulkCmt) slot.cmt=bulkCmt;
+    ok++;
+  }
+  render(); updateCounts(); scheduleAutosave();
+  setStatus(`${ok}枚の写真を追加しました`+(ng?`（${ng}枚は読み込めませんでした）`:''), ng?'err':'ok');
+}
 function addOne(){ if(photos.length>=MAX_PHOTOS) return; photos.push(mkPhoto('before')); render(); updateCounts(); }
 
 function meaningful(p){ return !!(p.img || (p.place&&p.place.trim()) || (p.kind==='custom' && p.label && p.label.trim())); }
@@ -1154,6 +1315,15 @@ function applyPasteSheet(){
   addPair(); addPair();
   $('addPair').addEventListener('click',addPair);
   $('addOne').addEventListener('click',addOne);
+  $('bulkPick').addEventListener('click',()=>$('bulkFile').click());
+  $('viewSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) setView(b.dataset.view); });
+  $('interleaveBtn').addEventListener('click',interleavePhotos);
+  $('bulkKind').addEventListener('change',e=>{ $('bulkLabelWrap').hidden = e.target.value!=='custom'; });
+  $('bulkFile').addEventListener('change',async e=>{ if(e.target.files.length) await addPhotosBulk(e.target.files); e.target.value=''; });
+  const bz=$('bulkZone');
+  bz.addEventListener('dragover',e=>{ if(dragFrom!==null) return; e.preventDefault(); bz.classList.add('over'); });
+  bz.addEventListener('dragleave',()=>bz.classList.remove('over'));
+  bz.addEventListener('drop',async e=>{ if(dragFrom!==null) return; e.preventDefault(); bz.classList.remove('over'); if(e.dataTransfer.files.length) await addPhotosBulk(e.dataTransfer.files); });
   $('genXpdf').addEventListener('click',generateExcelPdf);
   $('genPdf').addEventListener('click',generatePDF);
   // annotation editor
