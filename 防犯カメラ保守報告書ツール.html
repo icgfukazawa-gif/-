@@ -305,7 +305,7 @@ function newCam(i){return{name:"カメラ"+fw(i+1),lens:true,body:true,housing:f
 function newPhotos(){return Array.from({length:6},(_,i)=>({id:uid(),caption:DEFAULT_CAPS[i],autoRec:false,src:null,w:0,h:0}))}
 function defaults(){
   return{
-    company:{name:"株式会社アイベリー",zip:"〒552-0003",addr:"大阪市港区三先1丁目15-15",tel:"06-6577-8989",fax:"06-6577-7997"},
+    company:{name:"株式会社アイベリー",zip:"〒552-0016",addr:"大阪市港区三先1丁目15-15",tel:"06-6577-8989",fax:"06-6577-7997"},
     dateStyle:"seireki",
     reportDate:"2025-04-01",workDate:"2025-03-21",recFrom:"2025-03-04",recTo:"2025-03-21",
     customer:"",site:"",kind:"定期点検",jobName:"防犯カメラ保守管理業務",place:"",
@@ -723,7 +723,8 @@ function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout
 /* ---------- boot ---------- */
 const draft=lsGet(DRAFT_KEY);
 if(draft&&Array.isArray(draft.cameras)){const d=defaults();S={...d,...draft,company:{...d.company,...(draft.company||{})},include:{...d.include,...(draft.include||{})}};
-  S.photos=(S.photos&&S.photos.length?S.photos:newPhotos(true)).map(p=>({id:p.id||uid(),caption:p.caption||"",autoRec:!!p.autoRec,src:p.src||null,w:p.w||0,h:p.h||0}))}
+  S.photos=(S.photos&&S.photos.length?S.photos:newPhotos(true)).map(p=>({id:p.id||uid(),caption:p.caption||"",autoRec:!!p.autoRec,src:p.src||null,w:p.w||0,h:p.h||0}));
+  if(S.company.zip==="〒552-0003")S.company.zip="〒552-0016"}
 fillForm();updateHeader();renderPreview();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(renderPreview);
 window.__app={get S(){return S},buildXlsx,pagesList};

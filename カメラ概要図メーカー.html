@@ -73,6 +73,9 @@ body.alt #cv .locked{pointer-events:auto}
 .planbar{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:10px;display:flex;gap:4px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:3px 3px 3px 10px;box-shadow:var(--shadow);font-size:12px;color:var(--ink-2)}
 .planbar .btn{padding:4px 9px;background:var(--panel-2)}
 .planbar .btn.danger{color:var(--danger)}
+.stage:has(#planbar:not([hidden])) .hintbar{max-width:calc(100% - 540px);min-width:200px}
+@media (max-width:1100px){.stage:has(#planbar:not([hidden])) .hintbar{display:none}}
+.planbar .pbchk{display:flex;gap:4px;align-items:center;padding:0 6px;cursor:pointer;color:var(--ink)}
 .planbar .btn.primary{background:var(--accent);color:var(--accent-ink)}
 .side{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;min-width:0}
 .tabs{display:flex;border-bottom:1px solid var(--line)}
@@ -228,7 +231,8 @@ table.sum th{font-size:11px;color:var(--ink-2);font-weight:700}
 </div>
 
 <input type="file" id="fImg" accept="image/*" multiple hidden>
-<input type="file" id="fJson" accept=".json,application/json" hidden>
+<input type="file" id="fJson" accept=".json,application/json,.xlsx,.xlsm,.xls" hidden>
+<input type="file" id="fXlsx" accept=".xlsx,.xlsm,.xls" hidden>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -619,8 +623,26 @@ function lenValue(o) {
   const m = meters(polyLen(wirePts(o))); return m == null ? null : Math.max(1, Math.ceil(m - 0.05));
 }
 function camLabel(o) { return o.name || ('カメラ' + circ(o.num)); }
+/* vertical writing (縦書き): columns right to left, one glyph per cell */
+const VROT = 'ー－―‐〜～…‥（）「」『』【】〔〕［］｛｝〈〉《》()[]{}<>-=~_|→←⇒';
+const VSMALL = 'ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ', VPUNCT = '、。，．';
+function vSize(lines, fs) { return { w: Math.max(1, lines.length) * fs * 1.35, h: Math.max(1, ...lines.map(l => [...l].length)) * fs * 1.08 }; }
+function vTextSVG(lines, cx, cy, fs, attrs) {
+  const colW = fs * 1.35, step = fs * 1.08, sz = vSize(lines, fs), x0 = cx + sz.w / 2, y0 = cy - sz.h / 2; let s = '';
+  const base = `font-size="${fs}" text-anchor="middle" font-family="${FONT_ATTR}" ${attrs}`;
+  lines.forEach((ln, i) => {
+    const x = x0 - (i + 0.5) * colW;
+    [...ln].forEach((ch, j) => {
+      const y = y0 + (j + 0.5) * step;
+      if (VROT.includes(ch)) s += `<text x="${r1(x)}" y="${r1(y + fs * 0.36)}" transform="rotate(90 ${r1(x)} ${r1(y)})" ${base}>${esc(ch)}</text>`;
+      else { const dx = VPUNCT.includes(ch) ? fs * 0.55 : VSMALL.includes(ch) ? fs * 0.1 : 0, dy = VPUNCT.includes(ch) ? -fs * 0.55 : VSMALL.includes(ch) ? -fs * 0.1 : 0; s += `<text x="${r1(x + dx)}" y="${r1(y + fs * 0.36 + dy)}" ${base}>${esc(ch)}</text>`; }
+    });
+  });
+  return s;
+}
 function textBox(o) {
   const lines = String(o.text || '').split('\n'); const lh = o.fs * 1.35;
+  if (o.vert) { const v = vSize(lines, o.fs); return { x: o.anchor === 'middle' ? o.x - v.w / 2 : o.x, y: o.y - o.fs, w: v.w, h: v.h, lines, lh }; }
   const w = Math.max(...lines.map(l => textW(l, o.fs, o.bold)), o.fs);
   const x0 = o.anchor === 'middle' ? o.x - w / 2 : o.x;
   return { x: x0, y: o.y - o.fs * 1.0, w, h: lines.length * lh - (lh - o.fs) + o.fs * 0.25, lines, lh };
@@ -716,7 +738,7 @@ function renderObj(o, exp) {
       if (!exp) s += `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="${fill === 'none' ? 'none' : 'transparent'}" stroke="transparent" stroke-width="14" pointer-events="${fill === 'none' ? 'stroke' : 'all'}"/>`;
       if (o.label) {
         const lines = o.label.split('\n'), lh = o.fs * 1.3;
-        s += multiText(lines, o.x + o.w / 2, o.y + o.h / 2 - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111"');
+        s += o.vert ? vTextSVG(lines, o.x + o.w / 2, o.y + o.h / 2, o.fs, 'fill="#111"') : multiText(lines, o.x + o.w / 2, o.y + o.h / 2 - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111"');
       }
       return s;
     }
@@ -724,7 +746,8 @@ function renderObj(o, exp) {
       const b = textBox(o); let s = '';
       if (o.box !== 'none') s += `<rect x="${r1(b.x - 6)}" y="${r1(b.y - 5)}" width="${r1(b.w + 12)}" height="${r1(b.h + 10)}" fill="#fff" stroke="${o.box}" stroke-width="1.6"/>`;
       else if (!exp) s += `<rect x="${r1(b.x)}" y="${r1(b.y)}" width="${r1(b.w)}" height="${r1(b.h)}" fill="transparent"/>`;
-      s += multiText(b.lines, o.x, o.y, o.fs, b.lh, `fill="${o.color}" font-weight="${o.bold ? 700 : 400}" text-anchor="${o.anchor}"`);
+      s += o.vert ? vTextSVG(b.lines, b.x + b.w / 2, b.y + b.h / 2, o.fs, `fill="${o.color}" font-weight="${o.bold ? 700 : 400}"`)
+        : multiText(b.lines, o.x, o.y, o.fs, b.lh, `fill="${o.color}" font-weight="${o.bold ? 700 : 400}" text-anchor="${o.anchor}"`);
       return s;
     }
     case 'camera': {
@@ -763,12 +786,12 @@ function renderObj(o, exp) {
       return `<path d="${tri}" fill="${cf}" stroke="${cs}" stroke-width="1.4" stroke-linejoin="round"/>`
         + `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" rx="9" fill="${cf}" stroke="${cs}" stroke-width="1.4"/>`
         + `<path d="${tri}" fill="${cf}"/>`
-        + multiText(lines, cx, cy - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, `text-anchor="middle" fill="${o.color || '#111'}"`);
+        + (o.vert ? vTextSVG(lines, cx, cy, o.fs, `fill="${o.color || '#111'}"`) : multiText(lines, cx, cy - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, `text-anchor="middle" fill="${o.color || '#111'}"`));
     }
     case 'photo': {
       let s;
       if (o.asset && doc.assets[o.asset]) {
-        s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="#eef1f4"/><image href="${assetHref(o.asset, exp)}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" preserveAspectRatio="xMidYMid slice"/><rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#8a96a3" stroke-width="1"/>`;
+        s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="${o.fit === 'contain' ? '#ffffff' : '#eef1f4'}"/><image href="${assetHref(o.asset, exp)}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" preserveAspectRatio="xMidYMid ${o.fit === 'contain' ? 'meet' : 'slice'}"/><rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="none" stroke="#8a96a3" stroke-width="1"/>`;
       } else {
         s = `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="#f1f4f7" stroke="#a3afbb" stroke-width="1" ${exp ? '' : 'stroke-dasharray="6 4"'}/>`;
         if (!exp) {
@@ -786,7 +809,7 @@ function renderObj(o, exp) {
     }
     case 'image': {
       if (!doc.assets[o.asset] || o.hide) return '';
-      if (exp && o.print === false) return '';
+      if (exp && !bgOn(o)) return '';
       const tr = o.rot ? ` transform="rotate(${o.rot} ${o.x + o.w / 2} ${o.y + o.h / 2})"` : '';
       return `<g${tr}><image href="${assetHref(o.asset, exp)}" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" opacity="${o.opacity}" preserveAspectRatio="none"/>`
         + (exp ? '' : `<rect x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}" fill="transparent"/>`) + '</g>';
@@ -805,7 +828,7 @@ function renderObj(o, exp) {
       }
       if (o.label) {
         const lines = o.label.split('\n'), lh = o.fs * 1.3;
-        s += multiText(lines, cx + (o.lx || 0), cy + (o.ly || 0) - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111" data-part="label"');
+        s += o.vert ? `<g data-part="label">${vTextSVG(lines, cx + (o.lx || 0), cy + (o.ly || 0), o.fs, 'fill="#111"')}</g>` : multiText(lines, cx + (o.lx || 0), cy + (o.ly || 0) - (lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, 'text-anchor="middle" fill="#111" data-part="label"');
       }
       return s;
     }
@@ -827,7 +850,7 @@ function renderObj(o, exp) {
       const fill = !o.fill || o.fill === 'none' ? 'none' : o.fill, ev = o.kind === 'frame' || o.kind === 'donut' ? ' fill-rule="evenodd"' : '';
       let s = `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0}) scale(${o.flip ? -1 : 1},1)"><path d="${shapePath(o.kind, o.w, o.h)}" fill="${fill}"${ev} stroke="${o.stroke || '#111'}" stroke-width="${o.sw ?? 1.6}" stroke-linejoin="round" ${o.dash ? 'stroke-dasharray="8 5"' : ''}/>`
         + (exp || fill !== 'none' ? '' : `<rect x="${-o.w / 2}" y="${-o.h / 2}" width="${o.w}" height="${o.h}" fill="transparent"/>`) + '</g>';
-      if (o.text) { const lines = String(o.text).split('\n'), lh = o.fs * 1.3; s += `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0})">` + multiText(lines, 0, -(lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, `text-anchor="middle" fill="${o.color || '#111'}"`) + '</g>'; }
+      if (o.text) { const lines = String(o.text).split('\n'), lh = o.fs * 1.3; s += `<g transform="translate(${o.x},${o.y}) rotate(${o.rot || 0})">` + (o.vert ? vTextSVG(lines, 0, 0, o.fs, `fill="${o.color || '#111'}"`) : multiText(lines, 0, -(lines.length - 1) * lh / 2 + o.fs * 0.36, o.fs, lh, `text-anchor="middle" fill="${o.color || '#111'}"`)) + '</g>'; }
       return s;
     }
     case 'mark': {
@@ -874,7 +897,9 @@ function titleBlock() {
   s += `<path d="M${x + lw},${y + rh}V${y + rh * (rows.length + 1)}" stroke="#111" stroke-width="1"/>`;
   return s;
 }
-function frame() { return `<rect x="24" y="24" width="${W - 48}" height="${H - 48}" fill="none" stroke="#111" stroke-width="2"/>`; }
+const isBare = () => !!(doc.pages && doc.pages[doc.cur] && doc.pages[doc.cur].bare);
+function frame() { if (isBare()) return ''; return frame0(); }
+function frame0() { return `<rect x="24" y="24" width="${W - 48}" height="${H - 48}" fill="none" stroke="#111" stroke-width="2"/>`; }
 
 const nodeMap = new Map(), strMap = new Map();
 let lastPaper = '', lastFixed = '';
@@ -893,7 +918,7 @@ function render() {
     prev = g; seen.add(o.id);
   }
   for (const [id, g] of nodeMap) if (!seen.has(id)) { g.remove(); nodeMap.delete(id); strMap.delete(id); }
-  const fx = `<g data-id="__title" style="cursor:pointer">${titleBlock()}</g>`;
+  const fx = isBare() ? '' : `<g data-id="__title" style="cursor:pointer">${titleBlock()}</g>`;
   if (fx !== lastFixed) { $('#fixed').innerHTML = fx; lastFixed = fx; }
   if (editPhoto && !byId(editPhoto)) exitPhotoEdit();
   renderOverlay(); updateStatus(); renderPlanbar();
@@ -904,6 +929,7 @@ function renderPlanbar() {
   const h = imgs.length ? `<span>${imgs.some(o => o.isMap) ? '地図' : '下絵'}の画像</span>`
     + (imgs.every(o => o.locked) ? `<button class="btn" data-pb="unlock" title="固定を外して拡大縮小・移動できるようにする">固定を解除</button>` : `<button class="btn primary" data-pb="lock" title="位置と大きさを固定する">固定する</button>`)
     + `<button class="btn" data-pb="toggle">${imgs.every(o => o.hide) ? '表示する' : '隠す'}</button>`
+    + `<label class="pbchk" title="PNG・PDF・Excelに地図や下絵を残すか"><input type="checkbox" data-pb="print" ${imgs.some(o => o.print !== false) ? 'checked' : ''}> 書き出しに残す</label>`
     + `<button class="btn danger" data-pb="delete">削除</button>` : '';
   if (h !== lastPB) { pb.innerHTML = h; lastPB = h; pb.hidden = !imgs.length; }
 }
@@ -911,6 +937,7 @@ $('#planbar').addEventListener('click', e => {
   const b = e.target.closest('[data-pb]'); if (!b) return;
   const imgs = doc.objects.filter(o => o.type === 'image'); if (!imgs.length) return;
   const a = b.dataset.pb;
+  if (a === 'print') { pushUndo(); imgs.forEach(o => o.print = b.checked); save(); lastPB = ''; renderPlanbar(); toast(b.checked ? '書き出しに地図・下絵を残します' : '書き出しでは地図・下絵を消します（線だけ）'); return; }
   if (a === 'toggle') { pushUndo(); const show = imgs.every(o => o.hide); imgs.forEach(o => o.hide = !show); render(); save(); toast(show ? '画像を表示しました' : '画像を隠しました（書き出しにも出ません）'); }
   if (a === 'lock') lockImages(imgs);
   if (a === 'unlock') { pushUndo(); imgs.forEach(o => { o.locked = false; o.hide = false; }); select(imgs.map(o => o.id)); save(); toast('固定を解除しました。四隅で拡大縮小、中をドラッグで移動できます'); }
@@ -987,6 +1014,15 @@ function renderOverlay() {
   }
   const wh = (draft && draft.wallHit) || (drag && drag.kind === 'handle' && drag.wallHit);
   if (wh) { for (const sg of wh.segs) s += `<path d="M${sg.a[0]},${sg.a[1]}L${sg.b[0]},${sg.b[1]}" stroke="#16a34a" stroke-opacity=".35" stroke-width="${r1(7 * K)}" stroke-linecap="round" pointer-events="none"/>`; s += `<circle cx="${wh.pt[0]}" cy="${wh.pt[1]}" r="${r1(5 * K)}" fill="#16a34a" pointer-events="none"/>`; }
+  { const hs2 = hoverSnap, cpt = draft ? draft.cur : hs2 && hs2.cur;
+    if (cpt && (SNAP_TOOLS.includes(draft ? draft.type : baseTool()))) {
+      if (hs2 && hs2.kind === 'g') for (const [a, b] of hs2.guides) { const e2 = b || cpt; s += `<path d="M${a[0]},${a[1]}L${e2[0]},${e2[1]}" stroke="#e11d48" stroke-width="${r1(1.2 * K)}" stroke-dasharray="${r1(4 * K)} ${r1(3 * K)}" pointer-events="none"/>`; }
+      if (hs2 && hs2.kind === 'e') s += `<path d="M${hs2.seg[0][0]},${hs2.seg[0][1]}L${hs2.seg[1][0]},${hs2.seg[1][1]}" stroke="#16a34a" stroke-opacity=".35" stroke-width="${r1(6 * K)}" stroke-linecap="round" pointer-events="none"/>`;
+      const c2 = hs2 && hs2.kind === 'v' ? '#16a34a' : hs2 && hs2.kind === 'e' ? '#16a34a' : '#e11d48', L = 7 * K;
+      s += `<path d="M${r1(cpt[0] - L)},${cpt[1]}H${r1(cpt[0] + L)}M${cpt[0]},${r1(cpt[1] - L)}V${r1(cpt[1] + L)}" stroke="${c2}" stroke-width="${r1(1.3 * K)}" pointer-events="none"/>`;
+      if (hs2 && (hs2.kind === 'v' || hs2.kind === 'e')) s += `<rect x="${r1(cpt[0] - 5 * K)}" y="${r1(cpt[1] - 5 * K)}" width="${r1(10 * K)}" height="${r1(10 * K)}" fill="none" stroke="#16a34a" stroke-width="${r1(1.8 * K)}" pointer-events="none"/>`;
+    }
+  }
   if (draft && draft.snapHit) s += `<circle cx="${draft.snapHit[0]}" cy="${draft.snapHit[1]}" r="${r1(11 * K)}" fill="none" stroke="#16a34a" stroke-width="${2 * K}" pointer-events="none"/>`;
   if (editPhoto) { const ph = byId(editPhoto); if (ph) { const big = 1e5; s = `<path d="M${-big},${-big}H${big}V${big}H${-big}Z M${ph.x},${ph.y}V${ph.y + ph.h}H${ph.x + ph.w}V${ph.y}Z" fill="#0d141c" fill-opacity=".72" fill-rule="evenodd" pointer-events="none"/><rect x="${ph.x}" y="${ph.y}" width="${ph.w}" height="${ph.h}" fill="none" stroke="#38c3e2" stroke-width="${r1(2 * K)}" pointer-events="none"/>` + s; } }
   $('#overlay').innerHTML = s;
@@ -1215,6 +1251,63 @@ function snapTarget(p, exceptId) {
   return best ? [best[0], best[1]] : null;
 }
 
+/* building/wall drawing snap: corners & edges of existing shapes, horizontal/vertical lock, alignment with points, magnetic grid */
+function drawSegs() {
+  const segs = [], vs = [];
+  for (const o of doc.objects) {
+    if (o.hide || attached(o)) continue;
+    let P = null, closed = false;
+    if (o.type === 'poly') { P = o.pts; closed = true; }
+    else if (o.type === 'line') P = o.pts;
+    else if (o.type === 'rect') { P = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]]; closed = true; }
+    if (!P || !P.length) continue;
+    P.forEach(p => vs.push(p));
+    for (let i = 0; i < P.length - (closed ? 0 : 1); i++) { if (o.type === 'poly' && o.arcs && o.arcs[i]) continue; segs.push([P[i], P[(i + 1) % P.length]]); }
+  }
+  return { segs, vs };
+}
+function drawSnap(p, prev, own) {
+  const K = k(), R = 9 * K, A = 6 * K; own = own || [];
+  const { segs, vs } = drawSegs(); const allV = vs.concat(own.slice(0, -1));
+  // 1) existing corner / own start point
+  let best = null, bd = R;
+  for (const v of allV) { const d = Math.hypot(v[0] - p[0], v[1] - p[1]); if (d < bd) { bd = d; best = v; } }
+  if (best) return { q: [best[0], best[1]], hint: { kind: 'v', pt: best } };
+  let q = [p[0], p[1]], guides = [], lockX = false, lockY = false;
+  // 2) horizontal / vertical lock from previous point
+  if (prev) {
+    const dx = p[0] - prev[0], dy = p[1] - prev[1];
+    if (Math.abs(dx) > 2 * K || Math.abs(dy) > 2 * K) {
+      if (Math.abs(dy) <= Math.max(A, Math.abs(dx) * 0.06)) { q[1] = prev[1]; lockY = true; guides.push([[prev[0], prev[1]], [q[0], q[1]]]); }
+      else if (Math.abs(dx) <= Math.max(A, Math.abs(dy) * 0.06)) { q[0] = prev[0]; lockX = true; guides.push([[prev[0], prev[1]], [q[0], q[1]]]); }
+    }
+  }
+  // 3) align x / y with other corners (dotted guide)
+  let gx = null, gy = null, bx = A, by = A;
+  for (const v of allV) {
+    if (prev && v === prev) continue;
+    if (!lockX) { const d = Math.abs(v[0] - q[0]); if (d < bx) { bx = d; gx = v; } }
+    if (!lockY) { const d = Math.abs(v[1] - q[1]); if (d < by) { by = d; gy = v; } }
+  }
+  if (gx) { q[0] = gx[0]; lockX = true; guides.push([[gx[0], gx[1]], null]); }
+  if (gy) { q[1] = gy[1]; lockY = true; guides.push([[gy[0], gy[1]], null]); }
+  // 4) on an existing edge (T-junction)
+  if (!lockX && !lockY) {
+    let be = null, bde = 6 * K;
+    for (const [a, b] of segs) {
+      const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; if (L2 < 1) continue;
+      const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2)), c = [a[0] + dx * t, a[1] + dy * t], d = Math.hypot(c[0] - p[0], c[1] - p[1]);
+      if (d < bde) { bde = d; be = { c, a, b }; }
+    }
+    if (be) return { q: [r1(be.c[0]), r1(be.c[1])], hint: { kind: 'e', pt: be.c, seg: [be.a, be.b] } };
+  }
+  // 5) otherwise exactly where the cursor is (no grid pull, so tracing a map lands where you click)
+  q = [lockX ? q[0] : r1(q[0]), lockY ? q[1] : r1(q[1])];
+  return { q, hint: guides.length ? { kind: 'g', pt: q, guides } : null };
+}
+let hoverSnap = null;
+const SNAP_TOOLS = ['line', 'poly'];
+
 /* ============ tools ============ */
 const IC = {
   select: '<path d="M6 3l13 9-6 1.4L16 20l-2.6 1.2-3-6.6L6 18z" fill="currentColor"/>',
@@ -1298,7 +1391,7 @@ const HINTS = {
   select: '<b>選択</b>：クリックで選択・ドラッグで移動。空白をドラッグで範囲選択。<kbd>Space</kbd>+ドラッグ／ホイールで画面移動・拡大',
   hand: '<b>移動</b>：ドラッグで画面をスクロール',
   line: '<b>壁・線</b>：クリックで頂点を追加、ダブルクリックか <kbd>Enter</kbd> で確定。<kbd>Shift</kbd> で水平・垂直',
-  poly: '<b>建物</b>：角を順にクリック（曲がった辺はあとから「弧に曲げる」で）。最初の点をクリック（またはダブルクリック／<kbd>Enter</kbd>）で閉じる。<kbd>Shift</kbd> で45°単位。地図の下絵をなぞるのに便利',
+  poly: '<b>建物</b>：角を順にクリック（曲がった辺はあとから「弧に曲げる」で）。最初の点をクリック（またはダブルクリック／<kbd>Enter</kbd>）で閉じる。十字の位置に点が入ります。ほぼ水平・垂直なら自動でまっすぐに、既存の角に近づくと緑の□で吸着。<kbd>Alt</kbd> を押しながらで吸着なし、<kbd>Shift</kbd> で45°単位',
   sym: '<b>建具・柱</b>：柱は続けてクリックで連続して置けます（<kbd>Esc</kbd>で終了）。クリックで配置。丸い取っ手で回転、四角い取っ手で大きさ変更。ドアは壁の線の上をクリック（直線の辺が壁に乗ります）。縮尺設定済みなら実寸に近い大きさで置きます',
   arrow: '<b>矢印</b>：始点から終点へドラッグ。撮影方向や配線の向きを示すのに使えます（写真の上では写真に付きます）',
   shape: '<b>図形</b>：ドラッグで大きさを決めて描く（クリックだけなら標準の大きさ）。<kbd>Shift</kbd>で縦横比を保つ。中に文字も入れられます',
@@ -1340,11 +1433,12 @@ function toolDown(p, e) {
   if (bt === 'line' || bt === 'wire' || bt === 'scale' || bt === 'poly') {
     let q = sp;
     let snapped = false;
+    if (SNAP_TOOLS.includes(bt) && !onPh && !e.altKey) { const ds = drawSnap([p.x, p.y], draft ? draft.pts[draft.pts.length - 1] : null, draft ? draft.pts : []); q = ds.q; if (ds.hint && ds.hint.kind !== 'g') snapped = true; }
     if (bt === 'wire') { const t = snapTarget([p.x, p.y]); if (t) { q = t; snapped = true; } else if (wallOn && !onPh) { const ws = wallSnap([p.x, p.y], Math.max(8, 14 * k())); if (ws) { q = ws.pt; snapped = true; } } }
     if (!draft) { draft = { type: bt, pts: [q], cur: null, parent: onPh ? onPh.id : null }; render(); return; }
     const last = draft.pts[draft.pts.length - 1];
     if (e.shiftKey && !snapped) q = ortho(last, q);
-    if (dist(q, last) < 5 * k()) { if (bt !== 'scale') finishDraft(); return; }
+    if (dist(q, last) < 3 * k()) { if (bt !== 'scale') finishDraft(); return; }
     if (bt === 'poly' && draft.pts.length >= 3 && dist(q, draft.pts[0]) < 12 * k()) { finishDraft(); return; }
     draft.pts.push(q);
     if (bt === 'scale' && draft.pts.length === 2) { const pts = draft.pts; draft = null; render(); askScale(dist(pts[0], pts[1])); }
@@ -1426,9 +1520,13 @@ svg.addEventListener('pointermove', e => {
     let q = draft.parent ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)]; draft.snapHit = null;
     draft.wallHit = null;
     if (draft.type === 'wire') { const t = snapTarget([p.x, p.y]); if (t) { q = t; draft.snapHit = t; } else if (wallOn && !draft.parent) { const ws = wallSnap([p.x, p.y], Math.max(8, 14 * k())); if (ws) { q = ws.pt; draft.wallHit = ws; } } }
-    if (e.shiftKey && draft.pts.length && !draft.snapHit && !draft.wallHit) q = ortho(draft.pts[draft.pts.length - 1], q);
+    hoverSnap = null;
+    if (SNAP_TOOLS.includes(draft.type) && !draft.parent && !e.altKey) { const ds = drawSnap([p.x, p.y], draft.pts[draft.pts.length - 1], draft.pts); q = ds.q; hoverSnap = ds.hint; if (hoverSnap && hoverSnap.kind !== 'g') draft.snapHit2 = true; else draft.snapHit2 = false; }
+    if (e.shiftKey && draft.pts.length && !draft.snapHit && !draft.wallHit && !draft.snapHit2) { q = ortho(draft.pts[draft.pts.length - 1], q); hoverSnap = null; }
     draft.cur = q; renderOverlay();
-  }
+  } else if (SNAP_TOOLS.includes(baseTool()) && !drag && !editPhoto && !photoAt(p.x, p.y)) {
+    const ds = e.altKey ? { q: [r1(p.x), r1(p.y)], hint: null } : drawSnap([p.x, p.y], null, []); hoverSnap = Object.assign({ cur: ds.q }, ds.hint || { kind: 'none' }); renderOverlay();
+  } else if (hoverSnap) { hoverSnap = null; renderOverlay(); }
   if (!drag) return;
   if (drag.kind === 'pan') { const K = k(); vb.x = drag.vx - (e.clientX - drag.cx) * K; vb.y = drag.vy - (e.clientY - drag.cy) * K; applyVB(); return; }
   let dx = p.x - drag.p0?.x, dy = p.y - drag.p0?.y;
@@ -1586,6 +1684,7 @@ function propsHTML() {
       <div class="algrid">${AI('l', '左揃え', l('M3 2V18') + r(5, 4, 10, 4) + r(5, 11, 6, 4))}${AI('c', '左右中央揃え', l('M10 2V18') + r(4, 4, 12, 4) + r(6.5, 11, 7, 4))}${AI('r', '右揃え', l('M17 2V18') + r(5, 4, 10, 4) + r(9, 11, 6, 4))}${AI('dh', '左右に等間隔で整列（3つ以上）', r(2, 6, 3, 8) + r(8.5, 6, 3, 8) + r(15, 6, 3, 8))}
       ${AI('t', '上揃え', l('M2 3H18') + r(4, 5, 4, 10) + r(11, 5, 4, 6))}${AI('m', '上下中央揃え', l('M2 10H18') + r(4, 4, 4, 12) + r(11, 6.5, 4, 7))}${AI('b', '下揃え', l('M2 17H18') + r(4, 5, 4, 10) + r(11, 9, 4, 6))}${AI('dv', '上下に等間隔で整列（3つ以上）', r(6, 2, 8, 3) + r(6, 8.5, 8, 3) + r(6, 15, 8, 3))}</div>
       ${F.color('__color', '色（まとめて変更）', '', '', { all: true })}
+      ${xs.some(x => ['text', 'rect', 'poly', 'shape', 'callout'].includes(x.type)) ? `<div class="f"><span class="l">文字の向き（まとめて）</span><div class="seg" role="group"><button data-act="setVert" data-v="0">横書き</button><button data-act="setVert" data-v="1">縦書き</button></div></div>` : ''}
       ${xs.some(x => x.type === 'wire') ? '<button class="btn" data-act="tidyWire" style="justify-self:start;background:var(--panel-2)">選んだ配線を壁に沿わせて整える</button>' : ''}
       <div class="row"><button class="btn" data-act="sameSize" style="background:var(--panel-2)" title="最初に選んだものと同じ大きさにする">大きさをそろえる</button>${grouped ? '<button class="btn" data-act="ungroup" style="background:var(--panel-2)">グループ解除</button>' : '<button class="btn" data-act="group" style="background:var(--panel-2)">グループ化</button>'}</div>
       <p class="note"><kbd>Shift</kbd>／<kbd>Ctrl</kbd>+クリックで選択に追加・解除、空白をドラッグで範囲選択。グループはクリック1回でまとめて選択、もう1回クリックで中の1つを選択できます（<kbd>Ctrl</kbd>+<kbd>G</kbd>でグループ化）。</p>
@@ -1621,11 +1720,11 @@ function propsHTML() {
       s += `<div class="row">${F.num('w', '線の太さ', o.w, 0.5, 12, 0.5)}${F.color('color', '色', o.color, '#111111')}</div>` + F.chk('dash', '破線', o.dash) + `<div class="f"><span class="l">辺の中央の取っ手をドラッグすると</span><div class="seg" role="group"><button data-act="edgeMode" data-v="vertex" aria-pressed="${edgeMode === 'vertex'}">角を追加</button><button data-act="edgeMode" data-v="arc" aria-pressed="${edgeMode === 'arc'}">弧に曲げる</button></div></div>` + (hasArcs(o) ? '<button class="btn" data-act="clearArcs" style="justify-self:start;background:var(--panel-2)">弧をすべて直線に戻す</button>' : '');
       break;
     case 'rect':
-      s += F.area('label', '名前（改行可）', o.label) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
+      s += F.area('label', '名前（改行可）', o.label) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
         + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('fill', '塗り', o.fill, '', { light: true, none: true }) + F.chk('dash', '破線', o.dash);
       break;
     case 'poly':
-      s += F.area('label', '名前（改行可）', o.label) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
+      s += F.area('label', '名前（改行可）', o.label) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
         + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('fill', '塗り', o.fill, '', { light: true, none: true }) + F.chk('dash', '破線', o.dash)
         + F.chk('showEdges', '各辺の長さを表示' + (doc.scale ? '' : '（縮尺の設定が必要）'), o.showEdges)
         + `<div class="f"><span class="l">辺の中央の取っ手をドラッグすると</span><div class="seg" role="group"><button data-act="edgeMode" data-v="vertex" aria-pressed="${edgeMode === 'vertex'}">角を追加</button><button data-act="edgeMode" data-v="arc" aria-pressed="${edgeMode === 'arc'}">弧に曲げる</button></div></div>` + (hasArcs(o) ? '<button class="btn" data-act="clearArcs" style="justify-self:start;background:var(--panel-2)">弧をすべて直線に戻す</button>' : '')
@@ -1643,7 +1742,7 @@ function propsHTML() {
     }
     case 'shape':
       s += F.sel('kind', '形', o.kind, Object.fromEntries(Object.entries(SHAPES).map(([a, b]) => [a, b.name])))
-        + F.area('text', '中の文字（改行可）', o.text || '') + `<div class="row">${F.num('fs', '文字サイズ', o.fs || 14, 6, 80)}${F.num('sw', '線の太さ', o.sw ?? 1.6, 0, 12, 0.5)}</div>`
+        + F.area('text', '中の文字（改行可）', o.text || '') + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs || 14, 6, 80)}${F.num('sw', '線の太さ', o.sw ?? 1.6, 0, 12, 0.5)}</div>`
         + F.color('fill', '塗り', o.fill, '', { none: true, both: true }) + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('color', '文字の色', o.color, '#111111')
         + `<div class="row">${F.num('w', '幅', o.w, 6, 3000)}${F.num('h', '高さ', o.h, 6, 3000)}</div>`
         + F.range('rot', '回転', o.rot || 0, -180, 180, 15, '°') + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="symFlip" style="background:var(--panel-2)">左右反転</button></div>` + F.chk('dash', '破線', o.dash);
@@ -1658,15 +1757,17 @@ function propsHTML() {
       s += F.range('ang', '向き', o.ang, -180, 180, 1, '°') + F.range('sz', '大きさ', o.sz || 1, 0.5, 3, 0.1) + F.color('color', '色', o.color, '#111111');
       break;
     case 'text':
-      s += F.area('text', '文字（改行可）', o.text) + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 80)}${F.color('color', '色', o.color, '#111111')}</div>`
+      s += F.area('text', '文字（改行可）', o.text) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 80)}${F.color('color', '色', o.color, '#111111')}</div>`
         + `<div class="row">${F.sel('box', '枠線', o.box, { none: 'なし', [BLUE]: '青枠', [RED]: '赤枠', '#111111': '黒枠' })}${F.sel('anchor', '揃え', o.anchor, { start: '左', middle: '中央' })}</div>` + F.chk('bold', '太字', o.bold);
       break;
     case 'callout':
-      s += F.area('text', '文字（改行可）', o.text) + F.num('fs', '文字サイズ', o.fs, 8, 40) + F.color('color', '文字の色', o.color, '#111111') + F.color('stroke', '枠の色', o.stroke, '#333333') + F.color('fill', '塗り', o.fill, '#ffffff', { light: true }) + `<button class="btn" data-act="fitCallout" style="justify-self:start;background:var(--panel-2)">枠を文字に合わせる</button>`;
+      s += F.area('text', '文字（改行可）', o.text) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + F.num('fs', '文字サイズ', o.fs, 8, 40) + F.color('color', '文字の色', o.color, '#111111') + F.color('stroke', '枠の色', o.stroke, '#333333') + F.color('fill', '塗り', o.fill, '#ffffff', { light: true }) + `<button class="btn" data-act="fitCallout" style="justify-self:start;background:var(--panel-2)">枠を文字に合わせる</button>`;
       break;
     case 'photo':
       s += (o.asset ? `<button class="btn primary" data-act="photoEdit" style="justify-self:start">写真をアップにして描き込む</button><button class="btn" data-act="pick" style="justify-self:start;background:var(--panel-2)">写真を差し替え</button>` : `<button class="btn primary" data-act="pick" style="justify-self:start">写真を選択</button>`)
         + F.text('caption', 'キャプション', o.caption, 'カメラ①設置場所') + `<div class="row">${F.color('ccol', '枠の色', o.ccol, BLUE)}${F.num('cfs', '文字サイズ', o.cfs, 8, 30)}</div>`
+        + `<button class="btn" data-act="pasteClip" style="justify-self:start;background:var(--panel-2)" title="Excelなどでコピーした写真をこの枠に入れる">コピーした写真を貼り付け（Ctrl+V）</button>`
+        + (o.asset ? `<div class="f"><span class="l">写真の入れ方</span><div class="seg" role="group"><button data-act="photoFit" data-v="cover" aria-pressed="${o.fit !== 'contain'}">枠いっぱい（はみ出しは切る）</button><button data-act="photoFit" data-v="contain" aria-pressed="${o.fit === 'contain'}">写真全体を収める</button></div></div>` : '')
         + (o.asset ? `<div class="row"><button class="btn" data-act="fitPhoto" style="background:var(--panel-2)">写真の比率に合わせる</button><button class="btn danger" data-act="unphoto" style="background:var(--panel-2)">写真を外す</button></div>` : '')
         + `<p class="note"><b>写真への描き込み：</b>「写真をアップにして描き込む」（または写真をダブルクリック）で写真を大きく表示して描き込めます。写真の上に直接描いてもかまいません。写真を動かしたり拡大縮小したりすると一緒に付いてきます。${kidsOf(o.id).length ? `（描き込み ${kidsOf(o.id).length} 個）` : ''}</p>`;
       break;
@@ -1701,6 +1802,10 @@ function metaHTML() {
     <div class="row"><span style="font-weight:700;flex:1;min-width:0">${esc(doc.pages[doc.cur].name)}</span><button class="btn" data-act="pgRen" style="background:var(--panel-2)">名前を変更</button></div>
     <div class="row"><button class="btn" data-act="pgAdd" style="background:var(--panel-2)">＋ 追加</button><button class="btn" data-act="pgLeft" style="background:var(--panel-2)" ${doc.cur ? '' : 'disabled'}>← 前へ</button><button class="btn" data-act="pgRight" style="background:var(--panel-2)" ${doc.cur < pgN - 1 ? '' : 'disabled'}>次へ →</button>${pgN > 1 ? '<button class="btn danger" data-act="pgDel" style="background:var(--panel-2)">削除</button>' : ''}</div>
     <p class="note">ページは図面の下のタブで切り替えます。表題欄・用紙サイズは全ページ共通、縮尺はページごとです。PDFは全ページ、Excelはページごとにシートを分けて書き出します。</p>
+    <h3>Excelの図面を取り込む</h3>
+    <p class="note">このツールを使う前にExcelで描いた図面（.xlsx）の図形・線・文字・写真を、編集できる形で取り込めます。.xls はExcelで .xlsx に保存し直してから使ってください。</p>
+    <div class="row"><button class="btn primary" data-act="importXlsx">Excel図面を取り込む</button></div>
+    <label class="chk"><input type="checkbox" data-k="m.bare" data-t="bool" ${isBare() ? '' : 'checked'}> このページに図枠・表題欄を表示する</label>
     <h3>別のパソコン・ブラウザで続ける</h3>
     <ol class="help" style="font-size:11.5px"><li>「作業データを保存」で <b>.json</b> を書き出す（全ページ・写真・縮尺込み）</li><li>メールや共有フォルダで .json を渡す</li><li>別のパソコンでこのツールを開き、「作業データを開く」で .json を選ぶ（図面へドラッグでも可）</li></ol>
     <div class="row"><button class="btn primary" data-act="saveJson">作業データを保存</button><button class="btn" data-act="openJson" style="background:var(--panel-2)">作業データを開く</button></div>
@@ -1781,6 +1886,7 @@ $('#pane').addEventListener('input', e => {
   }
   if (key.startsWith('m.')) {
     const mk = key.slice(2);
+    if (mk === 'bare') { editing = false; doc.pages[doc.cur].bare = !v; render(); save(); return; }
     if (mk === 'paper') { editing = false; undoStack.pop(); el.value = doc.paper; changePaper(v); return; }
     if (mk === 'scaleDirect') { doc.scale = v > 0 ? 4000 / v : null; $('#sScale').textContent = scaleText(); }
     else doc.meta[mk] = v;
@@ -1807,7 +1913,7 @@ $('#pane').addEventListener('click', e => {
     case 'lenMode': mut(() => { o.lenMode = b.dataset.v; if (o.lenMode === 'manual' && !o.lenText) o.lenText = lenLabel({ ...o, lenMode: 'auto' }) || '約○m'; }); if (b.dataset.v === 'manual') focusField('lenText'); break;
     case 'style': mut(() => { o.style = b.dataset.v; }); break;
     case 'renum': mut(() => { doc.objects.filter(x => x.type === 'camera' && !onPhoto(x)).forEach((c, i) => c.num = i + 1); }); toast('カメラ番号を振り直しました'); break;
-    case 'fitCallout': mut(() => { const lines = String(o.text).split('\n'); o.w = Math.round(Math.max(...lines.map(l => textW(l, o.fs))) + 28); o.h = Math.round(lines.length * o.fs * 1.3 + 16); }); break;
+    case 'fitCallout': mut(() => { const lines = String(o.text).split('\n'); if (o.vert) { const v = vSize(lines, o.fs); o.w = Math.round(v.w + 20); o.h = Math.round(v.h + 20); return; } o.w = Math.round(Math.max(...lines.map(l => textW(l, o.fs))) + 28); o.h = Math.round(lines.length * o.fs * 1.3 + 16); }); break;
     case 'pick': pickPhoto(o.id); break;
     case 'unphoto': mut(() => { o.asset = null; }); break;
     case 'fitPhoto': { const im = new Image(); im.onload = () => mut(() => { o.h = Math.round(o.w * im.naturalHeight / im.naturalWidth); }); im.src = blobs[o.asset] || doc.assets[o.asset]; break; }
@@ -1821,6 +1927,10 @@ $('#pane').addEventListener('click', e => {
     case 'loadPlan': photoTarget = '__plan'; $('#fImg').multiple = false; $('#fImg').click(); break;
     case 'selImg': select([b.dataset.v]); break;
     case 'pgRen': renamePage(doc.cur); break;
+    case 'importXlsx': $('#fXlsx').click(); break;
+    case 'photoFit': mut(() => { for (const id of sel) { const x = byId(id); if (x && x.type === 'photo') x.fit = b.dataset.v; } }); break;
+    case 'pasteClip': pasteFromClipboard(o.id); break;
+    case 'setVert': mut(() => { for (const id of sel) { const x = byId(id); if (x && ['text', 'rect', 'poly', 'shape', 'callout'].includes(x.type)) x.vert = b.dataset.v === '1'; } if (o && o.type === 'callout') { const lines = String(o.text).split('\n'); if (o.vert) { const v = vSize(lines, o.fs); o.w = Math.round(v.w + 20); o.h = Math.round(v.h + 20); } else { o.w = Math.round(Math.max(...lines.map(l => textW(l, o.fs))) + 28); o.h = Math.round(lines.length * o.fs * 1.3 + 16); } } }); break;
     case 'wallGap': mut(() => { doc.meta.wallGap = +b.dataset.v; }); toast('壁からの距離を変えました。「壁に沿わせて整える」で既存の配線にも反映できます'); break;
     case 'tidyWire': { let n = 0; mut(() => { for (const id of sel) { const w = byId(id); if (!w || w.type !== 'wire' || w.parent) continue; w.pts = w.pts.map(pt => { if (snapTarget(pt, w.id) && dist(snapTarget(pt, w.id), pt) < 1) return pt; const ws = wallSnap(pt, 26); if (ws) { n++; return ws.pt; } return pt; }); } }); toast(n ? `${n}か所を壁沿いに揃えました` : '壁の近くに曲がり角が見つかりませんでした'); break; }
     case 'edgeMode': edgeMode = b.dataset.v; render(); refreshPane(); if (edgeMode === 'arc') toast('辺の中央の◆をドラッグして弧に曲げてください'); break;
@@ -1995,19 +2105,37 @@ async function placePhotos(files, targetId, at) {
 }
 stage.addEventListener('dragover', e => { e.preventDefault(); });
 document.addEventListener('dragover', e => e.preventDefault());
-document.addEventListener('drop', e => { if (e.defaultPrevented) return; e.preventDefault(); const f = [...(e.dataTransfer?.files || [])].find(f => /\.json$/i.test(f.name)); if (f) openJsonFile(f); });
+document.addEventListener('drop', e => { if (e.defaultPrevented) return; e.preventDefault(); const fx2 = [...(e.dataTransfer?.files || [])].find(f => /\.xls[xm]?$/i.test(f.name)); if (fx2) { openXlsxImport(fx2); return; } const f = [...(e.dataTransfer?.files || [])].find(f => /\.json$/i.test(f.name)); if (f) openJsonFile(f); });
 stage.addEventListener('drop', async e => {
   e.preventDefault(); const files = [...e.dataTransfer.files]; if (!files.length) return;
   const json = files.find(f => /\.json$/i.test(f.name)); if (json) { openJsonFile(json); return; }
+  const xls = files.find(f => /\.xls[xm]?$/i.test(f.name)); if (xls) { openXlsxImport(xls); return; }
   try { await placePhotos(files, null, pt(e)); } catch (err) { toast(err.message); }
 });
 document.addEventListener('paste', async e => {
   if (mapPaste) { const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith('image/')); if (f) { e.preventDefault(); mapPaste(f); } return; }
   if (e.target.matches && e.target.matches('input,textarea')) return;
-  const files = [...(e.clipboardData?.files || [])]; if (files.length) { e.preventDefault(); const t = sel.size === 1 && byId([...sel][0])?.type === 'photo' ? [...sel][0] : null; try { await placePhotos(files, t, null); } catch (err) { toast(err.message); } return; }
+  let files = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
+  if (!files.length) files = [...(e.clipboardData?.items || [])].filter(it => it.kind === 'file' && it.type.startsWith('image/')).map(it => it.getAsFile()).filter(Boolean);
+  if (files.length) { e.preventDefault(); try { await placePhotos(files.slice(0, 1).concat(files.slice(1)), pasteTarget(), null); } catch (err) { toast(err.message); } return; }
   if (clip) { pushUndo(); const ids = []; for (const c0 of clip) { const c = clone(c0); c.id = uid(); moveObj(c, clone(c), 30, 30); if (c.type === 'camera') c.num = nextCamNum(); doc.objects.push(c); ids.push(c.id); } clip = clip.map(c => { const d = clone(c); moveObj(d, clone(d), 30, 30); return d; }); select(ids); save(); }
 });
-let clip = null;
+let clip = null, hoverPt = null;
+svg.addEventListener('pointermove', e => { try { hoverPt = pt(e); } catch { } });
+svg.addEventListener('pointerleave', () => { hoverPt = null; });
+function pasteTarget() {
+  if (sel.size === 1) { const o = byId([...sel][0]); if (o && o.type === 'photo') return o.id; if (o && o.parent && byId(o.parent)?.type === 'photo') return o.parent; }
+  if (editPhoto) return editPhoto;
+  if (hoverPt) { const ph = doc.objects.slice().reverse().find(o => o.type === 'photo' && hoverPt.x >= o.x && hoverPt.x <= o.x + o.w && hoverPt.y >= o.y && hoverPt.y <= o.y + o.h); if (ph) return ph.id; }
+  return null;
+}
+async function pasteFromClipboard(id) {
+  try {
+    const items = await navigator.clipboard.read();
+    for (const it of items) { const t = it.types.find(x => x.startsWith('image/')); if (t) { const blob = await it.getType(t); await placePhotos([new File([blob], 'paste.' + t.split('/')[1], { type: t })], id, null); return; } }
+    toast('クリップボードに写真がありません。Excelで写真を選んで Ctrl+C してから試してください');
+  } catch { toast('このボタンは使えない環境です。写真の枠を選んだまま Ctrl+V で貼り付けてください'); }
+}
 document.addEventListener('copy', e => { if (e.target.matches && e.target.matches('input,textarea')) return; if (sel.size) { clip = [...sel].map(id => clone(byId(id))); e.preventDefault(); toast('コピーしました（Ctrl+Vで貼り付け）'); } });
 
 /* ============ map ============ */
@@ -2119,7 +2247,8 @@ function loadDoc(d) {
 function openJsonFile(f) {
   const r = new FileReader(); r.onload = () => { try { const d = JSON.parse(r.result); if (!Array.isArray(d.objects) && !Array.isArray(d.pages)) throw 0; pushUndo(); loadDoc(d); toast('「' + f.name + '」を開きました（' + doc.pages.length + 'ページ）'); } catch { toast('このファイルは読み込めません（カメラ概要図メーカーの .json を選んでください）'); } }; r.readAsText(f);
 }
-$('#fJson').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) openJsonFile(f); });
+$('#fJson').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; if (/\.xls[xm]?$/i.test(f.name)) openXlsxImport(f); else openJsonFile(f); });
+$('#fXlsx').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) openXlsxImport(f); });
 
 /* ============ Excel: native shapes (DrawingML) ============ */
 const XL = (() => {
@@ -2132,7 +2261,7 @@ const XL = (() => {
   const tx = (text, fs, o = {}) => {
     const sz = Math.max(100, Math.round(fs * 0.7087 * 100)), ins = E(o.ins || 0);
     const rpr = `<a:rPr lang="ja-JP" altLang="en-US" sz="${sz}"${o.bold ? ' b="1"' : ''}>${fill(o.color || '#111111')}<a:latin typeface="Meiryo UI"/><a:ea typeface="Meiryo UI"/></a:rPr>`;
-    return `<xdr:txBody><a:bodyPr vertOverflow="overflow" horzOverflow="overflow" wrap="none" lIns="${ins}" tIns="0" rIns="${ins}" bIns="0" anchor="ctr" rtlCol="0"/><a:lstStyle/>`
+    return `<xdr:txBody><a:bodyPr${o.vert ? ' vert="eaVert"' : ''} vertOverflow="overflow" horzOverflow="overflow" wrap="none" lIns="${ins}" tIns="0" rIns="${ins}" bIns="0" anchor="ctr" rtlCol="0"/><a:lstStyle/>`
       + String(text).split('\n').map(l => `<a:p><a:pPr algn="${o.algn || 'ctr'}"/>${l ? `<a:r>${rpr}<a:t>${esc(l)}</a:t></a:r>` : ''}<a:endParaRPr lang="ja-JP" sz="${sz}"/></a:p>`).join('') + '</xdr:txBody>';
   };
   const box = pts => { const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]); const x = Math.min(...xs), y = Math.min(...ys); return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }; };
@@ -2266,11 +2395,11 @@ const XL = (() => {
         const lab = o.showLen ? lenLabel(o) : ''; if (lab) { const m = pointAt(wirePts(o), 0.5); k.push(label('長さ', lab, m[0] + (o.lx || 0), m[1] + (o.ly || 0) + 5, 14, { bg: '#ffffff' })); }
         return group(st.name, k);
       }
-      case 'rect': return rect(o.label ? '部屋 ' + o.label.replace(/\n/g, ' ') : '四角', o.x, o.y, o.w, o.h, { fill: o.fill === 'none' ? null : o.fill, stroke: o.stroke || '#111111', w: o.sw, dash: o.dash ? 'dash' : '', text: o.label, fs: o.fs });
+      case 'rect': return rect(o.label ? '部屋 ' + o.label.replace(/\n/g, ' ') : '四角', o.x, o.y, o.w, o.h, { fill: o.fill === 'none' ? null : o.fill, stroke: o.stroke || '#111111', w: o.sw, dash: o.dash ? 'dash' : '', text: o.label, fs: o.fs, vert: o.vert });
       case 'text': {
         const b = textBox(o), al = o.anchor === 'middle' ? 'ctr' : 'l';
-        return o.box !== 'none' ? rect('文字', b.x - 6, b.y - 5, b.w + 12, b.h + 10, { fill: '#ffffff', stroke: o.box, w: 1.6, text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: al, ins: 6, box: true })
-          : rect('文字', b.x, b.y, b.w + 4, b.h, { text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: al, box: true });
+        return o.box !== 'none' ? rect('文字', b.x - 6, b.y - 5, b.w + 12, b.h + 10, { fill: '#ffffff', stroke: o.box, w: 1.6, text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: o.vert ? 'l' : al, ins: 6, box: true, vert: o.vert })
+          : rect('文字', b.x, b.y, b.w + 4, b.h + (o.vert ? 4 : 0), { text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: o.vert ? 'l' : al, box: true, vert: o.vert });
       }
       case 'camera': return camEl(o);
       case 'device': return devEl(o);
@@ -2284,7 +2413,7 @@ const XL = (() => {
           if ((mx + nx - cx) ** 2 + (my + ny - cy) ** 2 < (mx - cx) ** 2 + (my - cy) ** 2) { nx = -nx; ny = -ny; }
           k.push(label('辺の長さ', '約' + (L / doc.scale).toFixed(1) + 'm', mx + nx * 15, my + ny * 15 + 4, 12, { bg: '#ffffff' }));
         }
-        if (o.label) k.push(label('名前', o.label, cx + (o.lx || 0), cy + (o.ly || 0) + o.fs * 0.36, o.fs));
+        if (o.label) { if (o.vert) { const v = vSize(o.label.split('\n'), o.fs); k.push(rect('名前', cx + (o.lx || 0) - v.w / 2, cy + (o.ly || 0) - v.h / 2, v.w, v.h + 4, { text: o.label, fs: o.fs, box: true, vert: true, algn: 'l' })); } else k.push(label('名前', o.label, cx + (o.lx || 0), cy + (o.ly || 0) + o.fs * 0.36, o.fs)); }
         return group('建物', k);
       }
       case 'dim': {
@@ -2304,23 +2433,27 @@ const XL = (() => {
       }
       case 'callout': {
         const cx = o.x + o.w / 2, cy = o.y + o.h / 2, av = `<a:gd name="adj1" fmla="val ${Math.round((o.tx - cx) / o.w * 100000)}"/><a:gd name="adj2" fmla="val ${Math.round((o.ty - cy) / o.h * 100000)}"/><a:gd name="adj3" fmla="val 16667"/>`;
-        return rect('吹き出し', o.x, o.y, o.w, o.h, { prst: 'wedgeRoundRectCallout', av, fill: o.fill || '#ffffff', stroke: o.stroke || '#333333', w: 1.4, text: o.text, fs: o.fs, color: o.color });
+        return rect('吹き出し', o.x, o.y, o.w, o.h, { prst: 'wedgeRoundRectCallout', av, fill: o.fill || '#ffffff', stroke: o.stroke || '#333333', w: 1.4, text: o.text, fs: o.fs, color: o.color, vert: o.vert });
       }
-      case 'shape': return rect(SHAPES[o.kind] ? SHAPES[o.kind].name : '図形', o.x - o.w / 2, o.y - o.h / 2, o.w, o.h, { prst: (SHAPES[o.kind] || SHAPES.rect).prst, fill: !o.fill || o.fill === 'none' ? null : o.fill, stroke: (o.sw ?? 1.6) > 0 ? (o.stroke || '#111111') : null, w: o.sw ?? 1.6, dash: o.dash ? 'dash' : '', text: o.text, fs: o.fs || 14, color: o.color, rot: o.rot || 0, flip: !!o.flip });
+      case 'shape': return rect(SHAPES[o.kind] ? SHAPES[o.kind].name : '図形', o.x - o.w / 2, o.y - o.h / 2, o.w, o.h, { prst: (SHAPES[o.kind] || SHAPES.rect).prst, fill: !o.fill || o.fill === 'none' ? null : o.fill, stroke: (o.sw ?? 1.6) > 0 ? (o.stroke || '#111111') : null, w: o.sw ?? 1.6, dash: o.dash ? 'dash' : '', text: o.text, fs: o.fs || 14, color: o.color, rot: o.rot || 0, flip: !!o.flip, vert: o.vert });
       case 'mark': return ell('囲み', o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, { stroke: o.color, w: o.sw });
       case 'photo': {
         const k = [];
         if (o.asset && doc.assets[o.asset]) {
           const sz = ctx.size[o.asset]; let src = null;
           if (sz) { const ia = sz.w / sz.h, ba = o.w / o.h, c = ia > ba ? Math.round((1 - ba / ia) / 2 * 100000) : Math.round((1 - ia / ba) / 2 * 100000); src = ia > ba ? { l: c, r: c, t: 0, b: 0 } : { l: 0, r: 0, t: c, b: c }; }
-          k.push(pic('写真', ctx.img(o.asset), o.x, o.y, o.w, o.h, { src, stroke: '#8a96a3' }));
+          if (o.fit === 'contain' && sz) {
+            const ia = sz.w / sz.h, ba = o.w / o.h, w2 = ia > ba ? o.w : o.h * ia, h2 = ia > ba ? o.w / ia : o.h;
+            k.push(rect('写真枠', o.x, o.y, o.w, o.h, { fill: '#ffffff', stroke: '#8a96a3', w: 1 }));
+            k.push(pic('写真', ctx.img(o.asset), o.x + (o.w - w2) / 2, o.y + (o.h - h2) / 2, w2, h2, {}));
+          } else k.push(pic('写真', ctx.img(o.asset), o.x, o.y, o.w, o.h, { src, stroke: '#8a96a3' }));
         } else k.push(rect('写真枠', o.x, o.y, o.w, o.h, { fill: '#f1f4f7', stroke: '#a3afbb', w: 1 }));
         if (o.caption) { const tw = textW(o.caption, o.cfs) + 14, chh = o.cfs * 1.6; k.push(rect('キャプション', o.x + o.w / 2 - tw / 2, o.y + o.h + 6, tw, chh, { fill: '#ffffff', stroke: o.ccol, w: 1.6, text: o.caption, fs: o.cfs, box: true })); }
         for (const c of kidsOf(o.id)) k.push(emit(c, ctx));
         return group('写真 ' + (o.caption || ''), k);
       }
       case 'image': {
-        if (o.hide || o.print === false || !doc.assets[o.asset]) return null;
+        if (o.hide || !bgOn(o) || !doc.assets[o.asset]) return null;
         return pic(o.isMap ? '地図' : '下絵', ctx.img(o.asset), o.x, o.y, o.w, o.h, { alpha: o.opacity, rot: o.rot || 0 });
       }
       case 'north': {
@@ -2353,9 +2486,9 @@ const XL = (() => {
   }
   function build(ctx) {
     id = 1;
-    const els = [rect('図枠', 24, 24, W - 48, H - 48, { stroke: '#111111', w: 2 })];
+    const els = isBare() ? [] : [rect('図枠', 24, 24, W - 48, H - 48, { stroke: '#111111', w: 2 })];
     for (const o of doc.objects) { if (attached(o)) continue; const e = emit(o, ctx); if (e) els.push(e); }
-    els.push(titleEl());
+    if (!isBare()) els.push(titleEl());
     const body = els.filter(Boolean).map(e => `<xdr:absoluteAnchor><xdr:pos x="${E(e.b.x)}" y="${E(e.b.y)}"/><xdr:ext cx="${Math.max(1, E(e.b.w))}" cy="${Math.max(1, E(e.b.h))}"/>${e.xml}<xdr:clientData/></xdr:absoluteAnchor>`).join('');
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">${body}</xdr:wsDr>`;
   }
@@ -2392,6 +2525,381 @@ const XL = (() => {
   return { build, inject };
 })();
 
+/* ============ Excel drawing import (xlsx → editable objects) ============ */
+const XLIN = (() => {
+  const U = emu => emu / 9000;                           // EMU → drawing units
+  const PT = pt => pt / 0.7087;                          // font pt → units
+  const ch = (el, n) => el ? [...el.children].filter(c => c.localName === n) : [];
+  const c1 = (el, n) => ch(el, n)[0] || null;
+  const dig = (el, path) => path.split('/').reduce((e, n) => e && c1(e, n), el);
+  const num = (v, d = 0) => { const n = parseFloat(v); return isNaN(n) ? d : n; };
+  const parse = s => new DOMParser().parseFromString(s, 'application/xml');
+  function resolvePath(base, rel) { if (rel.startsWith('/')) return rel.slice(1); const p = base.split('/'); p.pop(); for (const s of rel.split('/')) { if (s === '..') p.pop(); else if (s !== '.') p.push(s); } return p.join('/'); }
+  async function rels(zip, partPath) {
+    const i = partPath.lastIndexOf('/'), rp = partPath.slice(0, i) + '/_rels/' + partPath.slice(i + 1) + '.rels', f = zip.file(rp), out = {};
+    if (!f) return out;
+    for (const r of parse(await f.async('string')).getElementsByTagName('Relationship')) out[r.getAttribute('Id')] = { target: resolvePath(partPath, r.getAttribute('Target')), type: r.getAttribute('Type') || '', ext: r.getAttribute('TargetMode') === 'External' };
+    return out;
+  }
+  /* colours */
+  const hex2 = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+  function rgb2hsl(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0; const l = (mx + mn) / 2; if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; } return [h, s, l]; }
+  function hsl2rgb(h, s, l) { if (!s) return [l * 255, l * 255, l * 255]; const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }; return [f(h + 1 / 3) * 255, f(h) * 255, f(h - 1 / 3) * 255]; }
+  const PRST = { black: '000000', white: 'ffffff', red: 'ff0000', blue: '0000ff', green: '008000', yellow: 'ffff00', gray: '808080' };
+  function colorOf(el, theme, ph) {
+    if (!el) return null;
+    let base = null, node = null;
+    for (const k of el.children) {
+      const n = k.localName;
+      if (n === 'srgbClr') { base = k.getAttribute('val'); node = k; }
+      else if (n === 'sysClr') { base = k.getAttribute('lastClr') || (k.getAttribute('val') === 'window' ? 'ffffff' : '000000'); node = k; }
+      else if (n === 'schemeClr') { const v = k.getAttribute('val'); base = v === 'phClr' ? (ph || '000000') : theme[{ tx1: 'dk1', bg1: 'lt1', tx2: 'dk2', bg2: 'lt2' }[v] || v] || '000000'; node = k; }
+      else if (n === 'prstClr') { base = PRST[k.getAttribute('val')] || '000000'; node = k; }
+      else if (n === 'scrgbClr') { base = [k.getAttribute('r'), k.getAttribute('g'), k.getAttribute('b')].map(v => hex2(num(v) / 100000 * 255)).join(''); node = k; }
+      if (node) break;
+    }
+    if (!base) return null;
+    let r = parseInt(base.slice(0, 2), 16), g = parseInt(base.slice(2, 4), 16), b = parseInt(base.slice(4, 6), 16), a = 1;
+    for (const m of node.children) {
+      const v = num(m.getAttribute('val'), 100000) / 100000;
+      if (m.localName === 'lumMod' || m.localName === 'lumOff') { const [h, s, l] = rgb2hsl(r, g, b); const nl = m.localName === 'lumMod' ? l * v : l + v; [r, g, b] = hsl2rgb(h, s, Math.max(0, Math.min(1, nl))); }
+      else if (m.localName === 'shade') { r *= v; g *= v; b *= v; }
+      else if (m.localName === 'tint') { r += (255 - r) * (1 - v); g += (255 - g) * (1 - v); b += (255 - b) * (1 - v); }
+      else if (m.localName === 'alpha') a = v;
+    }
+    return { c: '#' + hex2(r) + hex2(g) + hex2(b), a };
+  }
+  async function readTheme(zip) {
+    const t = {}, f = Object.keys(zip.files).find(n => /^xl\/theme\/theme\d*\.xml$/.test(n)); if (!f) return t;
+    const x = parse(await zip.file(f).async('string')), cs = x.getElementsByTagNameNS('*', 'clrScheme')[0]; if (!cs) return t;
+    for (const k of cs.children) { const c = colorOf(k, {}, null); if (c) t[k.localName] = c.c.slice(1); }
+    return t;
+  }
+  /* geometry of the drawing */
+  function xf(el) { const x = c1(el, 'xfrm') || dig(el, 'spPr/xfrm') || dig(el, 'grpSpPr/xfrm'); if (!x) return null; const off = c1(x, 'off'), ext = c1(x, 'ext'), co = c1(x, 'chOff'), ce = c1(x, 'chExt');
+    return { x: num(off?.getAttribute('x')), y: num(off?.getAttribute('y')), w: num(ext?.getAttribute('cx')), h: num(ext?.getAttribute('cy')), rot: num(x.getAttribute('rot')) / 60000, fh: x.getAttribute('flipH') === '1', fv: x.getAttribute('flipV') === '1',
+      cx: co ? num(co.getAttribute('x')) : null, cy: co ? num(co.getAttribute('y')) : null, cw: ce ? num(ce.getAttribute('cx')) : null, chh: ce ? num(ce.getAttribute('cy')) : null }; }
+  function anchorBox(a, geo) {
+    const cell = el => ({ x: geo.colX(num(c1(el, 'col')?.textContent)) + num(c1(el, 'colOff')?.textContent), y: geo.rowY(num(c1(el, 'row')?.textContent)) + num(c1(el, 'rowOff')?.textContent) });
+    if (a.localName === 'absoluteAnchor') { const p = c1(a, 'pos'), e = c1(a, 'ext'); return { x: num(p?.getAttribute('x')), y: num(p?.getAttribute('y')), w: num(e?.getAttribute('cx')), h: num(e?.getAttribute('cy')) }; }
+    const f = cell(c1(a, 'from'));
+    if (a.localName === 'oneCellAnchor') { const e = c1(a, 'ext'); return { ...f, w: num(e?.getAttribute('cx')), h: num(e?.getAttribute('cy')) }; }
+    const t = cell(c1(a, 'to')); return { x: f.x, y: f.y, w: t.x - f.x, h: t.y - f.y };
+  }
+  const ident = { m: (x, y) => [x, y], s: 1 };
+  function compose(T, g) { // group child-space → parent-space
+    if (!g || g.cw == null || !g.cw || !g.chh) return T;
+    const sx = g.w / g.cw, sy = g.h / g.chh;
+    return { m: (x, y) => T.m(g.x + (x - g.cx) * sx, g.y + (y - g.cy) * sy), s: T.s * (sx + sy) / 2 };
+  }
+  /* text */
+  function textOf(el, theme, styleFont) {
+    const tb = c1(el, 'txBody'); if (!tb) return null;
+    const lines = [], bp = c1(tb, 'bodyPr'); let sz = 0, col = null, bold = false, algn = null;
+    const def = tb.getElementsByTagNameNS('*', 'defRPr')[0];
+    for (const p of ch(tb, 'p')) {
+      let s = ''; const pp = c1(p, 'pPr'); if (algn == null && pp && pp.getAttribute('algn')) algn = pp.getAttribute('algn');
+      for (const r of p.children) {
+        if (r.localName === 'r' || r.localName === 'fld') { s += c1(r, 't')?.textContent || ''; const rp = c1(r, 'rPr'); if (rp) { if (!sz && rp.getAttribute('sz')) sz = num(rp.getAttribute('sz')) / 100; if (!col) { const f = c1(rp, 'solidFill'); if (f) col = colorOf(f, theme); } if (rp.getAttribute('b') === '1') bold = true; } }
+        else if (r.localName === 'br') s += '\n';
+      }
+      if (!sz) { const ep = c1(p, 'endParaRPr'); if (ep && ep.getAttribute('sz') && s) sz = num(ep.getAttribute('sz')) / 100; }
+      lines.push(s);
+    }
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+    const text = lines.join('\n'); if (!text.trim()) return null;
+    if (!sz && def && def.getAttribute('sz')) sz = num(def.getAttribute('sz')) / 100;
+    const vert = bp && /^(eaVert|vert|wordArtVert|mongolianVert|wordArtVertRtl|vert270)$/.test(bp.getAttribute('vert') || '');
+    return { text, pt: sz || 11, color: (col || styleFont)?.c || '#111111', bold, algn: algn || 'l', vert, anchor: bp?.getAttribute('anchor') || 't', ins: { l: num(bp?.getAttribute('lIns'), 91440), t: num(bp?.getAttribute('tIns'), 45720) } };
+  }
+  function fillOf(spPr, style, theme) {
+    if (spPr) for (const k of spPr.children) {
+      if (k.localName === 'noFill') return null;
+      if (k.localName === 'solidFill') return colorOf(k, theme);
+      if (k.localName === 'gradFill') { const gs = k.getElementsByTagNameNS('*', 'gs')[0]; return gs ? colorOf(gs, theme) : null; }
+      if (k.localName === 'pattFill') return colorOf(c1(k, 'fgClr'), theme);
+      if (k.localName === 'grpFill') return null;
+      if (k.localName === 'blipFill') return null;
+    }
+    const fr = style && c1(style, 'fillRef'); if (fr && num(fr.getAttribute('idx')) > 0) return colorOf(fr, theme);
+    return undefined;
+  }
+  function lineOf(spPr, style, theme) {
+    const ln = spPr && c1(spPr, 'ln'); let col, w = ln && ln.getAttribute('w') != null ? num(ln.getAttribute('w')) : null;
+    if (ln) for (const k of ln.children) { if (k.localName === 'noFill') return null; if (k.localName === 'solidFill' || k.localName === 'gradFill') col = colorOf(k.localName === 'gradFill' ? k.getElementsByTagNameNS('*', 'gs')[0] : k, theme); }
+    if (!col) { const lr = style && c1(style, 'lnRef'); if (lr && num(lr.getAttribute('idx')) > 0) col = colorOf(lr, theme); }
+    if (!col) return ln ? { c: '#000000', w: w ?? 9525, dash: '', head: '', tail: '' } : undefined;
+    const pd = ln && c1(ln, 'prstDash'), he = ln && c1(ln, 'headEnd'), te = ln && c1(ln, 'tailEnd');
+    return { c: col.c, w: w ?? 9525, dash: pd && pd.getAttribute('val') !== 'solid' ? pd.getAttribute('val') : '', head: he && he.getAttribute('type') !== 'none' ? he.getAttribute('type') : '', tail: te && te.getAttribute('type') !== 'none' ? te.getAttribute('type') : '' };
+  }
+  const SHAPEMAP = { flowChartProcess: 'rect', flowChartAlternateProcess: 'roundRect', flowChartDecision: 'diamond', flowChartTerminator: 'roundRect', flowChartConnector: 'ellipse', flowChartMagneticDisk: 'can', snip1Rect: 'rect', round1Rect: 'roundRect', round2SameRect: 'roundRect', plaque: 'roundRect', bevel: 'rect', octagon: 'octagon', star4: 'star5', star6: 'star5', star8: 'star5', notchedRightArrow: 'rightArrow', stripedRightArrow: 'rightArrow', textRect: 'rect' };
+  function avOf(el) { const o = {}; for (const g of el ? el.getElementsByTagNameNS('*', 'gd') : []) { const m = /val\s+(-?\d+)/.exec(g.getAttribute('fmla') || ''); if (m) o[g.getAttribute('name')] = +m[1]; } return o; }
+  /* convert one leaf element to tool objects (coordinates in EMU through T) */
+  function leaf(el, T, ctx, out) {
+    const t = el.localName, X = xf(el); if (!X) return;
+    const p0 = T.m(X.x, X.y), p1 = T.m(X.x + X.w, X.y + X.h);
+    const box = { x: U(Math.min(p0[0], p1[0])), y: U(Math.min(p0[1], p1[1])), w: U(Math.abs(p1[0] - p0[0])), h: U(Math.abs(p1[1] - p0[1])) };
+    const spPr = c1(el, 'spPr'), style = c1(el, 'style'), th = ctx.theme;
+    if (t === 'pic') {
+      const blip = el.getElementsByTagNameNS('*', 'blip')[0], rid = blip && (blip.getAttribute('r:embed') || blip.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'embed'));
+      const r = rid && ctx.rels[rid]; if (!r || r.ext) { ctx.skipped++; return; }
+      out.push({ type: 'photo', x: box.x, y: box.y, w: box.w, h: box.h, asset: null, _media: r.target, caption: '', ccol: BLUE, cfs: 13, fit: 'cover' }); return;
+    }
+    const geo = c1(spPr, 'prstGeom'), prst = geo ? geo.getAttribute('prst') : null, cust = c1(spPr, 'custGeom');
+    const fl = fillOf(spPr, style, th), ln = lineOf(spPr, style, th), styleFont = style ? colorOf(c1(style, 'fontRef'), th) : null;
+    const tx = textOf(el, th, styleFont);
+    const lw = ln ? Math.min(12, Math.max(0.5, U(ln.w || 9525))) : 0, dash = ln && ln.dash ? true : false;
+    const isTxBox = !!el.getElementsByTagNameNS('*', 'cNvSpPr')[0]?.getAttribute('txBox');
+    const lineLike = t === 'cxnSp' || ['line', 'straightConnector1'].includes(prst) || /Connector/.test(prst || '');
+    if (lineLike) {
+      if (!ln) return;
+      let a = [X.x, X.y], b = [X.x + X.w, X.y + X.h]; if (X.fh) { const q = a[0]; a[0] = b[0]; b[0] = q; } if (X.fv) { const q = a[1]; a[1] = b[1]; b[1] = q; }
+      const A = T.m(...a).map(U), B = T.m(...b).map(U);
+      let pts = [A, B];
+      if (/bentConnector/.test(prst || '')) { const mx = (A[0] + B[0]) / 2; pts = [A, [mx, A[1]], [mx, B[1]], B]; }
+      if (ln.head || ln.tail) { const [s, e] = ln.tail || !ln.head ? [pts[pts.length - 2], pts[pts.length - 1]] : [pts[1], pts[0]]; if (pts.length > 2) out.push({ type: 'line', pts: pts.slice(0, -1), w: lw, dash, color: ln.c }); out.push({ type: 'arrow', p1: pts.length > 2 ? s : pts[0], p2: e, color: ln.c, w: lw, dash, halo: false, both: !!(ln.head && ln.tail) }); }
+      else out.push({ type: 'line', pts, w: lw, dash, color: ln.c });
+      return;
+    }
+    if (prst === 'arc' || prst === 'blockArc') {
+      if (!ln) return; const av = avOf(geo), a1 = (av.adj1 ?? 16200000) / 60000, a2 = (av.adj2 ?? 0) / 60000;
+      let sweep = a2 - a1; if (sweep <= 0) sweep += 360;
+      const rx = X.w / 2, ry = X.h / 2, cx = X.x + rx, cy = X.y + ry, pts = [];
+      for (let i = 0; i <= 24; i++) { const ang = (a1 + sweep * i / 24) * Math.PI / 180; let px = rx * Math.cos(ang), py = ry * Math.sin(ang); if (X.fh) px = -px; if (X.fv) py = -py; pts.push(T.m(cx + px, cy + py).map(U)); }
+      out.push({ type: 'line', pts: pts.map(q => [r1(q[0]), r1(q[1])]), w: lw, dash, color: ln.c }); return;
+    }
+    if (cust) {
+      const pl = cust.getElementsByTagNameNS('*', 'path');
+      for (const pth of pl) {
+        const pw = num(pth.getAttribute('w'), X.w) || 1, phh = num(pth.getAttribute('h'), X.h) || 1, pts = []; let closed = false, cur = null;
+        const mp = q => { let lx = num(q.getAttribute('x')) / pw * X.w, ly = num(q.getAttribute('y')) / phh * X.h; if (X.fh) lx = X.w - lx; if (X.fv) ly = X.h - ly; return T.m(X.x + lx, X.y + ly).map(U); };
+        for (const c of pth.children) {
+          const qs = [...c.getElementsByTagNameNS('*', 'pt')].map(mp);
+          if (c.localName === 'moveTo' || c.localName === 'lnTo') { pts.push(qs[0]); cur = qs[0]; }
+          else if (c.localName === 'cubicBezTo' && cur) { for (let i = 1; i <= 8; i++) { const s2 = i / 8, u = 1 - s2; pts.push([u * u * u * cur[0] + 3 * u * u * s2 * qs[0][0] + 3 * u * s2 * s2 * qs[1][0] + s2 * s2 * s2 * qs[2][0], u * u * u * cur[1] + 3 * u * u * s2 * qs[0][1] + 3 * u * s2 * s2 * qs[1][1] + s2 * s2 * s2 * qs[2][1]]); } cur = qs[2]; }
+          else if (c.localName === 'quadBezTo' && cur) { for (let i = 1; i <= 8; i++) { const s2 = i / 8, u = 1 - s2; pts.push([u * u * cur[0] + 2 * u * s2 * qs[0][0] + s2 * s2 * qs[1][0], u * u * cur[1] + 2 * u * s2 * qs[0][1] + s2 * s2 * qs[1][1]]); } cur = qs[1]; }
+          else if (c.localName === 'close') closed = true;
+        }
+        if (pts.length < 2) continue;
+        const P = pts.map(q => [r1(q[0]), r1(q[1])]);
+        if (closed && P.length >= 3 && (fl || pth.getAttribute('fill') !== 'none')) out.push({ type: 'poly', pts: P, label: '', fs: 14, sw: lw || 0.5, stroke: ln ? ln.c : 'none', fill: fl ? fl.c : 'none', dash, showEdges: false, lx: 0, ly: 0 });
+        else if (ln) out.push({ type: 'line', pts: closed ? [...P, P[0]] : P, w: lw, dash, color: ln.c });
+      }
+      if (tx) out.push(textObj(tx, box, T));
+      return;
+    }
+    if (prst && /Callout/.test(prst) && /^wedge/.test(prst)) {
+      const av = avOf(geo), cx = box.x + box.w / 2, cy = box.y + box.h / 2;
+      out.push({ type: 'callout', x: box.x, y: box.y, w: box.w, h: box.h, text: tx ? tx.text : '', fs: tx ? Math.max(6, PT(tx.pt)) : 14, color: tx ? tx.color : '#111111', tx: r1(cx + (av.adj1 ?? -20833) / 100000 * box.w), ty: r1(cy + (av.adj2 ?? 62500) / 100000 * box.h), fill: fl ? fl.c : '#ffffff', stroke: ln ? ln.c : '#333333', vert: tx ? tx.vert : false });
+      return;
+    }
+    const noFrame = (fl === null || (fl === undefined && isTxBox)) && (ln === null || (ln === undefined && isTxBox));
+    if (noFrame) { if (tx) out.push(textObj(tx, box, T)); return; }
+    let kind = prst && (SHAPES[prst] ? prst : SHAPEMAP[prst]); if (!kind) { if (prst && prst !== 'rect') ctx.approx++; kind = 'rect'; }
+    const cx = box.x + box.w / 2, cy = box.y + box.h / 2, rot = X.rot || 0, swap = Math.abs(rot % 180) === 90;
+    out.push({ type: 'shape', kind, x: r1(cx), y: r1(cy), w: r1(box.w), h: r1(box.h), rot, flip: X.fh, fill: fl ? fl.c : (fl === undefined && !isTxBox ? '#ffffff' : 'none'), stroke: ln ? ln.c : '#111111', sw: ln ? lw : 0, dash, text: tx ? tx.text : '', fs: tx ? Math.max(6, r1(PT(tx.pt))) : 14, color: tx ? tx.color : '#111111', vert: tx ? tx.vert : false });
+    if (swap) { /* Excel stores unrotated ext */ }
+  }
+  function textObj(tx, box, T) {
+    const fs = Math.max(6, r1(PT(tx.pt))), lines = tx.text.split('\n'), lh = fs * 1.35, th = tx.vert ? vSize(lines, fs).h : lines.length * lh;
+    const top = tx.anchor === 'ctr' ? box.y + (box.h - th) / 2 : tx.anchor === 'b' ? box.y + box.h - th : box.y + U(tx.ins.t) * T.s;
+    const mid = tx.algn === 'ctr' || tx.vert;
+    const tw = tx.vert ? vSize(lines, fs).w : 0;
+    return { type: 'text', x: r1(mid ? box.x + box.w / 2 : tx.algn === 'r' ? box.x + box.w - U(tx.ins.l) * T.s - Math.max(...lines.map(l => textW(l, fs, tx.bold))) : box.x + U(tx.ins.l) * T.s), y: r1(top + fs), text: tx.text, fs, color: tx.color, bold: tx.bold, box: 'none', anchor: mid ? 'middle' : 'start', vert: !!tx.vert, _w: tw };
+  }
+  function walk(el, T, ctx, out, grp) {
+    const n = el.localName;
+    if (n === 'grpSp') {
+      const g = xf(el), T2 = compose(T, g), id = grp || ('g' + uid());
+      for (const k of el.children) if (['sp', 'pic', 'cxnSp', 'grpSp'].includes(k.localName)) walk(k, T2, ctx, out, id);
+      return;
+    }
+    if (['sp', 'pic', 'cxnSp'].includes(n)) { const list = []; leaf(el, T, ctx, list); list.forEach(o => { if (grp) o.grp = grp; out.push(o); }); }
+    else if (n === 'graphicFrame') ctx.skipped++;
+  }
+  /* sheet geometry: column x / row y in EMU */
+  function sheetGeo(sx) {
+    const fmt = sx.getElementsByTagNameNS('*', 'sheetFormatPr')[0];
+    const defW = num(fmt?.getAttribute('defaultColWidth'), num(fmt?.getAttribute('baseColWidth'), 8) + 0.71), defH = num(fmt?.getAttribute('defaultRowHeight'), 15);
+    const colPx = w => Math.trunc(((256 * w + Math.trunc(128 / 7)) / 256) * 7), cw = {}, rh = {};
+    for (const c of sx.getElementsByTagNameNS('*', 'col')) { const mn = num(c.getAttribute('min')), mx = Math.min(num(c.getAttribute('max')), 2000), w = c.getAttribute('hidden') === '1' || c.getAttribute('hidden') === 'true' ? 0 : num(c.getAttribute('width'), defW); for (let i = mn; i <= mx; i++) cw[i - 1] = colPx(w) * 9525; }
+    for (const r of sx.getElementsByTagNameNS('*', 'row')) if (r.getAttribute('ht')) rh[num(r.getAttribute('r')) - 1] = num(r.getAttribute('ht')) * 12700;
+    const dW = colPx(defW) * 9525, dH = defH * 12700, cx = [0], ry = [0];
+    const colX = i => { while (cx.length <= i) cx.push(cx[cx.length - 1] + (cw[cx.length - 1] ?? dW)); return cx[i]; };
+    const rowY = i => { while (ry.length <= i) ry.push(ry[ry.length - 1] + (rh[ry.length - 1] ?? dH)); return ry[i]; };
+    return { colX, rowY };
+  }
+  const colIdx = ref => { const m = /^([A-Z]+)(\d+)$/.exec(ref); if (!m) return null; let c = 0; for (const ch2 of m[1]) c = c * 26 + ch2.charCodeAt(0) - 64; return [c - 1, +m[2] - 1]; };
+  async function readStyles(zip, theme) {
+    const f = zip.file('xl/styles.xml'), st = { fonts: [], borders: [], xfs: [], fmts: {} }; if (!f) return st;
+    const x = parse(await f.async('string'));
+    const IDX = { 8: '#000000', 9: '#ffffff', 10: '#ff0000', 11: '#00ff00', 12: '#0000ff', 13: '#ffff00', 14: '#ff00ff', 15: '#00ffff', 16: '#800000', 17: '#008000', 18: '#000080', 22: '#c0c0c0', 23: '#808080', 55: '#969696', 64: '#000000', 65: '#ffffff' };
+    const clr = el => { if (!el) return null; if (el.getAttribute('indexed') != null) return IDX[+el.getAttribute('indexed')] || '#000000'; const rgb = el.getAttribute('rgb'); if (rgb) return '#' + rgb.slice(-6).toLowerCase(); const th = el.getAttribute('theme'); if (th != null) { const k = ['lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6'][+th]; return theme[k] ? '#' + theme[k] : null; } return null; };
+    const fonts = x.getElementsByTagNameNS('*', 'fonts')[0], borders = x.getElementsByTagNameNS('*', 'borders')[0], xfs = x.getElementsByTagNameNS('*', 'cellXfs')[0];
+    for (const fo of ch(fonts, 'font')) st.fonts.push({ sz: num(c1(fo, 'sz')?.getAttribute('val'), 11), b: !!c1(fo, 'b') && c1(fo, 'b').getAttribute('val') !== '0' && c1(fo, 'b').getAttribute('val') !== 'false', color: clr(c1(fo, 'color')) });
+    for (const bo of ch(borders, 'border')) { const e = {}; for (const k of ['left', 'right', 'top', 'bottom']) { const el = c1(bo, k), sty = el && el.getAttribute('style'); if (sty && sty !== 'none') e[k] = { s: sty, c: clr(c1(el, 'color')) || '#000000' }; } st.borders.push(e); }
+    for (const nf of x.getElementsByTagNameNS('*', 'numFmt')) st.fmts[nf.getAttribute('numFmtId')] = nf.getAttribute('formatCode') || '';
+    for (const xf2 of ch(xfs, 'xf')) { const al = c1(xf2, 'alignment'); st.xfs.push({ nf: num(xf2.getAttribute('numFmtId')), font: num(xf2.getAttribute('fontId')), border: num(xf2.getAttribute('borderId')), h: al?.getAttribute('horizontal') || 'general', v: al?.getAttribute('vertical') || 'bottom' }); }
+    return st;
+  }
+  async function listSheets(zip) {
+    const wb = parse(await zip.file('xl/workbook.xml').async('string')), wr = await rels(zip, 'xl/workbook.xml'), out = [], pa = {};
+    for (const d of wb.getElementsByTagNameNS('*', 'definedName')) if (d.getAttribute('name') === '_xlnm.Print_Area' && d.getAttribute('localSheetId') != null) pa[d.getAttribute('localSheetId')] = d.textContent;
+    let si = -1;
+    for (const s of wb.getElementsByTagNameNS('*', 'sheet')) { si++;
+      const rid = s.getAttribute('r:id') || s.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'id'), path = wr[rid]?.target; if (!path || !zip.file(path)) continue;
+      const sr = await rels(zip, path), dr = Object.values(sr).find(r => /\/drawing$/.test(r.type));
+      const m = pa[si] && /\$?([A-Z]+)\$?(\d+):\$?([A-Z]+)\$?(\d+)/.exec(pa[si].split(',')[0]);
+      out.push({ name: s.getAttribute('name'), path, drawing: dr ? dr.target : null, area: m ? [colIdx(m[1] + m[2]), colIdx(m[3] + m[4])] : null });
+    }
+    return out;
+  }
+  async function importSheet(zip, sh, opts) {
+    const theme = await readTheme(zip), sx = parse(await zip.file(sh.path).async('string')), est = sheetGeo(sx), out = [], ctx = { theme, rels: {}, skipped: 0, approx: 0 };
+    let geo = est, dxDoc = null;
+    if (sh.drawing && zip.file(sh.drawing)) {
+      dxDoc = parse(await zip.file(sh.drawing).async('string'));
+      // calibrate column/row positions from anchors that carry both cell refs and absolute xfrm
+      const cs = {}, rs = {};
+      for (const a of dxDoc.documentElement.children) {
+        if (a.localName !== 'twoCellAnchor' && a.localName !== 'oneCellAnchor') continue;
+        const el = [...a.children].find(e => ['sp', 'pic', 'cxnSp', 'grpSp', 'graphicFrame'].includes(e.localName)); if (!el) continue;
+        const X = xf(el); if (!X || (!X.w && !X.h)) continue;
+        const fr = c1(a, 'from'), to = c1(a, 'to');
+        const put = (m, i, v) => { (m[i] = m[i] || []).push(v); };
+        put(cs, num(c1(fr, 'col')?.textContent), X.x - num(c1(fr, 'colOff')?.textContent)); put(rs, num(c1(fr, 'row')?.textContent), X.y - num(c1(fr, 'rowOff')?.textContent));
+        if (to) { put(cs, num(c1(to, 'col')?.textContent), X.x + X.w - num(c1(to, 'colOff')?.textContent)); put(rs, num(c1(to, 'row')?.textContent), X.y + X.h - num(c1(to, 'rowOff')?.textContent)); }
+      }
+      const med = arr => { const q = [...arr].sort((a, b) => a - b); return q[Math.floor(q.length / 2)]; };
+      const mk = (m, f0) => {
+        // least-squares fit of the real position against our estimate: actual ≈ a·est + b (robust to a few odd anchors)
+        let pts = Object.keys(m).map(Number).map(k => [f0(k), med(m[k])]); if (pts.length < 2) return f0;
+        const fit = q => { const n = q.length, sx = q.reduce((s2, p2) => s2 + p2[0], 0), sy = q.reduce((s2, p2) => s2 + p2[1], 0), sxx = q.reduce((s2, p2) => s2 + p2[0] * p2[0], 0), sxy = q.reduce((s2, p2) => s2 + p2[0] * p2[1], 0), d = n * sxx - sx * sx; if (!d) return null; const a2 = (n * sxy - sx * sy) / d; return [a2, (sy - a2 * sx) / n]; };
+        let f = fit(pts); if (!f) return f0;
+        const res = pts.map(p2 => Math.abs(p2[1] - (f[0] * p2[0] + f[1]))), lim = Math.max(20000, [...res].sort((x, y) => x - y)[Math.floor(res.length * 0.8)] * 2);
+        const keep = pts.filter((p2, i) => res[i] <= lim); if (keep.length >= 2) f = fit(keep) || f;
+        return i => f[0] * f0(i) + f[1];
+      };
+      geo = { colX: mk(cs, est.colX), rowY: mk(rs, est.rowY) };
+    }
+    if (dxDoc) {
+      ctx.rels = await rels(zip, sh.drawing);
+      const dx = dxDoc;
+      for (const a of dx.documentElement.children) {
+        if (!/Anchor$/.test(a.localName)) continue;
+        const ab = anchorBox(a, geo);
+        for (const el of a.children) {
+          if (!['sp', 'pic', 'cxnSp', 'grpSp', 'graphicFrame'].includes(el.localName)) continue;
+          const X = xf(el); let T = ident;
+          if (!X || (!X.w && !X.h)) { /* no xfrm: place by anchor */ T = { m: (x, y) => [ab.x + x, ab.y + y], s: 1 }; }
+          walk(el, T, ctx, out, null);
+        }
+      }
+    }
+    const area = opts.area && sh.area ? { x: U(geo.colX(sh.area[0][0])), y: U(geo.rowY(sh.area[0][1])), x2: U(geo.colX(sh.area[1][0] + 1)), y2: U(geo.rowY(sh.area[1][1] + 1)) } : null;
+    const inArea = (r0, c0) => !area || (c0 >= sh.area[0][0] && c0 <= sh.area[1][0] && r0 >= sh.area[0][1] && r0 <= sh.area[1][1]);
+    if (opts.cells) {
+      const st = await readStyles(zip, theme), ssf = zip.file('xl/sharedStrings.xml'), ss = [];
+      if (ssf) for (const si of parse(await ssf.async('string')).getElementsByTagNameNS('*', 'si')) ss.push([...si.children].map(k => k.localName === 't' ? k.textContent : k.localName === 'r' ? (c1(k, 't')?.textContent || '') : '').join(''));
+      const merges = [...sx.getElementsByTagNameNS('*', 'mergeCell')].map(m => { const [a, b] = m.getAttribute('ref').split(':'); return [colIdx(a), colIdx(b || a)]; }).filter(m => m[0] && m[1]);
+      const mergeOf = (c0, r0) => merges.find(m => c0 >= m[0][0] && c0 <= m[1][0] && r0 >= m[0][1] && r0 <= m[1][1]);
+      const H = {}, V = {}, add = (map, key, a, b, sty) => { (map[key] = map[key] || []).push([a, b, sty]); };
+      for (const c of sx.getElementsByTagNameNS('*', 'c')) {
+        const rc = colIdx(c.getAttribute('r')); if (!rc || !inArea(rc[1], rc[0])) continue;
+        const xf2 = st.xfs[num(c.getAttribute('s'))] || { font: 0, border: 0, h: 'general', v: 'bottom' }, fo = st.fonts[xf2.font] || { sz: 11 }, bo = st.borders[xf2.border] || {};
+        const x0 = geo.colX(rc[0]), x1 = geo.colX(rc[0] + 1), y0 = geo.rowY(rc[1]), y1 = geo.rowY(rc[1] + 1);
+        const mb = mergeOf(rc[0], rc[1]);
+        if (bo.top && (!mb || rc[1] === mb[0][1])) add(H, y0, x0, x1, bo.top); if (bo.bottom && (!mb || rc[1] === mb[1][1])) add(H, y1, x0, x1, bo.bottom);
+        if (bo.left && (!mb || rc[0] === mb[0][0])) add(V, x0, y0, y1, bo.left); if (bo.right && (!mb || rc[0] === mb[1][0])) add(V, x1, y0, y1, bo.right);
+        const ty = c.getAttribute('t'), v = c1(c, 'v')?.textContent; let s = '';
+        const code = st.fmts[xf2.nf] || '', isDate = (xf2.nf >= 14 && xf2.nf <= 22) || (xf2.nf >= 27 && xf2.nf <= 58) || (code && /[ymdge]/i.test(code.replace(/"[^"]*"|\[[^\]]*\]/g, '')) && !/^[#0.,%\s]+$/.test(code));
+        if ((!ty || ty === 'n') && v != null && isDate && !isNaN(+v) && +v > 0) { const d = new Date(Date.UTC(1899, 11, 30) + Math.round(+v * 86400000)); const y = d.getUTCFullYear(), mo = d.getUTCMonth() + 1, da = d.getUTCDate(); s = /年|e|g/.test(code) || (xf2.nf >= 27 && xf2.nf <= 58) ? `${y}年${mo}月${da}日` : `${y}/${mo}/${da}`; }
+        else if (ty === 's' && v != null) s = ss[+v] || ''; else if (ty === 'inlineStr') { const is = c1(c, 'is'); s = is ? [...is.children].map(k => k.localName === 't' ? k.textContent : k.localName === 'r' ? (c1(k, 't')?.textContent || '') : '').join('') : ''; } else if (!s && (ty === 'str' || ((!ty || ty === 'n') && v != null))) s = v || '';
+        if (!s || !s.trim()) continue;
+        const mg = mergeOf(rc[0], rc[1]), bx = mg ? { x: U(geo.colX(mg[0][0])), y: U(geo.rowY(mg[0][1])), x2: U(geo.colX(mg[1][0] + 1)), y2: U(geo.rowY(mg[1][1] + 1)) } : { x: U(x0), y: U(y0), x2: U(x1), y2: U(y1) };
+        const fs = r1(PT(fo.sz)), lines = s.split('\n'), th = lines.length * fs * 1.35;
+        const yb = xf2.v === 'top' ? bx.y + fs + 2 : xf2.v === 'center' ? bx.y + (bx.y2 - bx.y - th) / 2 + fs : bx.y2 - th + fs - 2;
+        const hz = xf2.h === 'center' || xf2.h === 'centerContinuous' ? 'c' : xf2.h === 'right' ? 'r' : 'l';
+        out.push({ type: 'text', x: r1(hz === 'c' ? (bx.x + bx.x2) / 2 : hz === 'r' ? bx.x2 - 3 - Math.max(...lines.map(l => textW(l, fs, fo.b))) : bx.x + 3), y: r1(yb), text: s, fs, color: fo.color || '#111111', bold: !!fo.b, box: 'none', anchor: hz === 'c' ? 'middle' : 'start', _cell: 1 });
+      }
+      const W2 = sty => ({ hair: 0.5, thin: 1, medium: 2, thick: 3, double: 2.5, dashed: 1, dotted: 1, mediumDashed: 2, dashDot: 1, mediumDashDot: 2, dashDotDot: 1, slantDashDot: 2 }[sty.s] || 1);
+      const DASHED = /dash|dot/i;
+      const flush = (map, horiz) => {
+        for (const [k, segs] of Object.entries(map)) {
+          segs.sort((a, b) => a[0] - b[0]); let cur = null;
+          const emit = () => { if (!cur) return; const kk = U(+k), a = U(cur[0]), b = U(cur[1]); out.push({ type: 'line', pts: horiz ? [[r1(a), r1(kk)], [r1(b), r1(kk)]] : [[r1(kk), r1(a)], [r1(kk), r1(b)]], w: W2(cur[2]), dash: DASHED.test(cur[2].s), color: cur[2].c, _cell: 1 }); };
+          for (const sg of segs) { if (cur && sg[0] <= cur[1] + 1 && sg[2].s === cur[2].s && sg[2].c === cur[2].c) cur[1] = Math.max(cur[1], sg[1]); else { emit(); cur = [...sg]; } }
+          emit();
+        }
+      };
+      flush(H, true); flush(V, false);
+    }
+    // pictures → assets
+    for (const o of out.filter(o => o._media)) {
+      const f = zip.file(o._media), ext = (o._media.split('.').pop() || '').toLowerCase(), mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp' }[ext];
+      if (!f || !mime) { o._drop = 1; ctx.skipped++; continue; }
+      try { const b = await f.async('blob'); const a = await importImage(new File([b], 'x.' + ext, { type: mime }), 1800); o.asset = a.id; } catch { o._drop = 1; ctx.skipped++; }
+      delete o._media;
+    }
+    let objs = out.filter(o => !o._drop);
+    { const bs = objs.map(bbox), ax0 = Math.min(...bs.map(b => b.x)), ay0 = Math.min(...bs.map(b => b.y)), ax1 = Math.max(...bs.map(b => b.x + b.w)), ay1 = Math.max(...bs.map(b => b.y + b.h)), A = Math.max(1, (ax1 - ax0) * (ay1 - ay0));
+      const dark = c => { if (!c || c === 'none' || c[0] !== '#') return false; const n = parseInt(c.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255; return r * 0.3 + g * 0.59 + b * 0.11 < 90; };
+      for (const o of objs) { if ((o.type === 'shape' || o.type === 'poly') && dark(o.fill) && !o.text) { const b = bbox(o); if (b.w * b.h > A * 0.15) { o.fill = 'none'; ctx.fixed = (ctx.fixed || 0) + 1; } } } }
+    if (area) objs = objs.filter(o => { if (o._cell) return true; const b = bbox(o), cx = b.x + b.w / 2, cy = b.y + b.h / 2, mx = (area.x2 - area.x) * 0.005, my = (area.y2 - area.y) * 0.005; return cx >= area.x - mx && cx <= area.x2 + mx && cy >= area.y - my && cy <= area.y2 + my; });
+    return { objs, skipped: ctx.skipped, approx: ctx.approx, area, fixed: ctx.fixed || 0 };
+  }
+  return { listSheets, importSheet };
+})();
+
+function scaleObjs(objs, f, ox, oy, nx, ny) {
+  const m = (x, y) => [r1(nx + (x - ox) * f), r1(ny + (y - oy) * f)];
+  for (const o of objs) {
+    if ('x' in o) [o.x, o.y] = m(o.x, o.y);
+    if ('w' in o && o.type !== 'line' && o.type !== 'arrow') { o.w = r1(o.w * f); o.h = r1(o.h * f); }
+    if (o.type === 'line') o.w = Math.max(0.5, r1(o.w * f));
+    if (o.type === 'arrow') o.w = Math.max(0.5, r1(o.w * f));
+    if (o.pts) o.pts = o.pts.map(p => m(p[0], p[1]));
+    if (o.p1) { o.p1 = m(...o.p1); o.p2 = m(...o.p2); }
+    if ('tx' in o) [o.tx, o.ty] = m(o.tx, o.ty);
+    if (o.fs) o.fs = Math.max(5, r1(o.fs * f));
+    if (o.sw && o.type !== 'line') o.sw = Math.max(0.4, r1(o.sw * f));
+  }
+}
+async function openXlsxImport(file) {
+  if (/\.xls$/i.test(file.name)) { toast('古い形式（.xls）は読み込めません。Excelで開いて「名前を付けて保存」→「Excel ブック（.xlsx）」で保存してから取り込んでください'); return; }
+  let zip, sheets;
+  try { await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'); zip = await JSZip.loadAsync(file); sheets = await XLIN.listSheets(zip); }
+  catch (err) { toast('このファイルは読み込めません（.xlsx を選んでください）'); return; }
+  if (!sheets.length) { toast('シートが見つかりませんでした'); return; }
+  const withDr = sheets.filter(s => s.drawing), list = withDr.length ? withDr : sheets;
+  const opt = await modal('Excelの図面を取り込む', `
+    <p class="note" style="color:var(--ink)">「${esc(file.name)}」の図形・線・文字・写真を、このツールで編集できる形で取り込みます。</p>
+    ${list.length > 1 ? `<div class="f"><label for="mSheet">シート</label><select id="mSheet">${list.map((s, i) => `<option value="${i}">${esc(s.name)}${s.drawing ? '' : '（図形なし）'}</option>`).join('')}</select></div>` : `<p class="note">シート：${esc(list[0].name)}</p>`}
+    <div class="f"><span class="l">取り込み先</span><label class="chk"><input type="radio" name="mDest" value="new" checked> 新しいページに取り込む</label><label class="chk"><input type="radio" name="mDest" value="cur"> 今のページに追加する</label></div>
+    <div class="f"><span class="l">大きさ</span><label class="chk"><input type="radio" name="mFit" value="fit" checked> 用紙に合わせて縮小・拡大する</label><label class="chk"><input type="radio" name="mFit" value="raw"> 元の大きさのまま</label></div>
+    <label class="chk"><input type="checkbox" id="mCells" checked> セルの文字と罫線（図枠・表題欄など）も取り込む</label>
+    ${list.some(s => s.area) ? '<label class="chk"><input type="checkbox" id="mArea" checked> 印刷範囲の中だけ取り込む</label>' : ''}
+    <label class="chk"><input type="checkbox" id="mBare" checked> このツールの図枠・表題欄を表示しない（元の図面の枠を使う）</label>`,
+    '取り込む', f => ({ sheet: list[+(f.querySelector('#mSheet')?.value || 0)], dest: f.querySelector('input[name=mDest]:checked').value, fit: f.querySelector('input[name=mFit]:checked').value === 'fit', cells: f.querySelector('#mCells').checked, area: !!f.querySelector('#mArea')?.checked, bare: f.querySelector('#mBare').checked }));
+  if (!opt) return;
+  await busy('図面を取り込み中…', async () => {
+    const res = await XLIN.importSheet(zip, opt.sheet, { cells: opt.cells, area: opt.area });
+    if (!res.objs.length) { toast('取り込める図形が見つかりませんでした'); return; }
+    pushUndo();
+    if (opt.dest === 'new') { syncPage(); const pg = { id: uid(), name: (opt.sheet.name || '取り込み').slice(0, 20), objects: [], scale: null, bare: opt.bare }; doc.pages.splice(doc.cur + 1, 0, pg); usePage(doc.cur + 1); }
+    else if (opt.bare) doc.pages[doc.cur].bare = true;
+    for (const o of res.objs) { o.id = uid(); delete o._w; delete o._cell; }
+    const bs = res.objs.map(bbox); let x0 = Math.min(...bs.map(b => b.x)), y0 = Math.min(...bs.map(b => b.y)), x1 = Math.max(...bs.map(b => b.x + b.w)), y1 = Math.max(...bs.map(b => b.y + b.h));
+    if (res.area) { x0 = res.area.x; y0 = res.area.y; x1 = res.area.x2; y1 = res.area.y2; }
+    const pad = doc.pages[doc.cur].bare ? 10 : 30, aw = W - pad * 2, ah = H - pad * 2 - (doc.pages[doc.cur].bare ? 0 : 150);
+    const f = opt.fit ? Math.min(aw / Math.max(1, x1 - x0), ah / Math.max(1, y1 - y0)) : 1;
+    scaleObjs(res.objs, f, x0, y0, opt.fit ? pad + (aw - (x1 - x0) * f) / 2 : pad, opt.fit ? pad + (ah - (y1 - y0) * f) / 2 : pad);
+    for (const o of res.objs) doc.objects.push(o);
+    adoptPhotoKids(); renderPages(); sel = new Set(res.objs.map(o => o.id)); render(); refreshPane(); save();
+    toast(`${res.objs.length}個の図形を取り込みました` + (res.skipped ? `（${res.skipped}個はグラフや非対応の画像のため省略）` : '') + '。まとめて選択中なので、そのまま移動・拡大縮小できます');
+  });
+}
+
 /* ============ export ============ */
 let dlApi = null;
 (async () => { try { if (window.claude && window.claude.use) dlApi = await window.claude.use('downloads'); } catch { dlApi = null; } })();
@@ -2406,7 +2914,7 @@ async function saveFile(name, data) {
 }
 function exportSVG() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><rect width="${W}" height="${H}" fill="#fff"/>${frame()}`
-    + doc.objects.map(o => `<g>${renderObj(o, true)}</g>`).join('') + titleBlock() + '</svg>';
+    + doc.objects.map(o => `<g>${renderObj(o, true)}</g>`).join('') + (isBare() ? '' : titleBlock()) + '</svg>';
 }
 function rasterize(scale) {
   return new Promise((res, rej) => {
@@ -2419,13 +2927,37 @@ function rasterize(scale) {
 const toBlob = (c, type, q) => new Promise(r => c.toBlob(r, type, q));
 const libs = {};
 function loadScript(src) { return libs[src] = libs[src] || new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => { delete libs[src]; rej(new Error('ライブラリを読み込めませんでした')); }; document.head.appendChild(s); }); }
+/* background images (地図・下絵) on export: asked once per export, remembered on the images */
+let exportBg = null;
+const bgOn = o => exportBg === null ? o.print !== false : exportBg;
+function bgImages() { syncPage(); return doc.pages.flatMap(pg => pg.objects).filter(o => o.type === 'image' && o.asset && doc.assets[o.asset] && !o.hide); }
+function bgChoiceHTML() {
+  const imgs = bgImages(); if (!imgs.length) return '';
+  const def = imgs.some(o => o.print !== false), nm = imgs.some(o => o.isMap) ? '地図' : '下絵';
+  return `<div class="f" style="margin-top:4px"><span class="l">背景の${nm}（${imgs.length}枚）</span><div class="seg" role="group" id="mBgSeg">`
+    + `<button type="button" data-bg="0" aria-pressed="${!def}">残さない（線だけ）</button><button type="button" data-bg="1" aria-pressed="${def}">残す</button></div><input type="hidden" id="mBg" value="${def ? 1 : 0}"></div>`;
+}
+function wireBgSeg() { const seg = document.getElementById('mBgSeg'); if (!seg) return; seg.onclick = e => { const b = e.target.closest('[data-bg]'); if (!b) return; seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); document.getElementById('mBg').value = b.dataset.bg; }; }
+function readBg(f) { const el = f.querySelector('#mBg'); return el ? el.value === '1' : null; }
+function rememberBg(bg) { if (bg === null) return; bgImages().forEach(o => o.print = bg); save(); renderPlanbar(); }
+async function askBg(kind) {
+  if (!bgImages().length) return null;
+  setTimeout(wireBgSeg, 0);
+  const r = await modal(kind + 'で書き出し', bgChoiceHTML() + `<p class="note">地図や下絵をなぞって描いたときは「残さない」がおすすめです。</p>`, '書き出す', f => ({ bg: readBg(f) }));
+  if (!r) return undefined;
+  rememberBg(r.bg); return r.bg;
+}
+async function exportWith(kind, label, fn) {
+  const bg = await askBg(kind); if (bg === undefined) return;
+  exportBg = bg; try { await busy(label, fn); } finally { exportBg = null; }
+}
 async function busy(label, fn) {
   const b = document.createElement('div'); b.className = 'busy'; b.innerHTML = `<span>${label}</span>`; document.body.appendChild(b);
   try { await new Promise(r => setTimeout(r, 30)); await fn(); } catch (err) { toast(err.message || '書き出しに失敗しました'); } finally { b.remove(); }
 }
 const DPI_SCALE = 200 / 25.4 / 4; // 200dpi
-$('#bPng').onclick = () => busy('PNGを作成中…', async () => { const c = await rasterize(DPI_SCALE); await saveFile(baseName(true) + '.png', await toBlob(c, 'image/png')); });
-$('#bPdf').onclick = () => busy('PDFを作成中…', async () => {
+$('#bPng').onclick = () => exportWith('PNG', 'PNGを作成中…', async () => { const c = await rasterize(DPI_SCALE); await saveFile(baseName(true) + '.png', await toBlob(c, 'image/png')); });
+$('#bPdf').onclick = () => exportWith('PDF', 'PDFを作成中…', async () => {
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
   const P = PAPERS[doc.paper], ori = P.mm[0] > P.mm[1] ? 'landscape' : 'portrait', fmt = doc.paper.slice(0, 2).toLowerCase(), pdf = new window.jspdf.jsPDF({ orientation: ori, unit: 'mm', format: fmt });
   syncPage(); const back = doc.cur;
@@ -2435,13 +2967,15 @@ $('#bPdf').onclick = () => busy('PDFを作成中…', async () => {
 });
 $('#bXlsx').onclick = async () => {
   let last = 'shapes'; try { last = localStorage.getItem('camzu-xlmode') || 'shapes'; } catch { }
-  const mode = await modal('Excelで書き出し', `
+  setTimeout(wireBgSeg, 0);
+  const mres = await modal('Excelで書き出し', `
     <label class="chk" style="align-items:flex-start"><input type="radio" name="xm" value="shapes" ${last !== 'image' ? 'checked' : ''}><span><b>図形として書き出す（編集できる）</b><br><span class="note">線・カメラ・文字・表題欄がExcelの図形になります。Excelで文字の修正や位置の調整ができます。</span></span></label>
-    <label class="chk" style="align-items:flex-start"><input type="radio" name="xm" value="image" ${last === 'image' ? 'checked' : ''}><span><b>画像として書き出す（見た目そのまま）</b><br><span class="note">図面全体を1枚の画像で貼り付けます。編集はできませんが、見た目は画面と同じです。</span></span></label>`,
-    '書き出す', f => f.querySelector('input[name=xm]:checked').value);
-  if (!mode) return;
+    <label class="chk" style="align-items:flex-start"><input type="radio" name="xm" value="image" ${last === 'image' ? 'checked' : ''}><span><b>画像として書き出す（見た目そのまま）</b><br><span class="note">図面全体を1枚の画像で貼り付けます。編集はできませんが、見た目は画面と同じです。</span></span></label>` + bgChoiceHTML(), '書き出す', f => ({ mode: f.querySelector('input[name=xm]:checked').value, bg: readBg(f) }));
+  if (!mres) return;
+  const mode = mres.mode; rememberBg(mres.bg);
   try { localStorage.setItem('camzu-xlmode', mode); } catch { }
-  busy('Excelを作成中…', async () => {
+  exportBg = mres.bg;
+  try { await busy('Excelを作成中…', async () => {
   await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js');
   if (mode === 'shapes') await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
   const wb = new ExcelJS.Workbook(); wb.creator = 'カメラ概要図メーカー';
@@ -2482,9 +3016,9 @@ $('#bXlsx').onclick = async () => {
   const buf = await wb.xlsx.writeBuffer();
   const blob = mode === 'shapes' ? await XL.inject(buf, drawings, media) : new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   await saveFile(baseName() + (mode === 'shapes' ? '' : '_画像') + '.xlsx', blob);
-  });
+  }); } finally { exportBg = null; }
 };
-$('#bCopyImg').onclick = () => busy('画像を作成中…', async () => {
+$('#bCopyImg').onclick = () => exportWith('画像コピー', '画像を作成中…', async () => {
   const c = await rasterize(150 / 25.4 / 4);
   try { const blob = await toBlob(c, 'image/png'); await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]); toast('画像をコピーしました。Excelで Ctrl+V で貼り付けできます'); }
   catch { toast('この画面では画像コピーが使えません。PNGで書き出してください'); }
