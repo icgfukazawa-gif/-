@@ -118,6 +118,8 @@ a{color:var(--pri)}
 .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 12px}
 .hint{font-size:12px;color:var(--sub)}
 .note{background:var(--pri-l);border:1px solid #c9dbf6;color:#24426f;border-radius:9px;padding:10px 12px;font-size:13px}
+.linkbox{background:#fff8ec;border:1px solid #f0d9ae;border-radius:9px;padding:9px 12px;margin-bottom:14px}
+.linkbox summary{cursor:pointer;font-weight:700;font-size:13.5px}
 .note.warn{background:var(--warn-l);border-color:#f0d29a;color:#6b4300}
 /* tool view */
 #toolView{position:fixed;inset:0;z-index:50;background:#fff;display:none;flex-direction:column}
@@ -234,6 +236,56 @@ const TOOLS = {
     pre:{'customer':'client','site':'name'}}
 };
 const CATS = ['防犯カメラ','LED照明','電気工事','その他'];
+
+/* 各ツールの「連携シート」貼り付け欄（案件情報を反映で流し込む） */
+const TOOL_LINK = {
+  genba_report:{ta:'renkeiText', btn:'renkeiApply'},
+  estimate:    {ta:'i-paste',    paste:true},
+  kansei:      {ta:'pasteSrc',   btn:'pasteApply'},
+  maint:       {ta:'linkText',   btn:'linkApply'},
+  kanko:       {ta:'pasteBox',   btn:'pasteApply'},
+  photo:       {ta:'pPaste',     btn:'pParse'}
+};
+/* 連携シートの項目 → 案件の項目 */
+const LINK_KEYS = [
+  ['receptNo',  ['受付No指定','受付NO指定','受付No','受付NO','受付番号']],
+  ['receptDate',['受付日']],
+  ['company',   ['請負会社']],
+  ['sales',     ['営業担当者','営業担当']],
+  ['manager',   ['工事担当者','工事担当','施工管理責任者']],
+  ['contact',   ['顧客担当者名','顧客担当者','お客様担当者名','お客様担当者']],
+  ['client',    ['顧客名','お客様名','ご契約者様','契約者']],
+  ['site',      ['物件名','現場名']],
+  ['address',   ['物件住所','現場住所','住所']],
+  ['category',  ['案件分類','分類']],
+  ['work',      ['工事名','工事内容','件名']]
+];
+function normLabel(s){ return String(s||'').replace(/[\s　:：■□●・]/g,'').replace(/ｎｏ|ＮＯ|Ｎｏ/g,'No').trim(); }
+function parseLinkSheet(text){
+  const lines=String(text||'').replace(/\r/g,'').split('\n');
+  const pairs=[];
+  // 横並び（1行目が項目名、2行目が値）の形にも対応
+  const t0=(lines[0]||'').split('\t'), t1=(lines[1]||'').split('\t');
+  if(t0.length>=3 && t1.length>=2 && lines.filter(l=>l.trim()).length<=3){ t0.forEach((h,i)=>pairs.push([h, t1[i]||''])); }
+  else for(const line of lines){
+    const m=/^\s*([^\t]+?)\s*(?:\t+|\s{2,}|　+)(.*)$/.exec(line); if(!m) continue;
+    pairs.push([m[1], m[2].split('\t').map(s=>s.trim()).filter(Boolean)[0]||'']);
+  }
+  const out={};
+  for(const [lab, val0] of pairs){
+    const L=normLabel(lab), val=String(val0||'').trim(); if(!L || !val) continue;
+    for(const [k, keys] of LINK_KEYS){
+      if(out[k]) continue;
+      if(keys.some(x=>normLabel(x)===L)){ out[k]=val; break; }
+    }
+  }
+  for(const [lab, val0] of pairs){ // 完全一致で拾えなかった項目は前方一致で
+    const L=normLabel(lab), val=String(val0||'').trim(); if(!L || !val) continue;
+    for(const [k, keys] of LINK_KEYS){ if(out[k]) continue; if(keys.some(x=>L.startsWith(normLabel(x)))){ out[k]=val; break; } }
+  }
+  if(out.receptDate){ const m=/^(\d{4})[\/\-年.](\d{1,2})[\/\-月.](\d{1,2})/.exec(out.receptDate); if(m) out.receptDate=`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`; }
+  return out;
+}
 
 /* =========================================================
    ユーティリティ
@@ -558,7 +610,7 @@ function filteredList(){
     if(c.archived && !view.showDone) return false;
     if(view.filter && stageOf(c)!==view.filter) return false;
     if(view.who && c.sales!==view.who && c.manager!==view.who) return false;
-    if(view.q){ const q=view.q.toLowerCase(); if(![c.no,c.name,c.client,c.address,c.sales,c.manager,c.memo].join(' ').toLowerCase().includes(q)) return false; }
+    if(view.q){ const q=view.q.toLowerCase(); if(![c.no,c.receptNo,c.name,c.site,c.work,c.client,c.address,c.sales,c.manager,c.memo].join(' ').toLowerCase().includes(q)) return false; }
     return true;
   }).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
 }
@@ -577,7 +629,7 @@ function renderListBody(){
   el.innerHTML = `<table class="tbl"><thead><tr><th>案件番号</th><th>案件名・顧客</th><th class="hide-m">担当</th><th>現在の工程</th><th class="hide-m">進捗</th><th class="hide-m">更新</th></tr></thead><tbody>` +
     list.map(c=>{ const sk=stageOf(c); const s=STAGE[sk];
       const dots=STAGES.map(x=>{ const st=c.stages[x.k].status; return `<i class="${st==='done'||st==='skip'?'d':(x.k===sk?'cur':'')}"></i>`; }).join('');
-      return `<tr onclick="go('case','${c.id}')"><td class="no">${esc(c.no)}</td>
+      return `<tr onclick="go('case','${c.id}')"><td class="no">${esc(c.no)}${c.receptNo?`<div class="sub">受付 ${esc(c.receptNo)}</div>`:''}</td>
       <td><div class="nm">${esc(c.name)}${c.archived?' <span class="badge">保管済</span>':''}</div><div class="sub">${esc(c.client||'')}${c.address?' ／ '+esc(c.address):''}</div></td>
       <td class="hide-m"><div>${esc(c.sales||'')}</div><div class="sub">${c.manager?'現場：'+esc(c.manager):''}</div></td>
       <td><span class="pill" style="--c:${s.c}">${s.n}</span></td>
@@ -634,11 +686,13 @@ function renderCase(){
       <span class="pill" style="--c:${STAGE[cs].c};align-self:center">${STAGE[cs].n}</span>
       <button class="btn sm" onclick="editCase('${c.id}')">✎ 案件情報を編集</button></div>
     <div class="meta">
+      ${c.receptNo||c.dates.reception?`<div><span>受付No／受付日</span>${esc(c.receptNo||'－')} ／ ${fmtD(c.dates.reception)||'－'}</div>`:''}
       <div><span>顧客</span>${esc(c.client||'－')}</div>
       <div><span>現場住所</span>${esc(c.address||'－')}</div>
       <div><span>先方担当</span>${esc(c.contact||'－')}</div>
       <div><span>営業担当</span>${esc(c.sales||'－')}</div>
       <div><span>現場管理</span>${esc(c.manager||'－')}</div>
+      ${c.company?`<div><span>請負会社</span>${esc(c.company)}</div>`:''}
       <div><span>見積／契約</span>${yen(c.amount)||'－'} ／ ${yen(c.contractAmount)||'－'}</div>
       ${c.memo?`<div style="grid-column:1/-1"><span>メモ</span>${esc(c.memo)}</div>`:''}
     </div>
@@ -688,11 +742,23 @@ function editCase(id){
   const c = id ? getCase(id) : {no:newCaseNo(), sales:cfg.user};
   modal(`<div class="mh">${id?'案件情報の編集':'新規案件'}<span class="sp"></span><button class="btn sm ghost" onclick="closeModal()">✕</button></div>
   <div class="mb">
+    <details class="linkbox" ${id && c.linkText ? '' : 'open'}>
+      <summary>📋 連携シートから貼り付け</summary>
+      <div class="fld" style="margin:8px 0 6px"><textarea id="f_link" rows="5" placeholder="連携シート（項目名と値の2列）をコピーして、ここに貼り付けてください&#10;例）&#10;受付No指定&#9;KJ0469&#10;受付日&#9;2026/10/8&#10;営業担当者&#9;五味&#10;顧客名&#9;○○管理組合&#10;物件名&#9;市営高見住宅51号館&#10;物件住所&#9;大阪市此花区高見1丁目4-51&#10;工事名&#9;防犯カメラ設置工事">${esc(c.linkText||'')}</textarea></div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm pri" type="button" onclick="applyLinkToForm()">読み取って反映</button><span id="f_linkMsg" class="hint"></span></div>
+      <div class="hint" style="margin-top:6px">貼り付けた連携シートは案件に保存され、各ツールの「案件情報を反映」でもツール側に入力されます。</div>
+    </details>
     <div class="row">
       <div class="fld"><label>案件番号</label><input id="f_no" value="${esc(c.no||'')}"></div>
-      <div class="fld"><label>種別</label><select id="f_cat"><option value=""></option>${CATS.map(x=>`<option ${c.category===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="fld"><label>受付No</label><input id="f_rno" value="${esc(c.receptNo||'')}"></div>
+      <div class="fld"><label>受付日</label><input id="f_rdate" type="date" value="${esc(c.dates?.reception||'')}"></div>
+      <div class="fld"><label>種別</label><select id="f_cat"><option value=""></option>${[...new Set([...CATS, ...(c.category && !CATS.includes(c.category)?[c.category]:[])])].map(x=>`<option ${c.category===x?'selected':''}>${esc(x)}</option>`).join('')}</select></div>
     </div>
-    <div class="fld"><label>案件名 *</label><input id="f_name" value="${esc(c.name||'')}" placeholder="例：○○区 防犯カメラ設置工事"></div>
+    <div class="row">
+      <div class="fld"><label>物件名</label><input id="f_site" value="${esc(c.site||'')}" oninput="autoName()"></div>
+      <div class="fld"><label>工事名</label><input id="f_work" value="${esc(c.work||'')}" oninput="autoName()"></div>
+    </div>
+    <div class="fld"><label>案件名 *（物件名＋工事名で自動入力。変更もできます）</label><input id="f_name" value="${esc(c.name||'')}" placeholder="例：○○区 防犯カメラ設置工事" oninput="this.dataset.manual=this.value?'1':''" data-manual="${c.name?'1':''}"></div>
     <div class="row">
       <div class="fld"><label>顧客（発注者）</label><input id="f_client" value="${esc(c.client||'')}"></div>
       <div class="fld"><label>先方担当者・連絡先</label><input id="f_contact" value="${esc(c.contact||'')}"></div>
@@ -700,7 +766,8 @@ function editCase(id){
     <div class="fld"><label>現場住所</label><input id="f_addr" value="${esc(c.address||'')}"></div>
     <div class="row">
       <div class="fld"><label>営業担当</label><input id="f_sales" value="${esc(c.sales||'')}" list="peopleList"></div>
-      <div class="fld"><label>現場管理</label><input id="f_mgr" value="${esc(c.manager||'')}" list="peopleList"></div>
+      <div class="fld"><label>現場管理（工事担当）</label><input id="f_mgr" value="${esc(c.manager||'')}" list="peopleList"></div>
+      <div class="fld"><label>請負会社</label><input id="f_company" value="${esc(c.company||'')}"></div>
     </div>
     <datalist id="peopleList">${[...new Set(cases.flatMap(x=>[x.sales,x.manager]).filter(Boolean))].map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
     <div class="fld"><label>メモ</label><textarea id="f_memo">${esc(c.memo||'')}</textarea></div>
@@ -708,14 +775,35 @@ function editCase(id){
   </div>
   <div class="mf">${id?`<button class="btn danger" onclick="delCase('${id}')" style="margin-right:auto">削除</button>`:''}
     <button class="btn" onclick="closeModal()">キャンセル</button><button class="btn pri" onclick="saveCaseForm('${id||''}')">保存</button></div>`);
-  setTimeout(()=>$('#f_name').focus(), 50);
+  const ta=$('#f_link');
+  ta.addEventListener('paste', ()=>setTimeout(applyLinkToForm, 0));
+  setTimeout(()=>{ (id ? $('#f_name') : ta).focus(); }, 50);
+}
+function autoName(){
+  const n=$('#f_name'); if(n.dataset.manual==='1') return;
+  n.value=[$('#f_site').value.trim(), $('#f_work').value.trim()].filter(Boolean).join(' ');
+}
+function applyLinkToForm(){
+  const d=parseLinkSheet($('#f_link').value); const keys=Object.keys(d);
+  if(!keys.length){ $('#f_linkMsg').textContent='読み取れる項目がありませんでした。項目名と値の2列をコピーして貼り付けてください。'; return; }
+  const set=(sel,v)=>{ if(v!=null && v!==''){ const el=$(sel); el.value=v; el.style.background='#fff4e0'; } };
+  set('#f_rno', d.receptNo); set('#f_rdate', d.receptDate); set('#f_company', d.company);
+  set('#f_sales', d.sales); set('#f_mgr', d.manager); set('#f_contact', d.contact); set('#f_client', d.client);
+  set('#f_site', d.site); set('#f_work', d.work); set('#f_addr', d.address);
+  if(d.category){ const s=$('#f_cat'); if(![...s.options].some(o=>o.value===d.category)){ const o=document.createElement('option'); o.textContent=d.category; s.appendChild(o); } s.value=d.category; s.style.background='#fff4e0'; }
+  if(d.site || d.work){ const n=$('#f_name'); n.dataset.manual=''; autoName(); n.style.background='#fff4e0'; }
+  const names={receptNo:'受付No',receptDate:'受付日',company:'請負会社',sales:'営業担当',manager:'現場管理',contact:'先方担当',client:'顧客',site:'物件名',address:'住所',category:'種別',work:'工事名'};
+  $('#f_linkMsg').textContent = keys.length+'項目を反映しました（'+keys.map(k=>names[k]).join('・')+'）';
 }
 async function saveCaseForm(id){
   const name=$('#f_name').value.trim(); if(!name){ toast('案件名を入力してください', true); return; }
   const base = id ? JSON.parse(JSON.stringify(getCase(id))) : normCase({id:uid(), createdAt:nowISO(), createdBy:cfg.user});
   if(!id) base.stages.survey.status='prog';
   Object.assign(base, {no:$('#f_no').value.trim(), category:$('#f_cat').value, name, client:$('#f_client').value.trim(), contact:$('#f_contact').value.trim(),
-    address:$('#f_addr').value.trim(), sales:$('#f_sales').value.trim(), manager:$('#f_mgr').value.trim(), memo:$('#f_memo').value});
+    address:$('#f_addr').value.trim(), sales:$('#f_sales').value.trim(), manager:$('#f_mgr').value.trim(), memo:$('#f_memo').value,
+    receptNo:$('#f_rno').value.trim(), site:$('#f_site').value.trim(), work:$('#f_work').value.trim(), company:$('#f_company').value.trim(),
+    linkText:$('#f_link').value.trim()});
+  base.dates=base.dates||{}; base.dates.reception=$('#f_rdate').value;
   if(id) base.archived = $('#f_arch').checked;
   busy(true,'保存中…'); const r=await saveCaseSafe(base); busy(false);
   if(r){ closeModal(); toast('保存しました'); if(!id) go('case', r.id); else render(); }
@@ -782,11 +870,14 @@ async function openTool(cid, tid){
         else readonly=true;
       }
     }
+    let fresh=true;
     if(hasToolStorage(tid)){
       const raw = await store.getToolData(cid, tid);
-      await restoreTool(tid, raw ? JSON.parse(raw) : null);
+      const d = raw ? JSON.parse(raw) : null;
+      if(d && !d.empty) fresh=false;
+      await restoreTool(tid, d);
     }
-    cur={cid, tid, readonly, savedAt:null};
+    cur={cid, tid, readonly, savedAt:null, autoFill: fresh && !readonly && !!(c.linkText || c.receptNo || c.client || c.address)};
     $('#tvTitle').textContent = c.name;
     $('#tvSub').textContent = t.n + '（' + c.no + '）';
     $('#tvSave').style.display = (readonly || !hasToolStorage(tid)) ? 'none' : '';
@@ -797,7 +888,11 @@ async function openTool(cid, tid){
   }catch(e){ toast('ツールを開けませんでした：'+e.message, true); cur=null; }
   finally{ busy(false); }
 }
-frame.addEventListener('load', ()=>{ if(cur && frame.src!=='about:blank') hookFrame(); });
+frame.addEventListener('load', ()=>{
+  if(!cur || frame.src==='about:blank') return;
+  hookFrame();
+  if(cur.autoFill){ cur.autoFill=false; setTimeout(()=>{ if(cur) prefill(true); }, 900); }
+});
 
 /* 出力ファイルを横取りして案件に添付 */
 function hookFrame(){
@@ -826,11 +921,52 @@ function hookFrame(){
   const odisp=w.EventTarget.prototype.dispatchEvent;
   w.EventTarget.prototype.dispatchEvent=function(ev){ try{ if(ev && ev.type==='click' && this instanceof w.HTMLAnchorElement) grab(this); }catch(e){} return odisp.apply(this, arguments); };
   w.document.addEventListener('click', ev=>{ const a=ev.target && ev.target.closest && ev.target.closest('a[download]'); if(a) grab(a); }, true);
+
+  // 「名前を付けて保存」画面（showSaveFilePicker / showDirectoryPicker）で保存したファイル
+  const capOn=()=>cfg.capture && cur && !cur.readonly;
+  const take=(blob, name)=>{ if(!capOn()) return; const {cid, tid}=cur; captureFile(cid, TOOLS[tid].st, tid, blob, name||('output_'+Date.now())); };
+  const wrapHandle=(h)=>{
+    if(!h || h.__hubWrapped || typeof h.createWritable!=='function') return h;
+    h.__hubWrapped=true;
+    const ocw=h.createWritable.bind(h);
+    h.createWritable=async function(...args){
+      const ws=await ocw(...args); const parts=[];
+      const ow=ws.write.bind(ws), ocl=ws.close.bind(ws);
+      ws.write=async function(d){
+        try{ const x=(d && typeof d==='object' && !(d instanceof w.Blob) && !(d instanceof Blob) && d.type) ? (d.type==='write'?d.data:null) : d; if(x!=null) parts.push(x); }catch(e){}
+        return ow(d);
+      };
+      ws.close=async function(){ const r=await ocl(); try{ if(parts.length){ const t=(parts.find(p=>p && p.type && typeof p.size==='number')||{}).type||''; take(new Blob(parts,{type:t}), h.name); } }catch(e){} return r; };
+      return ws;
+    };
+    return h;
+  };
+  if(typeof w.showSaveFilePicker==='function'){
+    const osp=w.showSaveFilePicker.bind(w);
+    w.showSaveFilePicker=async function(...a){ return wrapHandle(await osp(...a)); };
+  }
+  if(typeof w.showDirectoryPicker==='function'){
+    const odp=w.showDirectoryPicker.bind(w);
+    w.showDirectoryPicker=async function(...a){
+      const dir=await odp(...a);
+      if(dir && typeof dir.getFileHandle==='function'){ const ogf=dir.getFileHandle.bind(dir); dir.getFileHandle=async function(name, opt){ const fh=await ogf(name, opt); return (opt && opt.create) ? wrapHandle(fh) : fh; }; }
+      return dir;
+    };
+  }
+  // スマホの「共有」から保存したファイル
+  if(w.navigator && typeof w.navigator.share==='function'){
+    const osh=w.navigator.share.bind(w.navigator);
+    try{ Object.defineProperty(w.navigator, 'share', {configurable:true, value:async function(data){
+      try{ if(data && data.files) for(const f of data.files) take(f, f.name); }catch(e){}
+      return osh(data);
+    }}); }catch(e){}
+  }
 }
-async function captureFile(cid, stage, tid, blob, name){
+let fileQueue=Promise.resolve();
+function captureFile(cid, stage, tid, blob, name){
   const f = (typeof File!=='undefined') ? new File([blob], name, {type:blob.type||''}) : blob;
-  await addFiles(cid, stage, [f], tid);
-  toast('出力ファイルを案件に保存しました：'+name);
+  fileQueue = fileQueue.then(async()=>{ await addFiles(cid, stage, [f], tid); toast('出力ファイルを案件に保存しました：'+name); }).catch(()=>{});
+  return fileQueue;
 }
 
 async function saveCurrent(silent){
@@ -858,6 +994,7 @@ async function closeTool(){
     // ツール側の終了処理（自動保存など）を走らせてから退避
     await new Promise(res=>{ const done=()=>{ frame.removeEventListener('load', done); res(); }; frame.addEventListener('load', done); frame.src='about:blank'; setTimeout(res, 2500); });
     await sleep(150);
+    await fileQueue;
     const ok = await saveCurrent(true);
     if(!ok && !confirm('保存に失敗しました。保存せずに閉じますか？\n（「キャンセル」でツールに戻ります）')){ frame.src=encodeURI(TOOLS[cur.tid].f); return; }
     if(store.mode==='remote' && !cur.readonly && hasToolStorage(cur.tid)) await store.unlock(cur.cid, cur.tid);
@@ -868,17 +1005,39 @@ async function closeTool(){
     go('case', cid, st);
   } finally { busy(false); }
 }
-function prefill(){
+/* 案件の連携シート（無ければ案件情報から作る） */
+function caseLinkText(c){
+  if(c.linkText) return c.linkText;
+  const rows=[['受付No指定',c.receptNo],['受付日',fmtD(c.dates?.reception)],['請負会社',c.company],['営業担当者',c.sales],['工事担当',c.manager],
+    ['顧客名',c.client],['物件名',c.site||c.name],['物件住所',c.address],['案件分類',c.category],['工事名',c.work],['顧客担当者名',c.contact]];
+  return rows.filter(r=>r[1]).map(r=>r[0]+'\t'+r[1]).join('\n');
+}
+function prefill(auto){
   if(!cur) return; const t=TOOLS[cur.tid]; const c=getCase(cur.cid);
-  let doc; try{ doc=frame.contentDocument; }catch(e){ return; }
-  if(!t.pre){ toast('このツールは自動入力に対応していません'); return; }
-  let n=0;
-  for(const [id, field] of Object.entries(t.pre)){
-    const el=doc.getElementById(id); const v=c[field]; if(!el || !v) continue;
-    if(el.value && el.value.trim()) continue;
-    el.value=v; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); n++;
+  let doc, w; try{ doc=frame.contentDocument; w=frame.contentWindow; }catch(e){ return; }
+  let used=false, n=0;
+  const L=TOOL_LINK[cur.tid]; const text=caseLinkText(c);
+  if(L && text){
+    const ta=doc.getElementById(L.ta);
+    if(ta){
+      ta.value=text; ta.dispatchEvent(new w.Event('input',{bubbles:true}));
+      if(L.paste){
+        try{ const dt=new w.DataTransfer(); dt.setData('text/plain', text); ta.dispatchEvent(new w.ClipboardEvent('paste',{clipboardData:dt, bubbles:true, cancelable:true})); }catch(e){}
+      }
+      if(L.btn){ const b=doc.getElementById(L.btn); if(b) b.click(); }
+      used=true;
+    }
   }
-  toast(n ? `${n}項目に案件情報を入力しました（入力済みの欄は変更していません）` : '入力できる空欄が見つかりませんでした');
+  if(t.pre){
+    for(const [id, field] of Object.entries(t.pre)){
+      const el=doc.getElementById(id); const v=c[field]; if(!el || !v) continue;
+      if(el.value && el.value.trim()) continue;
+      el.value=v; el.dispatchEvent(new w.Event('input',{bubbles:true})); el.dispatchEvent(new w.Event('change',{bubbles:true})); n++;
+    }
+  }
+  if(used) toast(auto ? '案件の連携シートをツールに反映しました' : '連携シートの内容をツールに反映しました');
+  else if(n) toast(`${n}項目に案件情報を入力しました（入力済みの欄は変更していません）`);
+  else if(!auto) toast(L ? 'ツール側の連携シート欄が見つかりません。ツールの入力画面を開いてからもう一度押してください' : '入力できる空欄が見つかりませんでした');
 }
 window.addEventListener('beforeunload', e=>{ if(cur && !cur.readonly){ e.preventDefault(); e.returnValue=''; } });
 
