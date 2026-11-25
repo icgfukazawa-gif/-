@@ -310,6 +310,7 @@ function stageOf(c){ for(const s of STAGES){ const st=(c.stages||{})[s.k]?.statu
 /* =========================================================
    設定（端末ごと）
    ========================================================= */
+const APP_VERSION='2026-11-25 c';
 const CFG_KEY='hubPortal.settings.v1';
 let cfg = (()=>{ try{ return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; }catch(e){ return {}; } })();
 cfg = Object.assign({user:'', gasUrl:'', apiKey:'', capture:true}, cfg);
@@ -953,14 +954,30 @@ function hookFrame(){
       return dir;
     };
   }
-  // スマホの「共有」から保存したファイル
-  if(w.navigator && typeof w.navigator.share==='function'){
-    const osh=w.navigator.share.bind(w.navigator);
-    try{ Object.defineProperty(w.navigator, 'share', {configurable:true, value:async function(data){
-      try{ if(data && data.files) for(const f of data.files) take(f, f.name); }catch(e){}
-      return osh(data);
-    }}); }catch(e){}
-  }
+  // スマホの「共有」から保存したファイル（iPhone は主にこの経路）
+  const shareSeen=new Set();
+  const takeShared=(data)=>{
+    try{
+      if(!data || !data.files) return;
+      for(const f of Array.from(data.files)){
+        const k=(f.name||'')+'|'+f.size+'|'+(f.lastModified||''); if(shareSeen.has(k)) continue; shareSeen.add(k); setTimeout(()=>shareSeen.delete(k), 5000);
+        take(f, f.name);
+      }
+    }catch(e){}
+  };
+  try{
+    const NP=w.Navigator && w.Navigator.prototype;
+    if(NP && typeof NP.share==='function' && !NP.__hubShare){
+      const osh=NP.share; NP.__hubShare=true;
+      NP.share=function(data){ takeShared(data); return osh.call(this, data); };
+    }
+  }catch(e){}
+  try{
+    if(w.navigator && typeof w.navigator.share==='function' && !Object.prototype.hasOwnProperty.call(w.navigator,'share')){
+      const osh2=w.navigator.share.bind(w.navigator);
+      Object.defineProperty(w.navigator, 'share', {configurable:true, writable:true, value:function(data){ takeShared(data); return osh2(data); }});
+    }
+  }catch(e){}
 }
 let fileQueue=Promise.resolve();
 function captureFile(cid, stage, tid, blob, name){
@@ -1072,7 +1089,7 @@ function openSettings(){
     <div class="hint" style="margin-top:6px">「この端末のみ」で登録した案件は、共有モードに切り替えた後に「この端末の案件を共有先へ送る」で移せます。</div>
     <div style="margin-top:8px"><button class="btn sm" onclick="pushLocalToRemote()">この端末の案件を共有先へ送る</button></div>
   </div>
-  <div class="mf"><button class="btn" onclick="closeModal()">キャンセル</button><button class="btn pri" onclick="saveSettings()">保存</button></div>`);
+  <div class="mf"><span class="hint" style="margin-right:auto">バージョン ${APP_VERSION}</span><button class="btn" onclick="closeModal()">キャンセル</button><button class="btn pri" onclick="saveSettings()">保存</button></div>`);
 }
 async function testConn(){
   const u=$('#s_url').value.trim(), k=$('#s_key').value.trim(); $('#s_test').textContent='確認中…';
