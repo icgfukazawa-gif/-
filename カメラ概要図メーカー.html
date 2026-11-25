@@ -663,7 +663,17 @@ function legendItems(lg) {
   }
   return items;
 }
+const ROTB = ['rect', 'mark', 'image', 'text'];
+function rotC(o) { if (o.type === 'text') { const b = textBox(o); return [b.x + b.w / 2, b.y + b.h / 2]; } return [o.x + o.w / 2, o.y + o.h / 2]; }
+function rotPt(p, c, deg) { const a = deg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), dx = p[0] - c[0], dy = p[1] - c[1]; return [c[0] + dx * ca - dy * sa, c[1] + dx * sa + dy * ca]; }
+function rectCorners(o) { const c = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]]; return o.rot ? c.map(p => rotPt(p, rotC(o), o.rot)) : c; }
 function bbox(o) {
+  const b = bbox0(o);
+  if (!o.rot || !ROTB.includes(o.type)) return b;
+  const c = rotC(o), P = [[b.x, b.y], [b.x + b.w, b.y], [b.x + b.w, b.y + b.h], [b.x, b.y + b.h]].map(p => rotPt(p, c, o.rot)), xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+  return { x: Math.min(...xs), y: Math.min(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+}
+function bbox0(o) {
   switch (o.type) {
     case 'shape': case 'sym': { const a = (o.rot || 0) * Math.PI / 180, c = Math.abs(Math.cos(a)), sn2 = Math.abs(Math.sin(a)); const bw = o.w * c + o.h * sn2, bh = o.w * sn2 + o.h * c; return { x: o.x - bw / 2, y: o.y - bh / 2, w: bw, h: bh }; }
     case 'north': { const r = 40 * (o.sz || 1); return { x: o.x - r, y: o.y - r, w: 2 * r, h: 2 * r }; }
@@ -715,6 +725,11 @@ function multiText(lines, x, y, fs, lh, attrs) {
   return `<text x="${r1(x)}" y="${r1(y)}" font-size="${fs}" font-family="${FONT_ATTR}" ${attrs}>` + lines.map((l, i) => `<tspan x="${r1(x)}" dy="${i ? lh : 0}">${esc(l) || ' '}</tspan>`).join('') + '</text>';
 }
 function renderObj(o, exp) {
+  const s0 = renderObj0(o, exp);
+  if (o.rot && s0 && (o.type === 'rect' || o.type === 'mark' || o.type === 'text')) { const c = rotC(o); return `<g transform="rotate(${o.rot} ${r1(c[0])} ${r1(c[1])})">${s0}</g>`; }
+  return s0;
+}
+function renderObj0(o, exp) {
   const hit = exp ? '' : ' ';
   switch (o.type) {
     case 'line': {
@@ -972,7 +987,9 @@ function renderOverlay() {
         }
       } else if (o.type === 'dim' || o.type === 'arrow') { s += H_(o.p1[0], o.p1[1], 'p1') + H_(o.p2[0], o.p2[1], 'p2'); }
       else if (['rect', 'photo', 'image', 'callout', 'mark'].includes(o.type)) {
-        s += H_(o.x, o.y, 'c:nw', 'nwse-resize') + H_(o.x + o.w, o.y, 'c:ne', 'nesw-resize') + H_(o.x, o.y + o.h, 'c:sw', 'nesw-resize') + H_(o.x + o.w, o.y + o.h, 'c:se', 'nwse-resize');
+        const cc = rectCorners(o.type === 'photo' || o.type === 'callout' ? { ...o, rot: 0 } : o);
+        s += H_(cc[0][0], cc[0][1], 'c:nw', 'nwse-resize') + H_(cc[1][0], cc[1][1], 'c:ne', 'nesw-resize') + H_(cc[3][0], cc[3][1], 'c:sw', 'nesw-resize') + H_(cc[2][0], cc[2][1], 'c:se', 'nwse-resize');
+        if (ROTB.includes(o.type)) { const c = rotC(o), rl = o.h / 2 + 30 * K, a = (o.rot || 0) * Math.PI / 180, rx = c[0] + rl * Math.sin(a), ry = c[1] - rl * Math.cos(a), tx = c[0] + o.h / 2 * Math.sin(a), ty = c[1] - o.h / 2 * Math.cos(a); s += `<path d="M${r1(tx)},${r1(ty)}L${r1(rx)},${r1(ry)}" stroke="#0a7891" stroke-width="${sw}" pointer-events="none"/>` + H_(rx, ry, 'rot', 'c'); }
         if (o.type === 'callout') s += H_(o.tx, o.ty, 't', 'c');
       } else if (o.type === 'sym' || o.type === 'shape') {
         const a = (o.rot || 0) * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), W2 = o.w / 2, H2 = o.h / 2;
@@ -986,6 +1003,7 @@ function renderOverlay() {
         const bb = bbox(o), pd = 5 * K; s += H_(bb.x + bb.w + pd, bb.y + bb.h + pd, 'sc', 'nwse-resize');
       } else if (o.type === 'device' || o.type === 'text') {
         const bb = bbox(o), pd = 5 * K; s += H_(bb.x + bb.w + pd, bb.y + bb.h + pd, 'sc', 'nwse-resize');
+        if (o.type === 'text') { const tb = textBox(o), c = rotC(o), rl = tb.h / 2 + 30 * K, a = (o.rot || 0) * Math.PI / 180, rx = c[0] + rl * Math.sin(a), ry = c[1] - rl * Math.cos(a); s += `<path d="M${r1(c[0])},${r1(c[1])}L${r1(rx)},${r1(ry)}" stroke="#0a7891" stroke-width="${sw}" stroke-dasharray="${r1(3 * K)} ${r1(2 * K)}" pointer-events="none"/>` + H_(rx, ry, 'rot', 'c'); }
       }
     }
   }
@@ -1015,7 +1033,7 @@ function renderOverlay() {
   const wh = (draft && draft.wallHit) || (drag && drag.kind === 'handle' && drag.wallHit);
   if (wh) { for (const sg of wh.segs) s += `<path d="M${sg.a[0]},${sg.a[1]}L${sg.b[0]},${sg.b[1]}" stroke="#16a34a" stroke-opacity=".35" stroke-width="${r1(7 * K)}" stroke-linecap="round" pointer-events="none"/>`; s += `<circle cx="${wh.pt[0]}" cy="${wh.pt[1]}" r="${r1(5 * K)}" fill="#16a34a" pointer-events="none"/>`; }
   { const hs2 = hoverSnap, cpt = draft ? draft.cur : hs2 && hs2.cur;
-    if (cpt && (SNAP_TOOLS.includes(draft ? draft.type : baseTool()))) {
+    if (cpt && (SNAP_TOOLS.includes(draft ? draft.type : baseTool()) || (drag && drag.kind === 'handle'))) {
       if (hs2 && hs2.kind === 'g') for (const [a, b] of hs2.guides) { const e2 = b || cpt; s += `<path d="M${a[0]},${a[1]}L${e2[0]},${e2[1]}" stroke="#e11d48" stroke-width="${r1(1.2 * K)}" stroke-dasharray="${r1(4 * K)} ${r1(3 * K)}" pointer-events="none"/>`; }
       if (hs2 && hs2.kind === 'e') s += `<path d="M${hs2.seg[0][0]},${hs2.seg[0][1]}L${hs2.seg[1][0]},${hs2.seg[1][1]}" stroke="#16a34a" stroke-opacity=".35" stroke-width="${r1(6 * K)}" stroke-linecap="round" pointer-events="none"/>`;
       const c2 = hs2 && hs2.kind === 'v' ? '#16a34a' : hs2 && hs2.kind === 'e' ? '#16a34a' : '#e11d48', L = 7 * K;
@@ -1213,7 +1231,7 @@ function wallSegs() {
   for (const o of doc.objects) {
     if (o.parent) continue;
     if (o.type === 'line') { const q = hasArcs(o) ? edgePts(o, false) : o.pts; for (let i = 0; i < q.length - 1; i++) segs.push([q[i], q[i + 1]]); }
-    else if (o.type === 'rect') { const c = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]]; for (let i = 0; i < 4; i++) segs.push([c[i], c[(i + 1) % 4]]); }
+    else if (o.type === 'rect') { const c = rectCorners(o); for (let i = 0; i < 4; i++) segs.push([c[i], c[(i + 1) % 4]]); }
     else if (o.type === 'poly') { const q = hasArcs(o) ? edgePts(o, true) : o.pts; for (let i = 0; i < q.length; i++) segs.push([q[i], q[(i + 1) % q.length]]); }
   }
   return segs;
@@ -1259,7 +1277,7 @@ function drawSegs() {
     let P = null, closed = false;
     if (o.type === 'poly') { P = o.pts; closed = true; }
     else if (o.type === 'line') P = o.pts;
-    else if (o.type === 'rect') { P = [[o.x, o.y], [o.x + o.w, o.y], [o.x + o.w, o.y + o.h], [o.x, o.y + o.h]]; closed = true; }
+    else if (o.type === 'rect') { P = rectCorners(o); closed = true; }
     if (!P || !P.length) continue;
     P.forEach(p => vs.push(p));
     for (let i = 0; i < P.length - (closed ? 0 : 1); i++) { if (o.type === 'poly' && o.arcs && o.arcs[i]) continue; segs.push([P[i], P[(i + 1) % P.length]]); }
@@ -1306,6 +1324,7 @@ function drawSnap(p, prev, own) {
   return { q, hint: guides.length ? { kind: 'g', pt: q, guides } : null };
 }
 let hoverSnap = null;
+const FREE_TOOLS = ['line', 'poly', 'wire', 'dim', 'arrow', 'scale']; /* line-like tools: no grid pull */
 const SNAP_TOOLS = ['line', 'poly'];
 
 /* ============ tools ============ */
@@ -1429,7 +1448,7 @@ function toolDown(p, e) {
   const bt = baseTool();
   if (editPhoto && !EDIT_TOOLS.includes(bt)) { toast('写真の編集中はこのツールは使えません。「編集を終える」で戻ってください'); setTool('select'); return; }
   const onPh = ['line', 'wire', 'camera', 'device', 'text', 'callout', 'mark', 'arrow', 'shape'].includes(bt) ? (editPhoto ? byId(editPhoto) : draft ? (draft.parent ? byId(draft.parent) : null) : photoAt(p.x, p.y)) : null;
-  const sp = onPh ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)];
+  const sp = onPh || FREE_TOOLS.includes(bt) ? [r1(p.x), r1(p.y)] : [sn(p.x), sn(p.y)];
   if (bt === 'line' || bt === 'wire' || bt === 'scale' || bt === 'poly') {
     let q = sp;
     let snapped = false;
@@ -1517,7 +1536,7 @@ svg.addEventListener('pointerdown', e => {
 svg.addEventListener('pointermove', e => {
   const p = pt(e);
   if (draft) {
-    let q = draft.parent ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)]; draft.snapHit = null;
+    let q = [r1(p.x), r1(p.y)]; draft.snapHit = null;
     draft.wallHit = null;
     if (draft.type === 'wire') { const t = snapTarget([p.x, p.y]); if (t) { q = t; draft.snapHit = t; } else if (wallOn && !draft.parent) { const ws = wallSnap([p.x, p.y], Math.max(8, 14 * k())); if (ws) { q = ws.pt; draft.wallHit = ws; } } }
     hoverSnap = null;
@@ -1545,7 +1564,7 @@ svg.addEventListener('pointermove', e => {
     sel = s; render(); return;
   }
   if (drag.kind === 'mk-rect' || drag.kind === 'mk-dim') {
-    let q = drag.parent ? [Math.round(p.x), Math.round(p.y)] : [sn(p.x), sn(p.y)];
+    let q = drag.parent || drag.kind === 'mk-dim' ? [r1(p.x), r1(p.y)] : [sn(p.x), sn(p.y)];
     if (drag.kind === 'mk-rect' && drag.otype === 'shape' && e.shiftKey) { const d2 = Math.max(Math.abs(q[0] - drag.p0.x), Math.abs(q[1] - drag.p0.y)); q = [drag.p0.x + Math.sign(q[0] - drag.p0.x || 1) * d2, drag.p0.y + Math.sign(q[1] - drag.p0.y || 1) * d2]; }
     if (drag.kind === 'mk-dim' && e.shiftKey) q = ortho([drag.p0.x, drag.p0.y], q);
     drag.p1 = { x: q[0], y: q[1] }; renderOverlay(); return;
@@ -1558,15 +1577,16 @@ svg.addEventListener('pointermove', e => {
       if (e.shiftKey) hh = Math.sign(hh) * Math.min(Math.abs(hh), cl / 2);
       o.arcs = o.arcs || {}; if (Math.abs(hh) < 3) delete o.arcs[i]; else o.arcs[i] = Math.round(hh);
     } else if (c.startsWith('v:')) {
-      const i = +c.slice(2); let q = [sn(p.x), sn(p.y)];
-      let vs = false;
+      const i = +c.slice(2); let q = [r1(p.x), r1(p.y)];
+      let vs = false; hoverSnap = null;
+      if ((o.type === 'line' || o.type === 'poly') && !o.parent && !e.altKey) { const others = o.pts.filter((_, j) => j !== i), nb = o.pts[i - 1] || (o.type === 'poly' ? o.pts[o.pts.length - 1] : o.pts[i + 1]); const sv = o.pts; o.pts = []; const ds = drawSnap([p.x, p.y], nb, [...others, null]); o.pts = sv; q = ds.q; hoverSnap = ds.hint ? Object.assign({ cur: q }, ds.hint) : null; if (ds.hint && ds.hint.kind !== 'g') vs = true; }
       if (o.type === 'wire') { const t = snapTarget([p.x, p.y], o.id); if (t) { q = t; vs = true; } else if (wallOn && !o.parent) { const ws = wallSnap([p.x, p.y], Math.max(8, 14 * k())); if (ws) { q = ws.pt; vs = true; drag.wallHit = ws; } else drag.wallHit = null; } }
       if (e.shiftKey && !vs) { const nb = o.pts[i - 1] || o.pts[i + 1]; if (nb) q = ortho(nb, q); }
       o.pts[i] = q;
     } else if (c === 'p1' || c === 'p2') {
-      let q = [sn(p.x), sn(p.y)]; const other = c === 'p1' ? o.p2 : o.p1; if (e.shiftKey) q = ortho(other, q); o[c] = q;
+      let q = [r1(p.x), r1(p.y)]; const other = c === 'p1' ? o.p2 : o.p1; if (e.shiftKey) q = ortho(other, q); o[c] = q;
     } else if (c === 't') { o.tx = sn(p.x); o.ty = sn(p.y); }
-    else if (c === 'rot') { let a = Math.atan2(p.y - o.y, p.x - o.x) * 180 / Math.PI + (o.type === 'north' || o.type === 'sym' || o.type === 'shape' ? 90 : 0); if (a > 180) a -= 360; a = e.shiftKey ? Math.round(a) : Math.round(a / 15) * 15; if (a === -180) a = 180; if (o.type === 'sym' || o.type === 'shape') o.rot = a; else o.ang = a; }
+    else if (c === 'rot') { const rb = ROTB.includes(o.type), cc = rb ? rotC(O) : [o.x, o.y]; let a = Math.atan2(p.y - cc[1], p.x - cc[0]) * 180 / Math.PI + (rb || o.type === 'north' || o.type === 'sym' || o.type === 'shape' ? 90 : 0); if (a > 180) a -= 360; a = e.shiftKey ? Math.round(a) : Math.round(a / 15) * 15; if (a === -180) a = 180; if (rb && o.type === 'text') { o.rot = a; } else if (rb) { o.rot = a; } else if (o.type === 'sym' || o.type === 'shape') o.rot = a; else o.ang = a; }
     else if (c === 'sc') {
       const ob = bbox(O), cx = O.type === 'text' ? ob.x : O.x, cy = O.type === 'text' ? ob.y : O.y;
       const f = Math.max(0.2, Math.min(6, dist([p.x, p.y], [cx, cy]) / Math.max(1, dist([drag.p0.x, drag.p0.y], [cx, cy]))));
@@ -1577,6 +1597,14 @@ svg.addEventListener('pointermove', e => {
       const r = -(o.rot || 0) * Math.PI / 180, dx2 = p.x - o.x, dy2 = p.y - o.y, lx = dx2 * Math.cos(r) - dy2 * Math.sin(r), ly = dx2 * Math.sin(r) + dy2 * Math.cos(r);
       o.w = Math.max(12, Math.round(2 * Math.abs(lx)));
       o.h = o.type === 'shape' ? (e.shiftKey ? Math.max(6, Math.round(o.w * O.h / O.w)) : Math.max(6, Math.round(2 * Math.abs(ly)))) : o.kind === 'door1' || o.kind === 'colrd' ? o.w : o.kind === 'door2' ? Math.round(o.w / 2) : Math.max(6, Math.round(2 * Math.abs(ly)));
+    }
+    else if (c.startsWith('c:') && O.rot && ROTB.includes(o.type)) {
+      const corner = c.slice(2), c0 = rotC(O), lp = rotPt([p.x, p.y], c0, -O.rot); let x0 = O.x, y0 = O.y, x1 = O.x + O.w, y1 = O.y + O.h;
+      if (corner.includes('w')) x0 = Math.min(lp[0], x1 - 10); else x1 = Math.max(lp[0], x0 + 10);
+      if (corner.includes('n')) y0 = Math.min(lp[1], y1 - 10); else y1 = Math.max(lp[1], y0 + 10);
+      if ((o.type === 'image' ? !e.shiftKey : e.shiftKey) && O.w && O.h) { const ar = O.w / O.h, w = x1 - x0, h = w / ar; if (corner.includes('n')) y0 = y1 - h; else y1 = y0 + h; }
+      const nc = rotPt([(x0 + x1) / 2, (y0 + y1) / 2], c0, O.rot), w = x1 - x0, h = y1 - y0;
+      o.x = Math.round(nc[0] - w / 2); o.y = Math.round(nc[1] - h / 2); o.w = Math.round(w); o.h = Math.round(h);
     }
     else if (c.startsWith('c:')) {
       const corner = c.slice(2); let x0 = O.x, y0 = O.y, x1 = O.x + O.w, y1 = O.y + O.h; const qx = sn(p.x), qy = sn(p.y);
@@ -1590,6 +1618,7 @@ svg.addEventListener('pointermove', e => {
   }
 });
 function endPointer(e) {
+  if (hoverSnap && drag && drag.kind === 'handle') hoverSnap = null;
   if (!drag) return;
   const d = drag; drag = null;
   if (d.kind === 'mk-rect') {
@@ -1721,7 +1750,7 @@ function propsHTML() {
       break;
     case 'rect':
       s += F.area('label', '名前（改行可）', o.label) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
-        + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('fill', '塗り', o.fill, '', { light: true, none: true }) + F.chk('dash', '破線', o.dash);
+        + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('fill', '塗り', o.fill, '', { light: true, none: true }) + F.chk('dash', '破線', o.dash) + F.range('rot', '回転', o.rot || 0, -180, 180, 1, '°') + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="rotReset" style="background:var(--panel-2)">角度を0°に戻す</button></div>`;
       break;
     case 'poly':
       s += F.area('label', '名前（改行可）', o.label) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 60)}${F.num('sw', '線の太さ', o.sw, 0.5, 12, 0.5)}</div>`
@@ -1735,7 +1764,7 @@ function propsHTML() {
       s += F.sel('kind', '種類', o.kind, Object.fromEntries(Object.entries(SYM).map(([a, b]) => [a, b.name])))
         + `<div class="row">${F.num('w', '幅', o.w, 6, 2000)}${o.kind === 'door1' || o.kind === 'door2' ? '' : F.num('h', '奥行き', o.h, 4, 2000)}</div>`
         + `<p class="note" style="margin:0">幅${mm(o.w)}　奥行き${mm(o.h)}</p>`
-        + F.range('rot', '回転', o.rot || 0, -180, 180, 15, '°') + F.color('color', o.kind.startsWith('col') ? '色' : '線の色', o.color, o.kind.startsWith('col') ? '#3f3f46' : '#111111')
+        + F.range('rot', '回転', o.rot || 0, -180, 180, 1, '°') + F.color('color', o.kind.startsWith('col') ? '色' : '線の色', o.color, o.kind.startsWith('col') ? '#3f3f46' : '#111111')
         + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="symFlip" style="background:var(--panel-2)">左右反転</button></div>`
         + (o.kind === 'stair' ? `<div class="row">${F.num('n', '段数', o.n || 10, 2, 40)}${F.sel('dir', '矢印', o.dir || 'up', { up: 'UP（上り）', dn: 'DN（下り）', none: 'なし' })}</div>` : o.kind.startsWith('col') ? F.sel('fillStyle', '塗り', o.fillStyle || 'solid', { solid: '塗りつぶし', x: '×印', white: '白抜き' }) : F.chk('cut', '壁を白抜きにする（開口部）', o.cut !== false));
       break;
@@ -1745,20 +1774,20 @@ function propsHTML() {
         + F.area('text', '中の文字（改行可）', o.text || '') + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs || 14, 6, 80)}${F.num('sw', '線の太さ', o.sw ?? 1.6, 0, 12, 0.5)}</div>`
         + F.color('fill', '塗り', o.fill, '', { none: true, both: true }) + F.color('stroke', '線の色', o.stroke, '#111111') + F.color('color', '文字の色', o.color, '#111111')
         + `<div class="row">${F.num('w', '幅', o.w, 6, 3000)}${F.num('h', '高さ', o.h, 6, 3000)}</div>`
-        + F.range('rot', '回転', o.rot || 0, -180, 180, 15, '°') + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="symFlip" style="background:var(--panel-2)">左右反転</button></div>` + F.chk('dash', '破線', o.dash);
+        + F.range('rot', '回転', o.rot || 0, -180, 180, 1, '°') + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="symFlip" style="background:var(--panel-2)">左右反転</button></div>` + F.chk('dash', '破線', o.dash);
       break;
     case 'arrow':
       s += `<div class="row">${F.color('color', '色', o.color, CAM)}${F.num('w', '太さ', o.w || 3, 1, 12, 0.5)}</div>` + F.chk('both', '両矢印', o.both) + F.chk('dash', '破線', o.dash) + F.chk('halo', '白いふちどり（写真の上で見やすく）', o.halo !== false);
       break;
     case 'mark':
-      s += `<div class="row">${F.color('color', '色', o.color, '#111111')}${F.num('sw', '線の太さ', o.sw, 1, 12, 0.5)}</div>`;
+      s += `<div class="row">${F.color('color', '色', o.color, '#111111')}${F.num('sw', '線の太さ', o.sw, 1, 12, 0.5)}</div>` + F.range('rot', '回転', o.rot || 0, -180, 180, 1, '°') + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="rotReset" style="background:var(--panel-2)">角度を0°に戻す</button></div>`;
       break;
     case 'north':
       s += F.range('ang', '向き', o.ang, -180, 180, 1, '°') + F.range('sz', '大きさ', o.sz || 1, 0.5, 3, 0.1) + F.color('color', '色', o.color, '#111111');
       break;
     case 'text':
       s += F.area('text', '文字（改行可）', o.text) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + `<div class="row">${F.num('fs', '文字サイズ', o.fs, 8, 80)}${F.color('color', '色', o.color, '#111111')}</div>`
-        + `<div class="row">${F.sel('box', '枠線', o.box, { none: 'なし', [BLUE]: '青枠', [RED]: '赤枠', '#111111': '黒枠' })}${F.sel('anchor', '揃え', o.anchor, { start: '左', middle: '中央' })}</div>` + F.chk('bold', '太字', o.bold);
+        + `<div class="row">${F.sel('box', '枠線', o.box, { none: 'なし', [BLUE]: '青枠', [RED]: '赤枠', '#111111': '黒枠' })}${F.sel('anchor', '揃え', o.anchor, { start: '左', middle: '中央' })}</div>` + F.chk('bold', '太字', o.bold) + F.range('rot', '回転', o.rot || 0, -180, 180, 1, '°') + `<div class="row"><button class="btn" data-act="symRot" style="background:var(--panel-2)">90°回転</button><button class="btn" data-act="rotReset" style="background:var(--panel-2)">角度を0°に戻す</button></div>`;
       break;
     case 'callout':
       s += F.area('text', '文字（改行可）', o.text) + `<div class="f"><span class="l">文字の向き</span><div class="seg" role="group"><button data-act="setVert" data-v="0" aria-pressed="${!o.vert}">横書き</button><button data-act="setVert" data-v="1" aria-pressed="${!!o.vert}">縦書き</button></div></div>` + F.num('fs', '文字サイズ', o.fs, 8, 40) + F.color('color', '文字の色', o.color, '#111111') + F.color('stroke', '枠の色', o.stroke, '#333333') + F.color('fill', '塗り', o.fill, '#ffffff', { light: true }) + `<button class="btn" data-act="fitCallout" style="justify-self:start;background:var(--panel-2)">枠を文字に合わせる</button>`;
@@ -1952,6 +1981,7 @@ $('#pane').addEventListener('click', e => {
     case 'pgRight': movePage(doc.cur, 1); break;
     case 'photoEdit': enterPhotoEdit(o.id); break;
     case 'exitEdit': exitPhotoEdit(); break;
+    case 'rotReset': mut(() => { o.rot = 0; }); break;
     case 'symRot': mut(() => { let a = (o.rot || 0) + 90; if (a > 180) a -= 360; o.rot = a; }); break;
     case 'symFlip': mut(() => { o.flip = !o.flip; }); break;
     case 'detach': mut(() => { delete o.parent; }); toast('写真から切り離しました'); break;
@@ -2395,11 +2425,11 @@ const XL = (() => {
         const lab = o.showLen ? lenLabel(o) : ''; if (lab) { const m = pointAt(wirePts(o), 0.5); k.push(label('長さ', lab, m[0] + (o.lx || 0), m[1] + (o.ly || 0) + 5, 14, { bg: '#ffffff' })); }
         return group(st.name, k);
       }
-      case 'rect': return rect(o.label ? '部屋 ' + o.label.replace(/\n/g, ' ') : '四角', o.x, o.y, o.w, o.h, { fill: o.fill === 'none' ? null : o.fill, stroke: o.stroke || '#111111', w: o.sw, dash: o.dash ? 'dash' : '', text: o.label, fs: o.fs, vert: o.vert });
+      case 'rect': return rect(o.label ? '部屋 ' + o.label.replace(/\n/g, ' ') : '四角', o.x, o.y, o.w, o.h, { fill: o.fill === 'none' ? null : o.fill, stroke: o.stroke || '#111111', w: o.sw, dash: o.dash ? 'dash' : '', text: o.label, fs: o.fs, vert: o.vert, rot: o.rot || 0 });
       case 'text': {
         const b = textBox(o), al = o.anchor === 'middle' ? 'ctr' : 'l';
-        return o.box !== 'none' ? rect('文字', b.x - 6, b.y - 5, b.w + 12, b.h + 10, { fill: '#ffffff', stroke: o.box, w: 1.6, text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: o.vert ? 'l' : al, ins: 6, box: true, vert: o.vert })
-          : rect('文字', b.x, b.y, b.w + 4, b.h + (o.vert ? 4 : 0), { text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: o.vert ? 'l' : al, box: true, vert: o.vert });
+        return o.box !== 'none' ? rect('文字', b.x - 6, b.y - 5, b.w + 12, b.h + 10, { fill: '#ffffff', stroke: o.box, w: 1.6, text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: o.vert ? 'l' : al, ins: 6, box: true, vert: o.vert, rot: o.rot || 0 })
+          : rect('文字', b.x, b.y, b.w + 4, b.h + (o.vert ? 4 : 0), { text: o.text, fs: o.fs, bold: o.bold, color: o.color, algn: o.vert ? 'l' : al, box: true, vert: o.vert, rot: o.rot || 0 });
       }
       case 'camera': return camEl(o);
       case 'device': return devEl(o);
@@ -2436,7 +2466,7 @@ const XL = (() => {
         return rect('吹き出し', o.x, o.y, o.w, o.h, { prst: 'wedgeRoundRectCallout', av, fill: o.fill || '#ffffff', stroke: o.stroke || '#333333', w: 1.4, text: o.text, fs: o.fs, color: o.color, vert: o.vert });
       }
       case 'shape': return rect(SHAPES[o.kind] ? SHAPES[o.kind].name : '図形', o.x - o.w / 2, o.y - o.h / 2, o.w, o.h, { prst: (SHAPES[o.kind] || SHAPES.rect).prst, fill: !o.fill || o.fill === 'none' ? null : o.fill, stroke: (o.sw ?? 1.6) > 0 ? (o.stroke || '#111111') : null, w: o.sw ?? 1.6, dash: o.dash ? 'dash' : '', text: o.text, fs: o.fs || 14, color: o.color, rot: o.rot || 0, flip: !!o.flip, vert: o.vert });
-      case 'mark': return ell('囲み', o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, { stroke: o.color, w: o.sw });
+      case 'mark': return ell('囲み', o.x + o.w / 2, o.y + o.h / 2, o.w / 2, o.h / 2, { stroke: o.color, w: o.sw, rot: o.rot || 0 });
       case 'photo': {
         const k = [];
         if (o.asset && doc.assets[o.asset]) {
