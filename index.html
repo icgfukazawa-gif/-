@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>案件管理ポータル</title>
+<style>
+:root{
+  --bg:#f4f6f9;--card:#fff;--ink:#1d2433;--sub:#5d6778;--line:#dfe3ea;--line2:#eef1f5;
+  --pri:#1f5fbf;--pri-d:#174a96;--pri-l:#e8f0fc;--ok:#1e8a4c;--ok-l:#e3f4ea;--warn:#b26a00;--warn-l:#fff3dc;--bad:#c0392b;--bad-l:#fdecea;
+  --s-survey:#2f7fd8;--s-estimate:#7b5cd6;--s-contract:#d08a12;--s-construction:#d0532d;--s-completion:#1e8a6e;--s-done:#6b7280;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--pri)}
+/* header */
+.top{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:10px 18px}
+.top h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.02em;display:flex;align-items:center;gap:8px;cursor:pointer}
+.top h1 .logo{width:26px;height:26px;border-radius:7px;background:var(--pri);color:#fff;display:grid;place-items:center;font-size:13px}
+.top .sp{flex:1}
+.badge{font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--sub);background:#fff;white-space:nowrap}
+.badge.local{background:var(--warn-l);border-color:#f0d29a;color:var(--warn)}
+.badge.remote{background:var(--ok-l);border-color:#b7e0c7;color:var(--ok)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 13px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{background:#f7f9fc}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.pri:hover{background:var(--pri-d)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.danger{color:var(--bad);border-color:#efc4bf}
+.btn.sm{padding:4px 9px;font-size:12.5px;border-radius:7px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+.wrap{max-width:1280px;margin:0 auto;padding:18px}
+/* pipeline cards */
+.pipe{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;cursor:pointer;position:relative;overflow:hidden}
+.pc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.pc .l{font-size:12.5px;color:var(--sub)}
+.pc .n{font-size:24px;font-weight:700;line-height:1.2}
+.pc .n small{font-size:12px;font-weight:400;color:var(--sub);margin-left:3px}
+.pc.on{outline:2px solid var(--c);outline-offset:-1px}
+/* toolbar */
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.bar input[type=search],.bar select{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:#fff}
+.bar input[type=search]{min-width:240px;flex:1;max-width:380px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.seg button{border:0;background:transparent;padding:7px 12px}
+.seg button.on{background:var(--pri-l);color:var(--pri);font-weight:700}
+/* table */
+.tbl{width:100%;border-collapse:separate;border-spacing:0;background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.tbl th{background:#f8f9fb;color:var(--sub);font-weight:600;font-size:12.5px;text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:0}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover td{background:#f8fbff}
+.tbl .no{color:var(--sub);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl .nm{font-weight:600}
+.tbl .sub{font-size:12px;color:var(--sub)}
+.pill{display:inline-block;font-size:12px;padding:2px 9px;border-radius:99px;color:#fff;background:var(--c);white-space:nowrap}
+.pill.out{background:transparent;color:var(--c);border:1px solid var(--c)}
+.dots{display:flex;gap:3px}
+.dots i{width:16px;height:6px;border-radius:3px;background:#e3e7ee}
+.dots i.d{background:var(--c)}
+.dots i.cur{background:var(--c);opacity:.45}
+.empty{padding:40px;text-align:center;color:var(--sub);background:var(--card);border:1px dashed var(--line);border-radius:var(--r)}
+/* board */
+.board{display:grid;grid-template-columns:repeat(6,minmax(190px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{background:#eceff4;border-radius:var(--r);padding:8px;min-height:120px}
+.col h3{font-size:13px;margin:2px 4px 8px;display:flex;align-items:center;gap:6px}
+.col h3 b{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.col h3 span{color:var(--sub);font-weight:400}
+.kc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:7px;cursor:pointer}
+.kc:hover{border-color:#b9c7dd}
+.kc .nm{font-weight:600;font-size:13.5px}
+.kc .sub{font-size:12px;color:var(--sub)}
+/* detail */
+.back{margin-bottom:10px}
+.dhead{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;margin-bottom:14px}
+.dhead .t{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.dhead h2{margin:0;font-size:20px}
+.dhead .meta{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px 18px;margin-top:12px;font-size:13px}
+.dhead .meta div span{color:var(--sub);margin-right:8px}
+.steps{display:flex;background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.step{flex:1;padding:11px 8px 10px;text-align:center;cursor:pointer;border-right:1px solid var(--line2);position:relative;min-width:0}
+.step:last-child{border-right:0}
+.step .c{width:26px;height:26px;border-radius:50%;margin:0 auto 4px;display:grid;place-items:center;font-size:12.5px;font-weight:700;border:2px solid var(--c);color:var(--c);background:#fff}
+.step.done .c{background:var(--c);color:#fff}
+.step.prog .c{background:var(--c);color:#fff;box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 22%,transparent)}
+.step .lb{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.step .st{font-size:11px;color:var(--sub)}
+.step.sel{background:color-mix(in srgb,var(--c) 9%,#fff)}
+.step.sel::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--c)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.panel h3{margin:0 0 12px;font-size:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.sec{margin-top:16px}
+.sec h4{font-size:13px;color:var(--sub);margin:0 0 8px;font-weight:600}
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.tool{border:1px solid var(--line);border-radius:9px;padding:12px;display:flex;flex-direction:column;gap:6px;background:#fbfcfe}
+.tool .tn{font-weight:700}
+.tool .ts{font-size:12px;color:var(--sub);min-height:18px}
+.tool .ta{display:flex;gap:6px;margin-top:auto}
+.files{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.file{display:flex;align-items:center;gap:10px;padding:8px 11px;border-bottom:1px solid var(--line2);font-size:13px}
+.file:last-child{border-bottom:0}
+.file .fi{width:34px;height:22px;border-radius:4px;background:#e9eef6;color:#4a5a75;font-size:10px;font-weight:700;display:grid;place-items:center;flex:none}
+.file .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file .fm{font-size:11.5px;color:var(--sub);white-space:nowrap}
+.file.none{color:var(--sub);justify-content:center;padding:14px}
+.fld{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.fld label{font-size:12.5px;color:var(--sub)}
+.fld input,.fld select,.fld textarea{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff;width:100%}
+.fld textarea{min-height:70px;resize:vertical}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 12px}
+.hint{font-size:12px;color:var(--sub)}
+.note{background:var(--pri-l);border:1px solid #c9dbf6;color:#24426f;border-radius:9px;padding:10px 12px;font-size:13px}
+.note.warn{background:var(--warn-l);border-color:#f0d29a;color:#6b4300}
+/* tool view */
+#toolView{position:fixed;inset:0;z-index:50;background:#fff;display:none;flex-direction:column}
+#toolView.on{display:flex}
+#toolView .tb{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#1d2a40;color:#fff;flex:none}
+#toolView .tb .btn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff}
+#toolView .tb .btn:hover{background:rgba(255,255,255,.2)}
+#toolView .tb .btn.pri{background:#3b82f6;border-color:#3b82f6}
+#toolView .tb .ti{flex:1;min-width:0}
+#toolView .tb .ti b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toolView .tb .ti span{font-size:12px;opacity:.75}
+#toolView iframe{flex:1;border:0;width:100%;background:#fff}
+#toolView .ro{background:#fde68a;color:#5b4300;font-size:12.5px;padding:5px 12px;display:none}
+#toolView.readonly .ro{display:block}
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(20,28,44,.45);z-index:80;display:none;align-items:flex-start;justify-content:center;padding:6vh 14px;overflow:auto}
+.mask.on{display:flex}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:720px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal .mh{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:15px;display:flex;align-items:center}
+.modal .mh .sp{flex:1}
+.modal .mb{padding:16px 18px}
+.modal .mf{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+/* toast / busy */
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:120;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+#toast div{background:#1d2433;color:#fff;padding:9px 16px;border-radius:9px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:90vw}
+#toast div.err{background:var(--bad)}
+#busy{position:fixed;inset:0;z-index:110;background:rgba(255,255,255,.65);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;font-size:14px}
+#busy.on{display:flex}
+#busy .sp{width:34px;height:34px;border-radius:50%;border:3px solid #cfd8e6;border-top-color:var(--pri);animation:rot .8s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+.pend{background:var(--warn-l);border-bottom:1px solid #f0d29a;color:#6b4300;padding:7px 18px;font-size:13px;display:none;align-items:center;gap:10px}
+.pend.on{display:flex}
+@media (max-width:900px){
+  .pipe{grid-template-columns:repeat(3,1fr)}
+  .grid2{grid-template-columns:1fr}
+  .step .lb{font-size:11px}.step .st{display:none}
+  .hide-m{display:none}
+  .wrap{padding:12px}
+}
+@media (max-width:560px){
+  .pipe{grid-template-columns:repeat(2,1fr)}
+  .top h1 span.t{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1 onclick="go('list')"><span class="logo">案</span><span class="t">案件管理ポータル</span></h1>
+  <span id="modeBadge" class="badge"></span>
+  <span class="sp"></span>
+  <span id="userBadge" class="badge hide-m"></span>
+  <button class="btn sm" onclick="refresh(true)" title="最新を読み込み">↻ 更新</button>
+  <button class="btn sm" onclick="openSettings()">⚙ 設定</button>
+</header>
+<div id="pendBar" class="pend"><span id="pendTxt"></span><button class="btn sm" onclick="retryPending()">再送信</button></div>
+<main class="wrap" id="app"></main>
+
+<section id="toolView">
+  <div class="tb">
+    <button class="btn" id="tvBack">← 保存して案件に戻る</button>
+    <div class="ti"><b id="tvTitle"></b><span id="tvSub"></span></div>
+    <button class="btn hide-m" id="tvPrefill" title="案件名・顧客・住所を空欄に入力">案件情報を反映</button>
+    <button class="btn pri" id="tvSave">保存</button>
+  </div>
+  <div class="ro">閲覧のみ：他の人が編集中のため、このツールで変更しても保存されません。</div>
+  <iframe id="tvFrame" title="ツール"></iframe>
+</section>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div id="busy"><div class="sp"></div><div id="busyTxt">処理中…</div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* =========================================================
+   定義
+   ========================================================= */
+const STAGES = [
+  {k:'survey',       n:'現場調査', c:'var(--s-survey)'},
+  {k:'estimate',     n:'見積',     c:'var(--s-estimate)'},
+  {k:'contract',     n:'契約',     c:'var(--s-contract)'},
+  {k:'construction', n:'工事',     c:'var(--s-construction)'},
+  {k:'completion',   n:'完成図書', c:'var(--s-completion)'},
+  {k:'done',         n:'完了・保守', c:'var(--s-done)'}
+];
+const STAGE = Object.fromEntries(STAGES.map((s,i)=>[s.k,{...s,i}]));
+const ST_STATUS = {todo:'未着手', prog:'進行中', done:'完了', skip:'対象外'};
+
+/* 各ツール：案件ごとに切り替える保存データの場所
+   ls/lsPrefix … localStorage（案件ごと）  ss … sessionStorage  idb … IndexedDB（DBごと）
+   ここに無いキー（品目マスタ・会社設定・表示設定など）は全案件共通のまま残る */
+const TOOLS = {
+  genba_report:{n:'現場調査報告書', f:'現場調査報告書_作成ツール.html', st:'survey',
+    d:'現調報告書のExcel作成。入力内容は「バックアップ保存」(.json)で案件に自動添付されます', ls:[], idb:[]},
+  cam_survey:{n:'防犯カメラ調査', f:'防犯カメラ調査ツール.html', st:'survey',
+    d:'防犯カメラの設置調査', ls:['bousou_survey_data_v1'], idb:[],
+    pre:{'bld-name':'name','bld-addr':'address'}},
+  led_survey:{n:'LED現場調査', f:'LED現場調査ツール.html', st:'survey',
+    d:'LED照明の現場調査', ls:['spoc:survey:v3'], idb:['spoc-db']},
+  estimate:{n:'見積作成', f:'見積作成ツール.html', st:'estimate',
+    d:'見積書の作成（品目マスタ・会社設定は全案件共通）', ls:['mitsumori.draft'], ss:['mitsumori.tab'], idb:[]},
+  gaiyouzu:{n:'カメラ概要図', f:'カメラ概要図メーカー.html', st:'estimate',
+    d:'カメラ配置の概要図', ls:[], idb:['camera-gaiyouzu']},
+  photo:{n:'現場フォト台帳', f:'現場フォト台帳.html', st:'construction',
+    d:'施工写真の撮影・台帳化', ls:['pid','kzBoard'], lsPrefix:['board:','spot:'], idb:['genbaPhoto'],
+    pre:{'kz_client':'client','kz_site':'name','kz_addr':'address'}},
+  kanko:{n:'施工完了報告書', f:'施工完了報告書作成ツール.html', st:'construction',
+    d:'施工完了報告書の作成', ls:['reportAssist'], idb:[], pre:{'p_name':'name'}},
+  kansei:{n:'完成図書', f:'完成図書作成ツール.html', st:'completion',
+    d:'完成図書の作成', ls:['kanseizusho_session_v1'], idb:['kanseizusho_db'],
+    pre:{'cv_client':'client','cv_site':'name','cv_addr':'address'}},
+  maint:{n:'保守報告書', f:'防犯カメラ保守報告書ツール.html', st:'done',
+    d:'防犯カメラ保守点検の報告書（現場マスタは全案件共通）', ls:['cam-maint-draft-v1'], idb:[],
+    pre:{'customer':'client','site':'name'}}
+};
+const CATS = ['防犯カメラ','LED照明','電気工事','その他'];
+
+/* =========================================================
+   ユーティリティ
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const nowISO = () => new Date().toISOString();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function fmtDT(s){ if(!s) return ''; const d=new Date(s); if(isNaN(d)) return s; const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+function fmtD(s){ if(!s) return ''; return String(s).replace(/-/g,'/'); }
+function yen(n){ if(n===''||n==null||isNaN(n)) return ''; return '¥' + Number(n).toLocaleString('ja-JP'); }
+function fmtSize(b){ if(b==null) return ''; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+function toast(msg, err){ const d=document.createElement('div'); d.textContent=msg; if(err) d.className='err'; $('#toast').appendChild(d); setTimeout(()=>d.remove(), err?6000:3200); }
+let busyN=0;
+function busy(on, txt){ busyN += on?1:-1; if(busyN<0) busyN=0; $('#busyTxt').textContent = txt || '処理中…'; $('#busy').classList.toggle('on', busyN>0); }
+function blobToB64(blob){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>{ const s=String(fr.result); res(s.slice(s.indexOf(',')+1)); }; fr.onerror=()=>rej(fr.error); fr.readAsDataURL(blob); }); }
+function b64ToBytes(b64){ const bin=atob(b64); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return u; }
+function ext(name){ const m=/\.([a-z0-9]+)$/i.exec(name||''); return m?m[1].toUpperCase().slice(0,4):'FILE'; }
+function stageOf(c){ for(const s of STAGES){ const st=(c.stages||{})[s.k]?.status; if(st!=='done' && st!=='skip') return s.k; } return 'done'; }
+
+/* =========================================================
+   設定（端末ごと）
+   ========================================================= */
+const CFG_KEY='hubPortal.settings.v1';
+let cfg = (()=>{ try{ return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; }catch(e){ return {}; } })();
+cfg = Object.assign({user:'', gasUrl:'', apiKey:'', capture:true}, cfg);
+function saveCfg(){ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+/* =========================================================
+   値のシリアライズ（Blob/ArrayBuffer/Date を JSON 化）
+   ========================================================= */
+async function enc(v){
+  if(v===null || typeof v!=='object') return v;
+  if(v instanceof Date) return {__t:'date', v:v.getTime()};
+  if(typeof Blob!=='undefined' && v instanceof Blob){
+    return {__t:'blob', type:v.type||'', file:(typeof File!=='undefined' && v instanceof File), name:v.name||null, lm:v.lastModified||null, b64: await blobToB64(v)};
+  }
+  if(v instanceof ArrayBuffer) return {__t:'ab', b64: await blobToB64(new Blob([v]))};
+  if(ArrayBuffer.isView(v)) return {__t:'ta', ctor:v.constructor.name, b64: await blobToB64(new Blob([v.buffer.slice(v.byteOffset, v.byteOffset+v.byteLength)]))};
+  if(Array.isArray(v)){ const a=[]; for(const x of v) a.push(await enc(x)); return a; }
+  if(v instanceof Map){ const a=[]; for(const [k,x] of v) a.push([await enc(k), await enc(x)]); return {__t:'map', v:a}; }
+  if(v instanceof Set){ const a=[]; for(const x of v) a.push(await enc(x)); return {__t:'set', v:a}; }
+  const o={}; for(const k of Object.keys(v)) o[k]=await enc(v[k]); return o;
+}
+function dec(v){
+  if(v===null || typeof v!=='object') return v;
+  if(Array.isArray(v)) return v.map(dec);
+  switch(v.__t){
+    case 'date': return new Date(v.v);
+    case 'blob': { const u=b64ToBytes(v.b64); return v.file ? new File([u], v.name||'file', {type:v.type, lastModified:v.lm||Date.now()}) : new Blob([u], {type:v.type}); }
+    case 'ab': return b64ToBytes(v.b64).buffer;
+    case 'ta': { const u=b64ToBytes(v.b64); const C=self[v.ctor]||Uint8Array; return new C(u.buffer, 0, u.byteLength / (C.BYTES_PER_ELEMENT||1)); }
+    case 'map': return new Map(v.v.map(([k,x])=>[dec(k),dec(x)]));
+    case 'set': return new Set(v.v.map(dec));
+  }
+  const o={}; for(const k of Object.keys(v)) o[k]=dec(v[k]); return o;
+}
+
+/* =========================================================
+   各ツールの保存データ：退避・消去・復元
+   ========================================================= */
+function idbReq(r){ return new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbExists(name){
+  if(indexedDB.databases){ try{ const l=await indexedDB.databases(); return l.some(d=>d.name===name); }catch(e){} }
+  return null; // 不明
+}
+function idbDelete(name){
+  return new Promise(res=>{ let done=false; const fin=()=>{ if(!done){ done=true; res(); } };
+    try{ const r=indexedDB.deleteDatabase(name); r.onsuccess=fin; r.onerror=fin; r.onblocked=()=>setTimeout(fin,1500); }catch(e){ fin(); }
+    setTimeout(fin, 5000); });
+}
+async function idbDump(name){
+  const ex = await idbExists(name);
+  if(ex===false) return null;
+  const db = await new Promise((res,rej)=>{ const r=indexedDB.open(name); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); r.onupgradeneeded=()=>{}; });
+  try{
+    if(db.objectStoreNames.length===0){ db.close(); await idbDelete(name); return null; }
+    const out={version:db.version, stores:[]};
+    for(const sn of Array.from(db.objectStoreNames)){
+      const tx=db.transaction(sn,'readonly'); const os=tx.objectStore(sn);
+      const meta={name:sn, keyPath:os.keyPath, autoIncrement:os.autoIncrement, indexes:[]};
+      for(const ix of Array.from(os.indexNames)){ const i=os.index(ix); meta.indexes.push({name:i.name, keyPath:i.keyPath, unique:i.unique, multiEntry:i.multiEntry}); }
+      const [keys, vals] = await Promise.all([idbReq(os.getAllKeys()), idbReq(os.getAll())]);
+      meta.records=[];
+      for(let i=0;i<vals.length;i++) meta.records.push([await enc(keys[i]), await enc(vals[i])]);
+      out.stores.push(meta);
+    }
+    return out;
+  } finally { db.close(); }
+}
+async function idbRestore(name, d){
+  await idbDelete(name);
+  const db = await new Promise((res,rej)=>{
+    const r=indexedDB.open(name, d.version||1);
+    r.onupgradeneeded=()=>{ const db=r.result;
+      for(const s of d.stores){ const os=db.createObjectStore(s.name, s.keyPath!=null ? {keyPath:s.keyPath, autoIncrement:!!s.autoIncrement} : {autoIncrement:!!s.autoIncrement});
+        for(const ix of s.indexes||[]) os.createIndex(ix.name, ix.keyPath, {unique:!!ix.unique, multiEntry:!!ix.multiEntry}); } };
+    r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  try{
+    for(const s of d.stores){
+      if(!s.records.length) continue;
+      await new Promise((res,rej)=>{ const tx=db.transaction(s.name,'readwrite'); const os=tx.objectStore(s.name);
+        for(const [k,v] of s.records){ const val=dec(v); if(s.keyPath!=null) os.put(val); else os.put(val, dec(k)); }
+        tx.oncomplete=res; tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error); });
+    }
+  } finally { db.close(); }
+}
+function lsKeysOf(t){
+  const keys=new Set(t.ls||[]);
+  if(t.lsPrefix && t.lsPrefix.length){ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(t.lsPrefix.some(p=>k.startsWith(p))) keys.add(k); } }
+  return [...keys];
+}
+async function dumpTool(tid){
+  const t=TOOLS[tid]; const out={v:1, tool:tid, at:nowISO(), ls:{}, ss:{}, idb:{}}; let any=false;
+  for(const k of lsKeysOf(t)){ const v=localStorage.getItem(k); if(v!=null){ out.ls[k]=v; any=true; } }
+  for(const k of t.ss||[]){ const v=sessionStorage.getItem(k); if(v!=null) out.ss[k]=v; }
+  for(const n of t.idb||[]){ const d=await idbDump(n); if(d){ out.idb[n]=d; if(d.stores.some(s=>s.records.length)) any=true; } }
+  return any ? out : null;
+}
+async function clearTool(tid){
+  const t=TOOLS[tid];
+  for(const k of lsKeysOf(t)) localStorage.removeItem(k);
+  for(const k of t.ss||[]) sessionStorage.removeItem(k);
+  for(const n of t.idb||[]) await idbDelete(n);
+}
+async function restoreTool(tid, d){
+  await clearTool(tid);
+  if(!d) return;
+  for(const [k,v] of Object.entries(d.ls||{})) localStorage.setItem(k, v);
+  for(const [k,v] of Object.entries(d.ss||{})) sessionStorage.setItem(k, v);
+  for(const [n,x] of Object.entries(d.idb||{})) await idbRestore(n, x);
+}
+function hasToolStorage(tid){ const t=TOOLS[tid]; return (t.ls&&t.ls.length)||(t.lsPrefix&&t.lsPrefix.length)||(t.idb&&t.idb.length); }
+
+/* =========================================================
+   保存先：ローカル（この端末）
+   ========================================================= */
+const LDB_NAME='hubPortal_v1';
+let _ldb=null;
+function ldb(){
+  if(_ldb) return Promise.resolve(_ldb);
+  return new Promise((res,rej)=>{ const r=indexedDB.open(LDB_NAME,1);
+    r.onupgradeneeded=()=>{ const d=r.result; d.createObjectStore('cases',{keyPath:'id'}); d.createObjectStore('tooldata',{keyPath:'k'}); d.createObjectStore('files',{keyPath:'id'}); d.createObjectStore('pending',{keyPath:'id'}); };
+    r.onsuccess=()=>{ _ldb=r.result; res(_ldb); }; r.onerror=()=>rej(r.error); });
+}
+async function lget(store, key){ const d=await ldb(); return idbReq(d.transaction(store).objectStore(store).get(key)); }
+async function lall(store){ const d=await ldb(); return idbReq(d.transaction(store).objectStore(store).getAll()); }
+async function lput(store, val){ const d=await ldb(); return new Promise((res,rej)=>{ const tx=d.transaction(store,'readwrite'); tx.objectStore(store).put(val); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+async function ldel(store, key){ const d=await ldb(); return new Promise((res,rej)=>{ const tx=d.transaction(store,'readwrite'); tx.objectStore(store).delete(key); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+
+const LocalStore = {
+  mode:'local',
+  async listCases(){ return lall('cases'); },
+  async saveCase(c){ c.updatedAt=nowISO(); c.updatedBy=cfg.user; await lput('cases', c); return c; },
+  async deleteCase(id){
+    await ldel('cases', id);
+    for(const r of await lall('tooldata')) if(r.k.startsWith(id+'|')) await ldel('tooldata', r.k);
+    for(const r of await lall('files')) if(r.caseId===id) await ldel('files', r.id);
+  },
+  async getToolData(cid, tid){ const r=await lget('tooldata', cid+'|'+tid); return r ? r.data : null; },
+  async putToolData(cid, tid, data){
+    await lput('tooldata', {k:cid+'|'+tid, data, at:nowISO()});
+    const c=await lget('cases', cid); c.tools=c.tools||{}; c.tools[tid]={at:nowISO(), by:cfg.user, size:data.length};
+    return this.saveCase(c);
+  },
+  async putFile(cid, meta, blob){
+    await lput('files', {id:meta.id, caseId:cid, blob});
+    const c=await lget('cases', cid); c.files=c.files||[]; c.files.push(meta); return this.saveCase(c);
+  },
+  async getFile(cid, meta){ const r=await lget('files', meta.id); return r ? r.blob : null; },
+  async deleteFile(cid, fid){
+    await ldel('files', fid);
+    const c=await lget('cases', cid); c.files=(c.files||[]).filter(f=>f.id!==fid); return this.saveCase(c);
+  },
+  async lock(){ return {ok:true}; },
+  async unlock(){}
+};
+
+/* =========================================================
+   保存先：共有（Google Apps Script）
+   ========================================================= */
+async function gas(action, params, body){
+  if(!cfg.gasUrl) throw new Error('共有先URLが未設定です');
+  const qs=new URLSearchParams({action, key:cfg.apiKey||'', ...(params||{})});
+  let res;
+  if(body){ res = await fetch(cfg.gasUrl, {method:'POST', body:JSON.stringify({action, key:cfg.apiKey||'', ...body}), redirect:'follow'}); }
+  else { res = await fetch(cfg.gasUrl + '?' + qs.toString(), {redirect:'follow'}); }
+  if(!res.ok) throw new Error('通信エラー (' + res.status + ')');
+  const txt = await res.text(); let j;
+  try{ j=JSON.parse(txt); }catch(e){ throw new Error('共有先の応答が不正です。URL・公開設定を確認してください'); }
+  if(j && j.error) { const e=new Error(j.error); e.data=j; throw e; }
+  return j;
+}
+const RemoteStore = {
+  mode:'remote',
+  async listCases(){ const j=await gas('list'); return j.cases||[]; },
+  async saveCase(c){
+    const j=await gas('saveCase', null, {case:c, base:c.updatedAt||'', user:cfg.user});
+    if(j.conflict){ const e=new Error('conflict'); e.conflict=true; e.latest=j.case; throw e; }
+    return j.case;
+  },
+  async deleteCase(id){ await gas('deleteCase', null, {id, user:cfg.user}); },
+  async getToolData(cid, tid){ const j=await gas('getData', {caseId:cid, toolId:tid}); return j.data || null; },
+  async putToolData(cid, tid, data){ const j=await gas('putData', null, {caseId:cid, toolId:tid, data, user:cfg.user}); return j.case; },
+  async putFile(cid, meta, blob){ const b64=await blobToB64(blob); const j=await gas('putFile', null, {caseId:cid, meta, b64, user:cfg.user}); return j.case; },
+  async getFile(cid, meta){ const j=await gas('getFile', {caseId:cid, fileId:meta.id}); return new Blob([b64ToBytes(j.b64)], {type:j.mime||meta.mime||''}); },
+  async deleteFile(cid, fid){ const j=await gas('deleteFile', null, {caseId:cid, fileId:fid, user:cfg.user}); return j.case; },
+  async lock(cid, tid, force){ return gas('lock', null, {caseId:cid, toolId:tid, user:cfg.user, force:!!force}); },
+  async unlock(cid, tid){ try{ await gas('unlock', null, {caseId:cid, toolId:tid, user:cfg.user}); }catch(e){} }
+};
+let store = cfg.gasUrl ? RemoteStore : LocalStore;
+
+/* 送信失敗時の一時保存（この端末） */
+async function savePending(kind, payload){ await lput('pending', {id:uid(), kind, payload, at:nowISO()}); await updatePendBar(); }
+async function updatePendBar(){
+  const p=await lall('pending'); $('#pendBar').classList.toggle('on', p.length>0);
+  $('#pendTxt').textContent = p.length ? `共有先へ未送信のデータが ${p.length} 件あります（この端末に一時保存中）。` : '';
+}
+async function retryPending(){
+  const p=await lall('pending'); if(!p.length) return;
+  busy(true,'再送信中…'); let ok=0;
+  try{
+    for(const r of p){
+      try{
+        if(r.kind==='tooldata') await store.putToolData(r.payload.cid, r.payload.tid, r.payload.data);
+        else if(r.kind==='file') await store.putFile(r.payload.cid, r.payload.meta, r.payload.blob);
+        await ldel('pending', r.id); ok++;
+      }catch(e){ toast('再送信に失敗：'+e.message, true); break; }
+    }
+  } finally { busy(false); }
+  if(ok) toast(ok+'件を送信しました');
+  await updatePendBar(); await refresh();
+}
+
+/* =========================================================
+   状態
+   ========================================================= */
+let cases=[];
+let view={page:'list', id:null, stage:null, filter:'', q:'', who:'', layout:localStorage.getItem('hubPortal.layout')||'table', showDone:false};
+let cur=null; // ツール表示中 {cid,tid,readonly}
+
+function getCase(id){ return cases.find(c=>c.id===id); }
+function putLocalCase(c){ const i=cases.findIndex(x=>x.id===c.id); if(i>=0) cases[i]=c; else cases.push(c); }
+
+async function refresh(manual){
+  try{
+    busy(true,'読み込み中…');
+    cases = await store.listCases();
+    cases.forEach(normCase);
+    await countLocalOnly();
+    if(manual) toast('最新の状態を読み込みました');
+  }catch(e){ toast('読み込みに失敗：'+e.message, true); }
+  finally{ busy(false); }
+  render();
+}
+function normCase(c){
+  c.stages=c.stages||{}; for(const s of STAGES){ c.stages[s.k]=Object.assign({status:'todo', memo:''}, c.stages[s.k]||{}); }
+  c.files=c.files||[]; c.tools=c.tools||{}; c.dates=c.dates||{};
+  return c;
+}
+function newCaseNo(){
+  const y=new Date().getFullYear(); let max=0;
+  for(const c of cases){ const m=new RegExp('^'+y+'-(\\d+)$').exec(c.no||''); if(m) max=Math.max(max, +m[1]); }
+  return y+'-'+String(max+1).padStart(3,'0');
+}
+async function saveCaseSafe(c){
+  try{ const r=normCase(await store.saveCase(c)); putLocalCase(r); return r; }
+  catch(e){
+    if(e.conflict){ putLocalCase(normCase(e.latest)); toast('他の人が先に更新していたため、最新の内容を読み込みました。もう一度操作してください。', true); render(); return null; }
+    toast('保存に失敗：'+e.message, true); return null;
+  }
+}
+
+/* =========================================================
+   画面
+   ========================================================= */
+function go(page, id, stage){
+  view.page=page; view.id=id||null; view.stage=stage||null;
+  const h = page==='case' ? '#case/'+id+(stage?'/'+stage:'') : '#';
+  if(location.hash!==h) history.pushState(null,'',h);
+  render(); window.scrollTo(0,0);
+}
+window.addEventListener('popstate', ()=>{ if(cur) return; fromHash(); render(); });
+function fromHash(){ const m=/^#case\/([^/]+)(?:\/(\w+))?/.exec(location.hash); if(m){ view.page='case'; view.id=m[1]; view.stage=m[2]||null; } else { view.page='list'; } }
+
+function render(){
+  $('#modeBadge').className = 'badge ' + store.mode;
+  $('#modeBadge').textContent = store.mode==='remote' ? '共有モード' : 'この端末のみ';
+  $('#userBadge').textContent = cfg.user ? '👤 ' + cfg.user : '👤 未設定';
+  if(view.page==='case' && getCase(view.id)) renderCase(); else renderList();
+}
+
+function renderList(){
+  const active = cases.filter(c=>!c.archived);
+  const cnt = Object.fromEntries(STAGES.map(s=>[s.k,0]));
+  active.forEach(c=>cnt[stageOf(c)]++);
+  const people=[...new Set(cases.flatMap(c=>[c.sales,c.manager]).filter(Boolean))].sort();
+  let h = (store.mode==='remote' && localOnlyCount) ? `<div class="note warn" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">この端末だけに保存された案件が ${localOnlyCount} 件あります（共有モードの一覧には出ません）。<button class="btn sm" onclick="pushLocalToRemote()">共有先へ送る</button></div>` : '';
+  h += `<div class="pipe">` + STAGES.map(s=>`
+    <div class="pc ${view.filter===s.k?'on':''}" style="--c:${s.c}" onclick="setFilter('${s.k}')">
+      <div class="l">${s.n}</div><div class="n">${cnt[s.k]}<small>件</small></div></div>`).join('') + `</div>
+  <div class="bar">
+    <button class="btn pri" onclick="editCase()">＋ 新規案件</button>
+    <input type="search" placeholder="案件名・顧客・住所・番号で検索" value="${esc(view.q)}" oninput="view.q=this.value;renderListBody()">
+    <select onchange="view.who=this.value;renderList()"><option value="">担当者：すべて</option>${people.map(p=>`<option ${view.who===p?'selected':''}>${esc(p)}</option>`).join('')}</select>
+    ${view.filter?`<button class="btn sm" onclick="setFilter('')">工程の絞り込みを解除 ✕</button>`:''}
+    <span style="flex:1"></span>
+    <label class="hint" style="display:flex;align-items:center;gap:4px"><input type="checkbox" ${view.showDone?'checked':''} onchange="view.showDone=this.checked;renderList()">保管済みも表示</label>
+    <div class="seg"><button class="${view.layout==='table'?'on':''}" onclick="setLayout('table')">一覧</button><button class="${view.layout==='board'?'on':''}" onclick="setLayout('board')">ボード</button></div>
+  </div><div id="listBody"></div>`;
+  $('#app').innerHTML = h;
+  renderListBody();
+}
+let localOnlyCount=0;
+async function countLocalOnly(){
+  if(store.mode!=='remote'){ localOnlyCount=0; return; }
+  const ids=new Set(cases.map(c=>c.id)); localOnlyCount=(await lall('cases')).filter(c=>!ids.has(c.id)).length;
+}
+function filteredList(){
+  return cases.filter(c=>{
+    if(c.archived && !view.showDone) return false;
+    if(view.filter && stageOf(c)!==view.filter) return false;
+    if(view.who && c.sales!==view.who && c.manager!==view.who) return false;
+    if(view.q){ const q=view.q.toLowerCase(); if(![c.no,c.name,c.client,c.address,c.sales,c.manager,c.memo].join(' ').toLowerCase().includes(q)) return false; }
+    return true;
+  }).sort((a,b)=>String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+}
+function renderListBody(){
+  const list=filteredList(); const el=$('#listBody'); if(!el) return;
+  if(!cases.length){ el.innerHTML=`<div class="empty">まだ案件がありません。「＋ 新規案件」から登録してください。</div>`; return; }
+  if(!list.length){ el.innerHTML=`<div class="empty">条件に合う案件がありません。</div>`; return; }
+  if(view.layout==='board'){
+    el.innerHTML = `<div class="board">` + STAGES.map(s=>{
+      const cs=list.filter(c=>stageOf(c)===s.k);
+      return `<div class="col" style="--c:${s.c}"><h3><b></b>${s.n}<span>${cs.length}</span></h3>` +
+        cs.map(c=>`<div class="kc" onclick="go('case','${c.id}')"><div class="sub">${esc(c.no)}</div><div class="nm">${esc(c.name)}</div><div class="sub">${esc(c.client||'')}${c.sales?' ／ '+esc(c.sales):''}</div></div>`).join('') + `</div>`;
+    }).join('') + `</div>`;
+    return;
+  }
+  el.innerHTML = `<table class="tbl"><thead><tr><th>案件番号</th><th>案件名・顧客</th><th class="hide-m">担当</th><th>現在の工程</th><th class="hide-m">進捗</th><th class="hide-m">更新</th></tr></thead><tbody>` +
+    list.map(c=>{ const sk=stageOf(c); const s=STAGE[sk];
+      const dots=STAGES.map(x=>{ const st=c.stages[x.k].status; return `<i class="${st==='done'||st==='skip'?'d':(x.k===sk?'cur':'')}"></i>`; }).join('');
+      return `<tr onclick="go('case','${c.id}')"><td class="no">${esc(c.no)}</td>
+      <td><div class="nm">${esc(c.name)}${c.archived?' <span class="badge">保管済</span>':''}</div><div class="sub">${esc(c.client||'')}${c.address?' ／ '+esc(c.address):''}</div></td>
+      <td class="hide-m"><div>${esc(c.sales||'')}</div><div class="sub">${c.manager?'現場：'+esc(c.manager):''}</div></td>
+      <td><span class="pill" style="--c:${s.c}">${s.n}</span></td>
+      <td class="hide-m"><div class="dots" style="--c:${s.c}">${dots}</div></td>
+      <td class="hide-m sub">${fmtDT(c.updatedAt)}<br>${esc(c.updatedBy||'')}</td></tr>`; }).join('') + `</tbody></table>`;
+}
+function setFilter(k){ view.filter = view.filter===k ? '' : k; renderList(); }
+function setLayout(l){ view.layout=l; localStorage.setItem('hubPortal.layout', l); renderList(); }
+
+/* ---------- 案件詳細 ---------- */
+function renderCase(){
+  const c=getCase(view.id); const cs=stageOf(c);
+  const sel = view.stage && STAGE[view.stage] ? view.stage : cs;
+  const S=STAGE[sel]; const st=c.stages[sel];
+  const steps = STAGES.map((s,i)=>{ const x=c.stages[s.k].status; const cls=(x==='done'||x==='skip')?'done':(s.k===cs?'prog':'');
+    return `<div class="step ${cls} ${s.k===sel?'sel':''}" style="--c:${s.c}" onclick="go('case','${c.id}','${s.k}')">
+      <div class="c">${x==='done'?'✓':(x==='skip'?'－':i+1)}</div><div class="lb">${s.n}</div><div class="st">${ST_STATUS[x]}</div></div>`; }).join('');
+  const tools = Object.entries(TOOLS).filter(([,t])=>t.st===sel);
+  const files = c.files.filter(f=>f.stage===sel).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+  const isLast = sel==='done';
+
+  let stageBody = '';
+  if(sel==='contract'){
+    stageBody = `<div class="sec"><h4>契約内容</h4><div class="row">
+      <div class="fld"><label>契約日</label><input type="date" value="${esc(c.dates.contract||'')}" onchange="setField('dates.contract',this.value)"></div>
+      <div class="fld"><label>契約金額（税抜）</label><input type="number" value="${esc(c.contractAmount??'')}" onchange="setField('contractAmount',this.value===''?'':+this.value)"></div>
+      <div class="fld"><label>注文書・契約書番号</label><input value="${esc(c.orderNo||'')}" onchange="setField('orderNo',this.value)"></div>
+      <div class="fld"><label>支払条件</label><input value="${esc(c.payTerms||'')}" onchange="setField('payTerms',this.value)"></div></div>
+      <div class="hint">注文書・契約書・請書は下の「ファイル」に添付してください。</div></div>`;
+  }
+  if(sel==='construction'){
+    stageBody = `<div class="sec"><h4>工期</h4><div class="row">
+      <div class="fld"><label>着工日</label><input type="date" value="${esc(c.dates.start||'')}" onchange="setField('dates.start',this.value)"></div>
+      <div class="fld"><label>完工（予定）日</label><input type="date" value="${esc(c.dates.finish||'')}" onchange="setField('dates.finish',this.value)"></div></div></div>`;
+  }
+  if(sel==='estimate'){
+    stageBody = `<div class="sec"><h4>見積</h4><div class="row">
+      <div class="fld"><label>見積提出日</label><input type="date" value="${esc(c.dates.estimate||'')}" onchange="setField('dates.estimate',this.value)"></div>
+      <div class="fld"><label>見積金額（税抜）</label><input type="number" value="${esc(c.amount??'')}" onchange="setField('amount',this.value===''?'':+this.value)"></div></div></div>`;
+  }
+  if(sel==='survey'){
+    stageBody = `<div class="sec"><h4>現場調査</h4><div class="row">
+      <div class="fld"><label>調査日</label><input type="date" value="${esc(c.dates.survey||'')}" onchange="setField('dates.survey',this.value)"></div></div></div>`;
+  }
+  if(sel==='completion'){
+    stageBody = `<div class="sec"><h4>納品</h4><div class="row">
+      <div class="fld"><label>完成図書 提出日</label><input type="date" value="${esc(c.dates.delivered||'')}" onchange="setField('dates.delivered',this.value)"></div></div></div>`;
+  }
+
+  $('#app').innerHTML = `
+  <div class="back"><button class="btn sm ghost" onclick="go('list')">← 案件一覧</button></div>
+  <div class="dhead">
+    <div class="t"><div style="flex:1;min-width:220px"><div class="hint">${esc(c.no)}${c.category?' ・ '+esc(c.category):''}</div><h2>${esc(c.name)}</h2></div>
+      <span class="pill" style="--c:${STAGE[cs].c};align-self:center">${STAGE[cs].n}</span>
+      <button class="btn sm" onclick="editCase('${c.id}')">✎ 案件情報を編集</button></div>
+    <div class="meta">
+      <div><span>顧客</span>${esc(c.client||'－')}</div>
+      <div><span>現場住所</span>${esc(c.address||'－')}</div>
+      <div><span>先方担当</span>${esc(c.contact||'－')}</div>
+      <div><span>営業担当</span>${esc(c.sales||'－')}</div>
+      <div><span>現場管理</span>${esc(c.manager||'－')}</div>
+      <div><span>見積／契約</span>${yen(c.amount)||'－'} ／ ${yen(c.contractAmount)||'－'}</div>
+      ${c.memo?`<div style="grid-column:1/-1"><span>メモ</span>${esc(c.memo)}</div>`:''}
+    </div>
+  </div>
+  <div class="steps">${steps}</div>
+  <div class="panel" style="border-top:3px solid ${S.c}">
+    <h3>${S.n}
+      <select onchange="setStageStatus('${sel}',this.value)" style="border:1px solid var(--line);border-radius:7px;padding:4px 8px;font-size:13px">
+        ${Object.entries(ST_STATUS).map(([k,v])=>`<option value="${k}" ${st.status===k?'selected':''}>${v}</option>`).join('')}</select>
+      <span style="flex:1"></span>
+      ${!isLast && st.status!=='done' ? `<button class="btn ok sm" onclick="completeStage('${sel}')">✓ この工程を完了して次へ</button>`:''}
+    </h3>
+    ${tools.length?`<div class="sec" style="margin-top:4px"><h4>ツール</h4><div class="tools">${tools.map(([tid,t])=>{
+      const m=c.tools[tid];
+      return `<div class="tool"><div class="tn">${esc(t.n)}</div><div class="hint">${esc(t.d)}</div>
+        <div class="ts">${m?'最終保存：'+fmtDT(m.at)+(m.by?'（'+esc(m.by)+'）':''):(hasToolStorage(tid)?'未作成':'')}</div>
+        <div class="ta"><button class="btn pri sm" onclick="openTool('${c.id}','${tid}')">開く</button></div></div>`; }).join('')}</div></div>`:''}
+    ${stageBody}
+    <div class="sec"><h4 style="display:flex;align-items:center;gap:8px">ファイル <span class="hint" style="font-weight:400">ツールの出力・注文書・写真など</span><span style="flex:1"></span>
+      <label class="btn sm">＋ 添付<input type="file" multiple hidden onchange="addFiles('${c.id}','${sel}',this.files);this.value=''"></label></h4>
+      <div class="files">${files.length?files.map(f=>`<div class="file"><span class="fi">${esc(ext(f.name))}</span>
+        <span class="fn" title="${esc(f.name)}">${esc(f.name)}</span>
+        <span class="fm hide-m">${fmtSize(f.size)}${f.tool?' ・ '+esc(TOOLS[f.tool]?.n||''):''} ・ ${fmtDT(f.at)}${f.by?' ・ '+esc(f.by):''}</span>
+        <button class="btn sm" onclick="dlFile('${c.id}','${f.id}')">開く</button>
+        <button class="btn sm ghost" title="削除" onclick="rmFile('${c.id}','${f.id}')">🗑</button></div>`).join('')
+        :`<div class="file none">ファイルはまだありません</div>`}</div></div>
+    <div class="sec"><h4>この工程のメモ</h4>
+      <div class="fld"><textarea placeholder="打合せ内容・申し送りなど" onchange="setStageMemo('${sel}',this.value)">${esc(st.memo||'')}</textarea></div></div>
+  </div>`;
+}
+
+async function mutateCase(id, fn){
+  const c=JSON.parse(JSON.stringify(getCase(id))); fn(c);
+  const r=await saveCaseSafe(c); render(); return r;
+}
+function setField(path, val){ return mutateCase(view.id, c=>{ const p=path.split('.'); let o=c; while(p.length>1){ const k=p.shift(); o[k]=o[k]||{}; o=o[k]; } o[p[0]]=val; }); }
+function setStageStatus(k, v){ return mutateCase(view.id, c=>{ c.stages[k].status=v; if(v==='done' && !c.stages[k].doneAt) c.stages[k].doneAt=nowISO(); }); }
+function setStageMemo(k, v){ return mutateCase(view.id, c=>{ c.stages[k].memo=v; }); }
+async function completeStage(k){
+  const r=await mutateCase(view.id, c=>{ c.stages[k].status='done'; c.stages[k].doneAt=nowISO();
+    const i=STAGE[k].i; const nx=STAGES[i+1]; if(nx && c.stages[nx.k].status==='todo') c.stages[nx.k].status='prog'; });
+  if(r){ const nx=STAGES[STAGE[k].i+1]; toast(STAGE[k].n+'を完了しました'); if(nx) go('case', view.id, nx.k); }
+}
+
+/* ---------- 案件の登録・編集 ---------- */
+function editCase(id){
+  const c = id ? getCase(id) : {no:newCaseNo(), sales:cfg.user};
+  modal(`<div class="mh">${id?'案件情報の編集':'新規案件'}<span class="sp"></span><button class="btn sm ghost" onclick="closeModal()">✕</button></div>
+  <div class="mb">
+    <div class="row">
+      <div class="fld"><label>案件番号</label><input id="f_no" value="${esc(c.no||'')}"></div>
+      <div class="fld"><label>種別</label><select id="f_cat"><option value=""></option>${CATS.map(x=>`<option ${c.category===x?'selected':''}>${x}</option>`).join('')}</select></div>
+    </div>
+    <div class="fld"><label>案件名 *</label><input id="f_name" value="${esc(c.name||'')}" placeholder="例：○○区 防犯カメラ設置工事"></div>
+    <div class="row">
+      <div class="fld"><label>顧客（発注者）</label><input id="f_client" value="${esc(c.client||'')}"></div>
+      <div class="fld"><label>先方担当者・連絡先</label><input id="f_contact" value="${esc(c.contact||'')}"></div>
+    </div>
+    <div class="fld"><label>現場住所</label><input id="f_addr" value="${esc(c.address||'')}"></div>
+    <div class="row">
+      <div class="fld"><label>営業担当</label><input id="f_sales" value="${esc(c.sales||'')}" list="peopleList"></div>
+      <div class="fld"><label>現場管理</label><input id="f_mgr" value="${esc(c.manager||'')}" list="peopleList"></div>
+    </div>
+    <datalist id="peopleList">${[...new Set(cases.flatMap(x=>[x.sales,x.manager]).filter(Boolean))].map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+    <div class="fld"><label>メモ</label><textarea id="f_memo">${esc(c.memo||'')}</textarea></div>
+    ${id?`<label class="hint" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="f_arch" ${c.archived?'checked':''}>保管済みにする（一覧に表示しない）</label>`:''}
+  </div>
+  <div class="mf">${id?`<button class="btn danger" onclick="delCase('${id}')" style="margin-right:auto">削除</button>`:''}
+    <button class="btn" onclick="closeModal()">キャンセル</button><button class="btn pri" onclick="saveCaseForm('${id||''}')">保存</button></div>`);
+  setTimeout(()=>$('#f_name').focus(), 50);
+}
+async function saveCaseForm(id){
+  const name=$('#f_name').value.trim(); if(!name){ toast('案件名を入力してください', true); return; }
+  const base = id ? JSON.parse(JSON.stringify(getCase(id))) : normCase({id:uid(), createdAt:nowISO(), createdBy:cfg.user});
+  if(!id) base.stages.survey.status='prog';
+  Object.assign(base, {no:$('#f_no').value.trim(), category:$('#f_cat').value, name, client:$('#f_client').value.trim(), contact:$('#f_contact').value.trim(),
+    address:$('#f_addr').value.trim(), sales:$('#f_sales').value.trim(), manager:$('#f_mgr').value.trim(), memo:$('#f_memo').value});
+  if(id) base.archived = $('#f_arch').checked;
+  busy(true,'保存中…'); const r=await saveCaseSafe(base); busy(false);
+  if(r){ closeModal(); toast('保存しました'); if(!id) go('case', r.id); else render(); }
+}
+async function delCase(id){
+  const c=getCase(id);
+  if(!confirm(`「${c.name}」を削除します。\nツールのデータ・添付ファイルもすべて削除され、元に戻せません。よろしいですか？`)) return;
+  busy(true,'削除中…');
+  try{ await store.deleteCase(id); cases=cases.filter(x=>x.id!==id); closeModal(); toast('削除しました'); go('list'); }
+  catch(e){ toast('削除に失敗：'+e.message, true); }
+  finally{ busy(false); }
+}
+
+/* ---------- ファイル ---------- */
+async function addFiles(cid, stage, fileList, tool){
+  for(const f of Array.from(fileList)){
+    const meta={id:uid(), name:f.name||'file', mime:f.type||'', size:f.size, stage, tool:tool||null, at:nowISO(), by:cfg.user};
+    try{ busy(true,'アップロード中… '+meta.name); const c=await store.putFile(cid, meta, f); putLocalCase(normCase(c)); }
+    catch(e){
+      if(store.mode==='remote'){ await savePending('file', {cid, meta, blob:f}); toast('送信できなかったため端末に一時保存しました：'+meta.name, true); }
+      else toast('添付に失敗：'+e.message, true);
+    }
+    finally{ busy(false); }
+  }
+  if(!cur) render();
+}
+async function dlFile(cid, fid){
+  const c=getCase(cid); const meta=c.files.find(f=>f.id===fid); if(!meta) return;
+  busy(true,'ダウンロード中…');
+  try{ const b=await store.getFile(cid, meta); if(!b) throw new Error('ファイルが見つかりません');
+    const url=URL.createObjectURL(b); const a=document.createElement('a'); a.href=url; a.download=meta.name; a.__hubSkip=true; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 30000); }
+  catch(e){ toast(e.message, true); }
+  finally{ busy(false); }
+}
+async function rmFile(cid, fid){
+  const c=getCase(cid); const meta=c.files.find(f=>f.id===fid); if(!meta) return;
+  if(!confirm(`「${meta.name}」を削除しますか？（元に戻せません）`)) return;
+  busy(true,'削除中…');
+  try{ putLocalCase(normCase(await store.deleteFile(cid, fid))); render(); }
+  catch(e){ toast('削除に失敗：'+e.message, true); }
+  finally{ busy(false); }
+}
+
+/* =========================================================
+   ツールを開く／閉じる
+   ========================================================= */
+const frame = $('#tvFrame');
+async function openTool(cid, tid){
+  if(cur) return;
+  const c=getCase(cid); const t=TOOLS[tid];
+  if(!cfg.user){ toast('先に「設定」で利用者名を入力してください', true); openSettings(); return; }
+  let readonly=false;
+  busy(true, t.n+' を準備中…');
+  try{
+    if(store.mode==='remote' && hasToolStorage(tid)){
+      let lk=await store.lock(cid, tid, false);
+      if(!lk.ok){
+        busy(false);
+        const ans = await choose(`${esc(lk.by)} さんが ${fmtDT(lk.at)} から「${esc(t.n)}」を編集中です。`,
+          [['ro','閲覧のみで開く'],['force','ロックを解除して編集する'],['cancel','やめる']]);
+        busy(true, t.n+' を準備中…');
+        if(ans==='cancel' || !ans) return;
+        if(ans==='force'){ lk=await store.lock(cid, tid, true); }
+        else readonly=true;
+      }
+    }
+    if(hasToolStorage(tid)){
+      const raw = await store.getToolData(cid, tid);
+      await restoreTool(tid, raw ? JSON.parse(raw) : null);
+    }
+    cur={cid, tid, readonly, savedAt:null};
+    $('#tvTitle').textContent = c.name;
+    $('#tvSub').textContent = t.n + '（' + c.no + '）';
+    $('#tvSave').style.display = (readonly || !hasToolStorage(tid)) ? 'none' : '';
+    $('#toolView').classList.toggle('readonly', readonly);
+    $('#toolView').classList.add('on');
+    document.body.style.overflow='hidden';
+    frame.src = encodeURI(t.f);
+  }catch(e){ toast('ツールを開けませんでした：'+e.message, true); cur=null; }
+  finally{ busy(false); }
+}
+frame.addEventListener('load', ()=>{ if(cur && frame.src!=='about:blank') hookFrame(); });
+
+/* 出力ファイルを横取りして案件に添付 */
+function hookFrame(){
+  let w; try{ w=frame.contentWindow; w.document; }catch(e){ return; }
+  if(!w || w.__hubHooked) return; w.__hubHooked=true;
+  const blobs=new Map();
+  const oc=w.URL.createObjectURL.bind(w.URL);
+  w.URL.createObjectURL=function(o){ const u=oc(o); try{ if(o && typeof o.size==='number') blobs.set(u,o); }catch(e){} return u; };
+  const seen=new Map();
+  const grab=(a)=>{
+    try{
+      if(!cfg.capture || !cur || cur.readonly) return;
+      const href=a.href||a.getAttribute('href'); const name=a.getAttribute('download'); if(!href || name==null) return;
+      const key=href+'|'+name; const t=Date.now(); if(seen.get(key) && t-seen.get(key)<2000) return; seen.set(key,t);
+      let blob=null;
+      if(href.startsWith('blob:')) blob=blobs.get(href)||null;
+      else if(href.startsWith('data:')){ const m=/^data:([^;,]*)(;base64)?,(.*)$/s.exec(href); if(m){ blob = m[2] ? new Blob([b64ToBytes(m[3])],{type:m[1]}) : new Blob([decodeURIComponent(m[3])],{type:m[1]}); } }
+      const fname = name || ('output_'+Date.now());
+      const {cid, tid}=cur; const st=TOOLS[tid].st;
+      if(blob){ captureFile(cid, st, tid, blob, fname); }
+      else if(href.startsWith('blob:')){ w.fetch(href).then(r=>r.blob()).then(b=>captureFile(cid, st, tid, b, fname)).catch(()=>{}); }
+    }catch(e){}
+  };
+  const oclick=w.HTMLAnchorElement.prototype.click;
+  w.HTMLAnchorElement.prototype.click=function(){ grab(this); return oclick.apply(this, arguments); };
+  const odisp=w.EventTarget.prototype.dispatchEvent;
+  w.EventTarget.prototype.dispatchEvent=function(ev){ try{ if(ev && ev.type==='click' && this instanceof w.HTMLAnchorElement) grab(this); }catch(e){} return odisp.apply(this, arguments); };
+  w.document.addEventListener('click', ev=>{ const a=ev.target && ev.target.closest && ev.target.closest('a[download]'); if(a) grab(a); }, true);
+}
+async function captureFile(cid, stage, tid, blob, name){
+  const f = (typeof File!=='undefined') ? new File([blob], name, {type:blob.type||''}) : blob;
+  await addFiles(cid, stage, [f], tid);
+  toast('出力ファイルを案件に保存しました：'+name);
+}
+
+async function saveCurrent(silent){
+  if(!cur || cur.readonly || !hasToolStorage(cur.tid)) return true;
+  const {cid, tid}=cur;
+  if(!silent) busy(true,'保存中…');
+  try{
+    const d=await dumpTool(tid);
+    const data=JSON.stringify(d||{v:1, tool:tid, at:nowISO(), empty:true, ls:{}, ss:{}, idb:{}});
+    try{ const c=await store.putToolData(cid, tid, data); putLocalCase(normCase(c)); cur.savedAt=nowISO(); if(!silent) toast('保存しました'); return true; }
+    catch(e){
+      if(store.mode==='remote'){ await savePending('tooldata', {cid, tid, data}); toast('共有先へ送信できないため、この端末に一時保存しました。後で「再送信」してください。', true); return true; }
+      throw e;
+    }
+  }catch(e){ toast('保存に失敗しました：'+e.message, true); return false; }
+  finally{ if(!silent) busy(false); }
+}
+$('#tvSave').onclick = ()=>saveCurrent(false);
+$('#tvBack').onclick = closeTool;
+$('#tvPrefill').onclick = prefill;
+async function closeTool(){
+  if(!cur) return;
+  busy(true,'保存して閉じています…');
+  try{
+    // ツール側の終了処理（自動保存など）を走らせてから退避
+    await new Promise(res=>{ const done=()=>{ frame.removeEventListener('load', done); res(); }; frame.addEventListener('load', done); frame.src='about:blank'; setTimeout(res, 2500); });
+    await sleep(150);
+    const ok = await saveCurrent(true);
+    if(!ok && !confirm('保存に失敗しました。保存せずに閉じますか？\n（「キャンセル」でツールに戻ります）')){ frame.src=encodeURI(TOOLS[cur.tid].f); return; }
+    if(store.mode==='remote' && !cur.readonly && hasToolStorage(cur.tid)) await store.unlock(cur.cid, cur.tid);
+    if(hasToolStorage(cur.tid)) await clearTool(cur.tid);
+    const cid=cur.cid, st=TOOLS[cur.tid].st; cur=null;
+    $('#toolView').classList.remove('on','readonly'); document.body.style.overflow='';
+    await updatePendBar();
+    go('case', cid, st);
+  } finally { busy(false); }
+}
+function prefill(){
+  if(!cur) return; const t=TOOLS[cur.tid]; const c=getCase(cur.cid);
+  let doc; try{ doc=frame.contentDocument; }catch(e){ return; }
+  if(!t.pre){ toast('このツールは自動入力に対応していません'); return; }
+  let n=0;
+  for(const [id, field] of Object.entries(t.pre)){
+    const el=doc.getElementById(id); const v=c[field]; if(!el || !v) continue;
+    if(el.value && el.value.trim()) continue;
+    el.value=v; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); n++;
+  }
+  toast(n ? `${n}項目に案件情報を入力しました（入力済みの欄は変更していません）` : '入力できる空欄が見つかりませんでした');
+}
+window.addEventListener('beforeunload', e=>{ if(cur && !cur.readonly){ e.preventDefault(); e.returnValue=''; } });
+
+/* =========================================================
+   モーダル・設定
+   ========================================================= */
+function modal(html){ $('#modal').innerHTML=html; $('#mask').classList.add('on'); }
+function closeModal(){ $('#mask').classList.remove('on'); $('#modal').innerHTML=''; }
+function choose(msg, opts){
+  return new Promise(res=>{
+    modal(`<div class="mh">確認</div><div class="mb">${msg}</div><div class="mf">${opts.map(([k,l],i)=>`<button class="btn ${i===0?'pri':''}" data-k="${k}">${l}</button>`).join('')}</div>`);
+    $('#modal').querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{ closeModal(); res(b.dataset.k); });
+  });
+}
+function openSettings(){
+  modal(`<div class="mh">設定<span class="sp"></span><button class="btn sm ghost" onclick="closeModal()">✕</button></div>
+  <div class="mb">
+    <div class="fld"><label>利用者名（保存者・編集中の表示に使います）</label><input id="s_user" value="${esc(cfg.user)}" placeholder="例：深澤"></div>
+    <h4 style="margin:16px 0 8px">社内共有（Google スプレッドシート）</h4>
+    <div class="fld"><label>共有先URL（Apps Script のウェブアプリURL）</label><input id="s_url" value="${esc(cfg.gasUrl)}" placeholder="https://script.google.com/macros/s/……/exec"></div>
+    <div class="fld"><label>APIキー</label><input id="s_key" value="${esc(cfg.apiKey)}"></div>
+    <div class="hint" style="margin-bottom:8px">空欄のままだと「この端末のみ」で動きます。URLとキーは端末ごとに保存され、GitHubには載りません。</div>
+    <button class="btn sm" onclick="testConn()">接続テスト</button> <span id="s_test" class="hint"></span>
+    <h4 style="margin:18px 0 8px">その他</h4>
+    <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="s_cap" ${cfg.capture?'checked':''}>ツールで出力したファイル（Excel・PDFなど）を自動で案件に添付する</label>
+    <h4 style="margin:18px 0 8px">データの移行・バックアップ</h4>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn sm" onclick="exportAll()">この端末のデータを書き出し</button>
+      <label class="btn sm">書き出したデータを読み込み<input type="file" accept=".json" hidden onchange="importAll(this.files[0])"></label>
+      ${cfg.gasUrl?'':''}
+    </div>
+    <div class="hint" style="margin-top:6px">「この端末のみ」で登録した案件は、共有モードに切り替えた後に「この端末の案件を共有先へ送る」で移せます。</div>
+    <div style="margin-top:8px"><button class="btn sm" onclick="pushLocalToRemote()">この端末の案件を共有先へ送る</button></div>
+  </div>
+  <div class="mf"><button class="btn" onclick="closeModal()">キャンセル</button><button class="btn pri" onclick="saveSettings()">保存</button></div>`);
+}
+async function testConn(){
+  const u=$('#s_url').value.trim(), k=$('#s_key').value.trim(); $('#s_test').textContent='確認中…';
+  const bk={...cfg}; cfg.gasUrl=u; cfg.apiKey=k;
+  try{ const j=await gas('ping'); $('#s_test').textContent='接続OK（案件 '+(j.count??0)+' 件）'; }
+  catch(e){ $('#s_test').textContent='接続できません：'+e.message; }
+  finally{ cfg.gasUrl=bk.gasUrl; cfg.apiKey=bk.apiKey; }
+}
+async function saveSettings(){
+  if(cur){ toast('ツールを閉じてから変更してください', true); return; }
+  cfg.user=$('#s_user').value.trim(); cfg.gasUrl=$('#s_url').value.trim(); cfg.apiKey=$('#s_key').value.trim(); cfg.capture=$('#s_cap').checked;
+  saveCfg(); store = cfg.gasUrl ? RemoteStore : LocalStore; closeModal(); toast('設定を保存しました'); await refresh();
+}
+async function exportAll(){
+  busy(true,'書き出し中…');
+  try{
+    const out={app:'hubPortal', v:1, at:nowISO(), cases:await lall('cases'), tooldata:await lall('tooldata'), files:[]};
+    for(const f of await lall('files')) out.files.push({id:f.id, caseId:f.caseId, b64:await blobToB64(f.blob), type:f.blob.type});
+    const b=new Blob([JSON.stringify(out)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b);
+    a.download='案件管理ポータル_バックアップ_'+new Date().toISOString().slice(0,10)+'.json'; a.click();
+  }catch(e){ toast('書き出しに失敗：'+e.message, true); }
+  finally{ busy(false); }
+}
+async function importAll(file){
+  if(!file) return;
+  if(!confirm('読み込んだデータを「この端末」の案件に追加します（同じ案件は上書き）。よろしいですか？')) return;
+  busy(true,'読み込み中…');
+  try{
+    const j=JSON.parse(await file.text()); if(j.app!=='hubPortal') throw new Error('このポータルのバックアップではありません');
+    for(const c of j.cases) await lput('cases', c);
+    for(const t of j.tooldata) await lput('tooldata', t);
+    for(const f of j.files) await lput('files', {id:f.id, caseId:f.caseId, blob:new Blob([b64ToBytes(f.b64)],{type:f.type})});
+    toast('読み込みました（'+j.cases.length+'件）'); closeModal(); await refresh();
+  }catch(e){ toast('読み込みに失敗：'+e.message, true); }
+  finally{ busy(false); }
+}
+async function pushLocalToRemote(){
+  const u=$('#s_url')?.value.trim()||cfg.gasUrl; if(!u){ toast('共有先URLを入力して保存してから実行してください', true); return; }
+  if(!cfg.gasUrl){ toast('先に設定を保存してください', true); return; }
+  const lc=await lall('cases'); if(!lc.length){ toast('この端末に案件はありません'); return; }
+  if(!confirm(`この端末の案件 ${lc.length} 件を共有先へ送ります。よろしいですか？`)) return;
+  busy(true,'送信中…'); let n=0;
+  try{
+    for(const c0 of lc){
+      const c=JSON.parse(JSON.stringify(c0)); const files=c.files||[]; c.files=[]; c.tools={}; c.updatedAt='';
+      await RemoteStore.saveCase(c);
+      for(const r of await lall('tooldata')) if(r.k.startsWith(c.id+'|')) await RemoteStore.putToolData(c.id, r.k.split('|')[1], r.data);
+      for(const m of files){ const f=await lget('files', m.id); if(f) await RemoteStore.putFile(c.id, m, f.blob); }
+      n++;
+    }
+    toast(n+'件を送信しました'); closeModal(); await refresh();
+  }catch(e){ toast('送信に失敗（'+n+'件まで完了）：'+e.message, true); }
+  finally{ busy(false); }
+}
+
+/* =========================================================
+   初回：ポータル導入前の各ツールのデータを退避
+   ========================================================= */
+async function firstRunImport(){
+  if(localStorage.getItem('hubPortal.imported')) return;
+  const dumps={};
+  for(const tid of Object.keys(TOOLS)){ if(!hasToolStorage(tid)) continue; try{ const d=await dumpTool(tid); if(d) dumps[tid]=d; }catch(e){} }
+  localStorage.setItem('hubPortal.imported', nowISO());
+  if(!Object.keys(dumps).length) return;
+  const c=normCase({id:uid(), no:'取込', name:'ポータル導入前のデータ（'+new Date().toLocaleDateString('ja-JP')+'）', memo:'ポータルを初めて開いた時点で、各ツールに残っていた入力データをこの案件に保存しました。必要な内容を確認してください。', createdAt:nowISO(), createdBy:cfg.user});
+  // 導入前データは常にこの端末に保存（他の人の共有データと混ざらないように）
+  await LocalStore.saveCase(c);
+  for(const [tid,d] of Object.entries(dumps)) await LocalStore.putToolData(c.id, tid, JSON.stringify(d));
+  for(const tid of Object.keys(dumps)) await clearTool(tid);
+  toast('各ツールに残っていたデータを「ポータル導入前のデータ」に保存しました');
+}
+
+/* =========================================================
+   起動
+   ========================================================= */
+(async function init(){
+  fromHash();
+  try{ await firstRunImport(); }catch(e){ console.warn(e); }
+  if(!cfg.user) setTimeout(()=>{ toast('はじめに「設定」で利用者名を入力してください'); }, 600);
+  await updatePendBar();
+  await refresh();
+})();
+</script>
+</body>
+</html>
